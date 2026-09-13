@@ -1,45 +1,63 @@
 import { getActivePage, getState, setPageImage, subscribe } from '../document/state.js';
-import { uploadPageImage } from '../document/api.js';
+import { pageImageUrl, uploadPageImage } from '../document/api.js';
 import type { Page } from '../document/types.js';
 import { requireElement } from '../dom.js';
+import { mountImageCanvas, type ImageCanvasHandle } from '../canvas/imageCanvas.js';
+
+interface MountedCanvas {
+    pageId: string;
+    imageFile: string;
+    handle: ImageCanvasHandle;
+}
+
+let controlsEl: HTMLDivElement;
+let canvasMount: HTMLDivElement;
+let mountedCanvas: MountedCanvas | null = null;
 
 export function initStage(): void {
     const container = requireElement('canvas-area');
-    subscribe(function renderOnChange() {
-        render(container);
-    });
-    render(container);
+    container.innerHTML = '';
+    controlsEl = document.createElement('div');
+    controlsEl.className = 'stage-controls';
+    canvasMount = document.createElement('div');
+    canvasMount.className = 'canvas-mount';
+    container.append(controlsEl, canvasMount);
+
+    subscribe(render);
+    render();
 }
 
-function render(container: HTMLElement): void {
+function render(): void {
     const { document: doc } = getState();
     if (!doc) {
-        container.textContent = 'No document open. Use New or Open to get started.';
+        showMessage('No document open. Use New or Open to get started.');
         return;
     }
 
     const page = getActivePage();
     if (!page) {
-        container.textContent = 'This document has no pages yet. Add one from the sidebar.';
+        showMessage('This document has no pages yet. Add one from the sidebar.');
         return;
     }
 
-    container.innerHTML = '';
-    container.append(renderStatus(page), renderImageInput(doc.id, page));
+    renderControls(doc.id, page);
+    renderCanvas(doc.id, page);
 }
 
-function renderStatus(page: Page): HTMLParagraphElement {
-    const status = document.createElement('p');
-    status.textContent = page.image
-        ? `Active page: ${page.name} (image assigned)`
-        : `Active page: ${page.name} (no image yet)`;
-    return status;
+function showMessage(message: string): void {
+    controlsEl.textContent = message;
+    unmountCanvas();
+    canvasMount.textContent = '';
 }
 
-function renderImageInput(documentId: string, page: Page): HTMLLabelElement {
+function renderControls(documentId: string, page: Page): void {
+    controlsEl.innerHTML = '';
+
+    const status = document.createElement('span');
+    status.textContent = `Active page: ${page.name}`;
+
     const label = document.createElement('label');
-    label.textContent = page.image ? 'Replace image: ' : 'Assign image: ';
-
+    label.textContent = page.image ? ' Replace image: ' : ' Assign image: ';
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/png,image/jpeg,image/webp,image/gif';
@@ -49,9 +67,34 @@ function renderImageInput(documentId: string, page: Page): HTMLLabelElement {
             void assignImage(documentId, page.id, file);
         }
     });
-
     label.appendChild(input);
-    return label;
+
+    controlsEl.append(status, label);
+}
+
+function renderCanvas(documentId: string, page: Page): void {
+    if (!page.image) {
+        unmountCanvas();
+        canvasMount.textContent = 'No image assigned to this page yet.';
+        return;
+    }
+
+    if (mountedCanvas?.pageId === page.id && mountedCanvas.imageFile === page.image.file) {
+        return;
+    }
+
+    unmountCanvas();
+    canvasMount.textContent = '';
+    mountedCanvas = {
+        pageId: page.id,
+        imageFile: page.image.file,
+        handle: mountImageCanvas(canvasMount, pageImageUrl(documentId, page.image))
+    };
+}
+
+function unmountCanvas(): void {
+    mountedCanvas?.handle.destroy();
+    mountedCanvas = null;
 }
 
 async function assignImage(documentId: string, pageId: string, file: File): Promise<void> {
