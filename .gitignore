@@ -2,6 +2,7 @@ node_modules/
 dist/
 CLAUDE.md
 design-doc.md
+UI-doc.md
 progress.md
 public/
 data/documents/*
