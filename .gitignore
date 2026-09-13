@@ -1,0 +1,9 @@
+node_modules/
+dist/
+CLAUDE.md
+design-doc.md
+public/js/
+data/documents/*
+!data/documents/.gitkeep
+*.log
+.DS_Store

@@ -1,0 +1,36 @@
+{
+  "name": "studeh",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local image-occlusion study app.",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.server.json && tsc -p tsconfig.client.json",
+    "start": "npm run build && node dist/server/index.js",
+    "dev": "concurrently -n client,server,run -c blue,green,yellow \"npm:dev:client\" \"npm:dev:server\" \"npm:dev:run\"",
+    "predev": "npm run build",
+    "dev:client": "tsc -p tsconfig.client.json --watch --preserveWatchOutput",
+    "dev:server": "tsc -p tsconfig.server.json --watch --preserveWatchOutput",
+    "dev:run": "node --watch dist/server/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ka-Q/studeh.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Ka-Q/studeh/issues"
+  },
+  "homepage": "https://github.com/Ka-Q/studeh#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.13.4",
+    "concurrently": "^9.2.4",
+    "typescript": "^7.0.2"
+  }
+}
