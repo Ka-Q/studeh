@@ -37,6 +37,7 @@ export function setDocument(document: DocumentManifest | null): void {
     state.selectedShapeId = null;
     state.dirty = false;
     state.mode = 'edit';
+    syncUrlWithDocument(document);
     notify();
 }
 
@@ -249,6 +250,13 @@ export function confirmDiscardIfDirty(): boolean {
         return true;
     }
     return confirm('You have unsaved changes. Discard them?');
+}
+
+function syncUrlWithDocument(document: DocumentManifest | null): void {
+    const targetPath = document ? `/${document.id}` : '/';
+    if (location.pathname !== targetPath) {
+        history.pushState(null, '', targetPath);
+    }
 }
 
 function findPage(pageId: string): Page | null {
