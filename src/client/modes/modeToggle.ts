@@ -1,21 +1,17 @@
-import { setMode, subscribe } from '../document/state.js';
+import { getState, setMode, subscribe } from '../document/state.js';
 import { requireElement } from '../dom.js';
 
 export function initModeToggle(): void {
-    const editButton = requireElement('btn-mode-edit');
-    const studyButton = requireElement('btn-mode-study');
+    const statusEl = requireElement('mode-status');
+    const toggleButton = requireElement('btn-mode-toggle');
 
-    editButton.addEventListener('click', function onEditClick() {
-        setMode('edit');
-    });
-    studyButton.addEventListener('click', function onStudyClick() {
-        setMode('study');
+    toggleButton.addEventListener('click', function onToggleClick() {
+        setMode(getState().mode === 'edit' ? 'study' : 'edit');
     });
 
     subscribe(function renderOnChange(state) {
-        editButton.classList.toggle('active', state.mode === 'edit');
-        studyButton.classList.toggle('active', state.mode === 'study');
-        editButton.toggleAttribute('disabled', !state.document);
-        studyButton.toggleAttribute('disabled', !state.document);
+        statusEl.textContent = state.mode === 'edit' ? 'Currently editing' : 'Currently studying';
+        toggleButton.textContent = state.mode === 'edit' ? 'Switch to studying' : 'Switch to editing';
+        toggleButton.toggleAttribute('disabled', !state.document);
     });
 }
