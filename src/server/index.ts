@@ -2,13 +2,16 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { exec } from 'node:child_process';
 import express from 'express';
+import { documentsRouter } from './routes/documents.js';
 
 const port = Number(process.env.PORT) || 3000;
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(currentDir, '../../public');
 
 const app = express();
+app.use(express.json());
 app.use(express.static(publicDir));
+app.use('/api/documents', documentsRouter);
 
 app.listen(port, function onListening() {
     const url = `http://localhost:${port}`;
