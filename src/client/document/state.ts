@@ -186,6 +186,27 @@ export function toggleShapeVisibility(pageId: string, shapeId: string): void {
     markDirty();
 }
 
+export function setPageShapesVisibility(pageId: string, visible: boolean): void {
+    if (!state.document || !findPage(pageId)) {
+        return;
+    }
+    replaceDocument({
+        ...state.document,
+        pages: state.document.pages.map(function setVisibilityIfTarget(page) {
+            if (page.id !== pageId) {
+                return page;
+            }
+            return {
+                ...page,
+                shapes: page.shapes.map(function setShapeVisibility(shape) {
+                    return { ...shape, visible };
+                })
+            };
+        })
+    });
+    markDirty();
+}
+
 export function selectShape(shapeId: string | null): void {
     state.selectedShapeId = shapeId;
     notify();
