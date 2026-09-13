@@ -7,11 +7,11 @@ const STORAGE_KEY = 'studeh:theme';
 export function initTheme(): void {
     const button = requireElement('btn-theme-toggle');
     let theme = resolveInitialTheme();
-    applyTheme(theme);
+    applyTheme(theme, button);
 
     button.addEventListener('click', function onToggleTheme() {
         theme = theme === 'dark' ? 'light' : 'dark';
-        applyTheme(theme);
+        applyTheme(theme, button);
         localStorage.setItem(STORAGE_KEY, theme);
     });
 }
@@ -24,7 +24,7 @@ function resolveInitialTheme(): Theme {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-function applyTheme(theme: Theme): void {
+function applyTheme(theme: Theme, button: HTMLElement): void {
     document.documentElement.setAttribute('data-theme', theme);
-    requireElement('btn-theme-toggle').textContent = theme === 'dark' ? 'Light mode' : 'Dark mode';
+    button.textContent = theme === 'dark' ? 'Light mode' : 'Dark mode';
 }
