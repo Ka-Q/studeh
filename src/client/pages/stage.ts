@@ -1,4 +1,13 @@
-import { addShape, deleteSelectedShape, getActivePage, getState, selectShape, setPageImage, subscribe } from '../document/state.js';
+import {
+    addShape,
+    deleteSelectedShape,
+    getActivePage,
+    getState,
+    selectShape,
+    setPageImage,
+    subscribe,
+    updateShapeRect
+} from '../document/state.js';
 import { pageImageUrl, uploadPageImage } from '../document/api.js';
 import type { Page } from '../document/types.js';
 import { requireElement } from '../dom.js';
@@ -97,6 +106,9 @@ function renderCanvas(documentId: string, page: Page): void {
             },
             onSelectShape(shapeId) {
                 selectShape(shapeId);
+            },
+            onUpdateShapeRect(shapeId, rect) {
+                updateShapeRect(page.id, shapeId, rect);
             },
             onDeleteSelected() {
                 deleteSelectedShape();

@@ -134,6 +134,27 @@ export function addShape(pageId: string, rect: Rect): void {
     markDirty();
 }
 
+export function updateShapeRect(pageId: string, shapeId: string, rect: Rect): void {
+    if (!state.document || !findPage(pageId)) {
+        return;
+    }
+    replaceDocument({
+        ...state.document,
+        pages: state.document.pages.map(function updatePageIfTarget(page) {
+            if (page.id !== pageId) {
+                return page;
+            }
+            return {
+                ...page,
+                shapes: page.shapes.map(function updateShapeIfTarget(shape) {
+                    return shape.id === shapeId ? { ...shape, ...rect } : shape;
+                })
+            };
+        })
+    });
+    markDirty();
+}
+
 export function selectShape(shapeId: string | null): void {
     state.selectedShapeId = shapeId;
     notify();
