@@ -106,4 +106,57 @@ function validateManifestShape(manifest: DocumentManifest, expectedId: string): 
     if (!Array.isArray(manifest.pages)) {
         throw new InvalidManifestError('Document manifest is missing a pages array');
     }
+    manifest.pages.forEach(validatePage);
+}
+
+function asRecord(value: unknown, what: string): Record<string, unknown> {
+    if (typeof value !== 'object' || value === null) {
+        throw new InvalidManifestError(`${what} is not a valid object`);
+    }
+    return value as Record<string, unknown>;
+}
+
+function validatePage(page: unknown, index: number): void {
+    const p = asRecord(page, `Page ${index}`);
+    if (typeof p.id !== 'string' || !p.id) {
+        throw new InvalidManifestError(`Page ${index} is missing a valid id`);
+    }
+    if (typeof p.name !== 'string') {
+        throw new InvalidManifestError(`Page "${p.id}" is missing a valid name`);
+    }
+    if (p.image != null && !isValidPageImage(p.image)) {
+        throw new InvalidManifestError(`Page "${p.id}" has an invalid image reference`);
+    }
+    if (!Array.isArray(p.shapes)) {
+        throw new InvalidManifestError(`Page "${p.id}" is missing a shapes array`);
+    }
+    p.shapes.forEach(function validateShapeOnPage(shape: unknown, shapeIndex: number) {
+        validateShape(shape, shapeIndex, p.id as string);
+    });
+}
+
+function isValidPageImage(image: unknown): boolean {
+    if (typeof image !== 'object' || image === null) {
+        return false;
+    }
+    const img = image as Record<string, unknown>;
+    return typeof img.mimeType === 'string' && typeof img.file === 'string';
+}
+
+function validateShape(shape: unknown, index: number, pageId: string): void {
+    const s = asRecord(shape, `Shape ${index} on page "${pageId}"`);
+    if (typeof s.id !== 'string' || !s.id) {
+        throw new InvalidManifestError(`Shape ${index} on page "${pageId}" is missing a valid id`);
+    }
+    if (s.type !== 'rectangle') {
+        throw new InvalidManifestError(`Shape "${s.id}" on page "${pageId}" has an unsupported type: ${String(s.type)}`);
+    }
+    for (const field of ['x', 'y', 'width', 'height'] as const) {
+        if (typeof s[field] !== 'number' || !Number.isFinite(s[field])) {
+            throw new InvalidManifestError(`Shape "${s.id}" on page "${pageId}" has an invalid ${field}`);
+        }
+    }
+    if (typeof s.visible !== 'boolean') {
+        throw new InvalidManifestError(`Shape "${s.id}" on page "${pageId}" is missing a valid visible flag`);
+    }
 }
