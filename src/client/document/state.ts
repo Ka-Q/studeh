@@ -1,3 +1,4 @@
+import { getDocument } from './api.js';
 import type { DocumentManifest, Page, PageImage, RectangleShape } from './types.js';
 import type { Rect } from '../shapes/rectangle.js';
 
@@ -258,6 +259,25 @@ function syncUrlWithDocument(document: DocumentManifest | null): void {
         history.pushState(null, '', targetPath);
     }
 }
+
+window.addEventListener('popstate', function onPopState() {
+    const id = location.pathname.slice(1);
+    if (id === state.document?.id || (!id && !state.document)) {
+        return;
+    }
+    if (!confirmDiscardIfDirty()) {
+        history.pushState(null, '', state.document ? `/${state.document.id}` : '/');
+        return;
+    }
+    if (!id) {
+        setDocument(null);
+        return;
+    }
+    getDocument(id).then(setDocument).catch(function onRestoreError(error) {
+        history.replaceState(null, '', state.document ? `/${state.document.id}` : '/');
+        alert(`Failed to open document: ${error instanceof Error ? error.message : String(error)}`);
+    });
+});
 
 function findPage(pageId: string): Page | null {
     return state.document?.pages.find(function matchesId(page) {
