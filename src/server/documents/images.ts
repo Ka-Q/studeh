@@ -1,9 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import type { Request, Response } from 'express';
 import { assertValidPageId, imagesDir } from './paths.js';
 import { InvalidDocumentIdError, InvalidImageUploadError } from './errors.js';
-import type { PageImage } from './types.js';
+import type { DocumentManifest, PageImage } from './types.js';
 
 const extensionByMimeType: Record<string, string> = {
     'image/png': 'png',
@@ -44,19 +45,35 @@ export async function writePageImage(
 
     const dir = imagesDir(documentId);
     await fs.mkdir(dir, { recursive: true });
-    await removeExistingPageImageFiles(dir, pageId);
 
-    const fileName = `${pageId}.${extension}`;
+    const fileName = `${pageId}-${randomUUID().replace(/-/g, '')}.${extension}`;
     await fs.writeFile(path.join(dir, fileName), data);
     return { mimeType, file: `images/${fileName}` };
 }
 
-async function removeExistingPageImageFiles(dir: string, pageId: string): Promise<void> {
-    const entries = await fs.readdir(dir);
-    const staleFiles = entries.filter(function belongsToPage(entry) {
-        return entry.startsWith(`${pageId}.`);
+export async function pruneUnreferencedImages(documentId: string, manifest: DocumentManifest): Promise<void> {
+    const dir = imagesDir(documentId);
+    let entries: string[];
+    try {
+        entries = await fs.readdir(dir);
+    } catch {
+        return;
+    }
+
+    const referencedFiles = new Set(
+        manifest.pages
+            .map(function fileNameOf(page) {
+                return page.image ? path.basename(page.image.file) : null;
+            })
+            .filter(function isFileName(name): name is string {
+                return name !== null;
+            })
+    );
+
+    const orphanedFiles = entries.filter(function isUnreferenced(entry) {
+        return !referencedFiles.has(entry);
     });
-    await Promise.all(staleFiles.map(function removeFile(entry) {
+    await Promise.all(orphanedFiles.map(function removeFile(entry) {
         return fs.unlink(path.join(dir, entry));
     }));
 }
