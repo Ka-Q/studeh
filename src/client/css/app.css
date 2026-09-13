@@ -203,7 +203,6 @@ dialog {
 }
 
 #page-sidebar.collapsed {
-    width: 0;
     padding: 0;
     border-right: none;
     overflow: hidden;
