@@ -2,6 +2,7 @@ node_modules/
 dist/
 CLAUDE.md
 design-doc.md
+progress.md
 public/js/
 data/documents/*
 !data/documents/.gitkeep
