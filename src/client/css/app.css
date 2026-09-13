@@ -11,6 +11,16 @@ body {
     border-bottom: 1px solid #ccc;
 }
 
+.mode-toggle {
+    margin-left: auto;
+    display: flex;
+    gap: 0.25rem;
+}
+
+.mode-toggle button.active {
+    font-weight: bold;
+}
+
 #app {
     display: flex;
     height: calc(100vh - 3rem);

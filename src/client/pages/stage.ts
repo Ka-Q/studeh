@@ -6,6 +6,7 @@ import {
     selectShape,
     setPageImage,
     subscribe,
+    toggleShapeVisibility,
     updateShapeRect
 } from '../document/state.js';
 import { pageImageUrl, uploadPageImage } from '../document/api.js';
@@ -88,10 +89,10 @@ function renderCanvas(documentId: string, page: Page): void {
         return;
     }
 
-    const { selectedShapeId } = getState();
+    const { selectedShapeId, mode } = getState();
 
     if (mountedCanvas?.pageId === page.id && mountedCanvas.imageFile === page.image.file) {
-        mountedCanvas.handle.update(page.shapes, selectedShapeId);
+        mountedCanvas.handle.update(page.shapes, selectedShapeId, mode);
         return;
     }
 
@@ -100,20 +101,30 @@ function renderCanvas(documentId: string, page: Page): void {
     mountedCanvas = {
         pageId: page.id,
         imageFile: page.image.file,
-        handle: mountImageCanvas(canvasMount, pageImageUrl(documentId, page.image), page.shapes, selectedShapeId, {
-            onCreateShape(rect) {
-                addShape(page.id, rect);
-            },
-            onSelectShape(shapeId) {
-                selectShape(shapeId);
-            },
-            onUpdateShapeRect(shapeId, rect) {
-                updateShapeRect(page.id, shapeId, rect);
-            },
-            onDeleteSelected() {
-                deleteSelectedShape();
+        handle: mountImageCanvas(
+            canvasMount,
+            pageImageUrl(documentId, page.image),
+            page.shapes,
+            selectedShapeId,
+            mode,
+            {
+                onCreateShape(rect) {
+                    addShape(page.id, rect);
+                },
+                onSelectShape(shapeId) {
+                    selectShape(shapeId);
+                },
+                onUpdateShapeRect(shapeId, rect) {
+                    updateShapeRect(page.id, shapeId, rect);
+                },
+                onDeleteSelected() {
+                    deleteSelectedShape();
+                },
+                onToggleVisibility(shapeId) {
+                    toggleShapeVisibility(page.id, shapeId);
+                }
             }
-        })
+        )
     };
 }
 
