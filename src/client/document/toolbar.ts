@@ -32,8 +32,11 @@ async function onNew(): Promise<void> {
     if (!name) {
         return;
     }
-    const manifest = await createDocument(name);
-    setDocument(manifest);
+    try {
+        setDocument(await createDocument(name));
+    } catch (error) {
+        alert(`Failed to create document: ${error instanceof Error ? error.message : String(error)}`);
+    }
 }
 
 async function onSave(): Promise<void> {
@@ -41,8 +44,12 @@ async function onSave(): Promise<void> {
     if (!doc) {
         return;
     }
-    await saveDocument(doc);
-    markClean();
+    try {
+        await saveDocument(doc);
+        markClean();
+    } catch (error) {
+        alert(`Failed to save document: ${error instanceof Error ? error.message : String(error)}`);
+    }
 }
 
 function onRenameDocument(): void {
