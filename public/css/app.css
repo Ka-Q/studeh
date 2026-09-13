@@ -2,3 +2,45 @@ body {
     margin: 0;
     font-family: system-ui, sans-serif;
 }
+
+#toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #ccc;
+}
+
+#app {
+    display: flex;
+    height: calc(100vh - 3rem);
+}
+
+#page-sidebar {
+    width: 220px;
+    border-right: 1px solid #ccc;
+    padding: 0.5rem;
+    overflow-y: auto;
+}
+
+#page-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.page-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0;
+}
+
+.page-item.active .page-name {
+    font-weight: bold;
+}
+
+#canvas-area {
+    flex: 1;
+    padding: 1rem;
+}
