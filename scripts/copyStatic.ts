@@ -1,4 +1,4 @@
-import { copyFileSync, cpSync, mkdirSync } from 'node:fs';
+import { copyFileSync, cpSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 const staticFiles = [
@@ -11,4 +11,5 @@ for (const [from, to] of staticFiles) {
     copyFileSync(from, to);
 }
 
+rmSync('public/icons', { recursive: true, force: true });
 cpSync('src/client/icons', 'public/icons', { recursive: true });
