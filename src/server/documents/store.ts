@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { documentsRoot, documentDir, manifestPath, imagesDir, assertValidDocumentId } from './paths.js';
 import { DocumentNotFoundError, InvalidManifestError } from './errors.js';
+import { pruneUnreferencedImages } from './images.js';
 import { MANIFEST_FORMAT, MANIFEST_VERSION, type DocumentManifest, type DocumentSummary } from './types.js';
 
 export async function listDocuments(): Promise<DocumentSummary[]> {
@@ -51,6 +52,7 @@ export async function writeManifest(id: string, manifest: DocumentManifest): Pro
 
     await fs.mkdir(imagesDir(id), { recursive: true });
     await fs.writeFile(manifestPath(id), JSON.stringify(manifest, null, 2), 'utf-8');
+    await pruneUnreferencedImages(id, manifest);
     return manifest;
 }
 
