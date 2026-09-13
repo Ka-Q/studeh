@@ -97,6 +97,16 @@ button {
     mask-image: url('/icons/rename.svg');
 }
 
+.icon-trash {
+    -webkit-mask-image: url('/icons/trash.svg');
+    mask-image: url('/icons/trash.svg');
+}
+
+.icon-image-placeholder {
+    -webkit-mask-image: url('/icons/image-placeholder.svg');
+    mask-image: url('/icons/image-placeholder.svg');
+}
+
 .icon-button {
     padding: var(--space-1);
 }
@@ -180,17 +190,61 @@ dialog {
 
 .page-item {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: var(--space-1);
-    padding: var(--space-1) 0;
+    padding: var(--space-2);
+    border-radius: var(--radius-md);
 }
 
-.page-item .page-name {
+.page-item.active {
+    background: var(--color-surface);
+}
+
+.page-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    border: none;
+    border-radius: 0;
+    background: none;
+    padding: 0;
+    text-align: left;
+}
+
+.page-thumb {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    overflow: hidden;
+}
+
+.page-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.page-thumb .icon {
+    width: 20px;
+    height: 20px;
+    color: var(--color-text-muted);
+}
+
+.page-name {
     font-size: var(--font-size-lg);
 }
 
-.page-item.active .page-name {
-    font-weight: bold;
+.page-actions {
+    display: flex;
+    gap: var(--space-1);
+    padding-left: calc(40px + var(--space-2));
 }
 
 #canvas-area {
