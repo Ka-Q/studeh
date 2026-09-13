@@ -5,6 +5,7 @@ import {
     getState,
     selectShape,
     setPageImage,
+    setPageShapesVisibility,
     subscribe,
     toggleShapeVisibility,
     updateShapeRect
@@ -63,6 +64,9 @@ function showMessage(message: string): void {
 function renderControls(documentId: string, page: Page): void {
     controlsEl.innerHTML = '';
 
+    const leftGroup = document.createElement('div');
+    leftGroup.className = 'stage-controls-left';
+
     const status = document.createElement('span');
     status.textContent = `Active page: ${page.name}`;
 
@@ -79,7 +83,32 @@ function renderControls(documentId: string, page: Page): void {
     });
     label.appendChild(input);
 
-    controlsEl.append(status, label);
+    leftGroup.append(status, label);
+    controlsEl.append(leftGroup);
+
+    if (getState().mode === 'study') {
+        controlsEl.append(buildStudyControls(page));
+    }
+}
+
+function buildStudyControls(page: Page): HTMLElement {
+    const rightGroup = document.createElement('div');
+    rightGroup.className = 'stage-controls-right';
+
+    const hideAllButton = document.createElement('button');
+    hideAllButton.textContent = 'Hide all';
+    hideAllButton.addEventListener('click', function onHideAll() {
+        setPageShapesVisibility(page.id, false);
+    });
+
+    const revealAllButton = document.createElement('button');
+    revealAllButton.textContent = 'Reveal all';
+    revealAllButton.addEventListener('click', function onRevealAll() {
+        setPageShapesVisibility(page.id, true);
+    });
+
+    rightGroup.append(hideAllButton, revealAllButton);
+    return rightGroup;
 }
 
 function renderCanvas(documentId: string, page: Page): void {
