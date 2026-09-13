@@ -61,6 +61,17 @@ body {
 
 .stage-controls {
     flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.stage-controls-left,
+.stage-controls-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .canvas-mount {
