@@ -34,6 +34,11 @@ export async function uploadPageImage(documentId: string, pageId: string, file: 
     });
 }
 
+export function pageImageUrl(documentId: string, image: PageImage): string {
+    const fileName = image.file.split('/').pop();
+    return `${baseUrl}/${documentId}/images/${fileName}`;
+}
+
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
     const response = await fetch(url, init);
     if (!response.ok) {
