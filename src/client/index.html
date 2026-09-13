@@ -8,17 +8,34 @@
 </head>
 <body>
     <header id="toolbar">
-        <button id="btn-new">New</button>
-        <button id="btn-open">Open</button>
-        <button id="btn-save" disabled>Save</button>
-        <span id="doc-title">No document open</span>
-        <button id="btn-rename-document" disabled>Rename</button>
-        <span id="dirty-indicator" hidden>Unsaved changes</span>
-        <span class="mode-toggle">
-            <span id="mode-status">Currently editing</span>
-            <button id="btn-mode-toggle" disabled>Switch to studying</button>
-        </span>
-        <button id="btn-theme-toggle" title="Toggle theme" aria-label="Toggle theme"></button>
+        <div class="toolbar-group">
+            <button id="btn-new">
+                <span class="icon icon-new" aria-hidden="true"></span>
+                <span>New</span>
+            </button>
+            <button id="btn-open">
+                <span class="icon icon-open" aria-hidden="true"></span>
+                <span>Open</span>
+            </button>
+            <button id="btn-save" disabled>
+                <span class="icon icon-save" aria-hidden="true"></span>
+                <span>Save</span>
+            </button>
+        </div>
+        <div id="doc-title-group">
+            <span id="doc-title">No document open</span>
+            <button id="btn-rename-document" class="icon-button" disabled title="Rename document" aria-label="Rename document">
+                <span class="icon icon-rename" aria-hidden="true"></span>
+            </button>
+            <span id="dirty-indicator" hidden>Unsaved changes</span>
+        </div>
+        <div class="toolbar-group toolbar-end">
+            <span class="mode-toggle">
+                <span id="mode-status">Currently editing</span>
+                <button id="btn-mode-toggle" disabled>Switch to studying</button>
+            </span>
+            <button id="btn-theme-toggle" title="Toggle theme" aria-label="Toggle theme"></button>
+        </div>
     </header>
     <div id="app">
         <aside id="page-sidebar">

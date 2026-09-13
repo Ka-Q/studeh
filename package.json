@@ -13,7 +13,7 @@
     "dev": "concurrently -n client,static,server,run -c blue,cyan,green,yellow \"npm:dev:client\" \"npm:dev:static\" \"npm:dev:server\" \"npm:dev:run\"",
     "predev": "npm run build",
     "dev:client": "tsc -p tsconfig.client.json --watch --preserveWatchOutput",
-    "dev:static": "node --watch-path=src/client/index.html --watch-path=src/client/css scripts/copyStatic.ts",
+    "dev:static": "node --watch-path=src/client/index.html --watch-path=src/client/css --watch-path=src/client/icons scripts/copyStatic.ts",
     "dev:server": "tsc -p tsconfig.server.json --watch --preserveWatchOutput",
     "dev:run": "node --watch dist/server/index.js"
   },
