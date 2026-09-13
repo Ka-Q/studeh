@@ -1,8 +1,10 @@
-import type { DocumentManifest, Page, PageImage } from './types.js';
+import type { DocumentManifest, Page, PageImage, RectangleShape } from './types.js';
+import type { Rect } from '../shapes/rectangle.js';
 
 export interface AppState {
     document: DocumentManifest | null;
     activePageId: string | null;
+    selectedShapeId: string | null;
     dirty: boolean;
 }
 
@@ -11,6 +13,7 @@ type Listener = (state: AppState) => void;
 const state: AppState = {
     document: null,
     activePageId: null,
+    selectedShapeId: null,
     dirty: false
 };
 
@@ -27,6 +30,7 @@ export function subscribe(listener: Listener): void {
 export function setDocument(document: DocumentManifest | null): void {
     replaceDocument(document);
     state.activePageId = document?.pages[0]?.id ?? null;
+    state.selectedShapeId = null;
     state.dirty = false;
     notify();
 }
@@ -38,6 +42,7 @@ export function markClean(): void {
 
 export function setActivePage(pageId: string): void {
     state.activePageId = pageId;
+    state.selectedShapeId = null;
     notify();
 }
 
@@ -89,6 +94,7 @@ export function deletePage(pageId: string): void {
     if (state.activePageId === pageId) {
         state.activePageId = state.document.pages[0]?.id ?? null;
     }
+    state.selectedShapeId = null;
     markDirty();
 }
 
@@ -102,6 +108,57 @@ export function setPageImage(pageId: string, image: PageImage): void {
             return page.id === pageId ? { ...page, image } : page;
         })
     });
+    markDirty();
+}
+
+export function addShape(pageId: string, rect: Rect): void {
+    if (!state.document || !findPage(pageId)) {
+        return;
+    }
+    const shape: RectangleShape = {
+        id: generateId('shape'),
+        type: 'rectangle',
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+        visible: false
+    };
+    replaceDocument({
+        ...state.document,
+        pages: state.document.pages.map(function addShapeIfTarget(page) {
+            return page.id === pageId ? { ...page, shapes: [...page.shapes, shape] } : page;
+        })
+    });
+    state.selectedShapeId = shape.id;
+    markDirty();
+}
+
+export function selectShape(shapeId: string | null): void {
+    state.selectedShapeId = shapeId;
+    notify();
+}
+
+export function deleteSelectedShape(): void {
+    if (!state.document || !state.activePageId || !state.selectedShapeId) {
+        return;
+    }
+    const shapeId = state.selectedShapeId;
+    replaceDocument({
+        ...state.document,
+        pages: state.document.pages.map(function deleteShapeIfActivePage(page) {
+            if (page.id !== state.activePageId) {
+                return page;
+            }
+            return {
+                ...page,
+                shapes: page.shapes.filter(function isNotTarget(shape) {
+                    return shape.id !== shapeId;
+                })
+            };
+        })
+    });
+    state.selectedShapeId = null;
     markDirty();
 }
 
