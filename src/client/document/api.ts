@@ -1,4 +1,4 @@
-import type { DocumentManifest, DocumentSummary } from './types.js';
+import type { DocumentManifest, DocumentSummary, PageImage } from './types.js';
 
 const baseUrl = '/api/documents';
 
@@ -23,6 +23,14 @@ export async function saveDocument(manifest: DocumentManifest): Promise<Document
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(manifest)
+    });
+}
+
+export async function uploadPageImage(documentId: string, pageId: string, file: File): Promise<PageImage> {
+    return requestJson<PageImage>(`${baseUrl}/${documentId}/pages/${pageId}/image`, {
+        method: 'POST',
+        headers: { 'Content-Type': file.type },
+        body: file
     });
 }
 

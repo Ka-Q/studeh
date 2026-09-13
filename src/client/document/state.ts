@@ -1,4 +1,4 @@
-import type { DocumentManifest, Page } from './types.js';
+import type { DocumentManifest, Page, PageImage } from './types.js';
 
 export interface AppState {
     document: DocumentManifest | null;
@@ -89,6 +89,19 @@ export function deletePage(pageId: string): void {
     if (state.activePageId === pageId) {
         state.activePageId = state.document.pages[0]?.id ?? null;
     }
+    markDirty();
+}
+
+export function setPageImage(pageId: string, image: PageImage): void {
+    if (!state.document || !findPage(pageId)) {
+        return;
+    }
+    replaceDocument({
+        ...state.document,
+        pages: state.document.pages.map(function setImageIfTarget(page) {
+            return page.id === pageId ? { ...page, image } : page;
+        })
+    });
     markDirty();
 }
 

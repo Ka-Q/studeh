@@ -1,4 +1,6 @@
-import { getActivePage, getState, subscribe } from '../document/state.js';
+import { getActivePage, getState, setPageImage, subscribe } from '../document/state.js';
+import { uploadPageImage } from '../document/api.js';
+import type { Page } from '../document/types.js';
 import { requireElement } from '../dom.js';
 
 export function initStage(): void {
@@ -22,7 +24,37 @@ function render(container: HTMLElement): void {
         return;
     }
 
-    container.textContent = page.image
+    container.innerHTML = '';
+    container.append(renderStatus(page), renderImageInput(doc.id, page));
+}
+
+function renderStatus(page: Page): HTMLParagraphElement {
+    const status = document.createElement('p');
+    status.textContent = page.image
         ? `Active page: ${page.name} (image assigned)`
         : `Active page: ${page.name} (no image yet)`;
+    return status;
+}
+
+function renderImageInput(documentId: string, page: Page): HTMLLabelElement {
+    const label = document.createElement('label');
+    label.textContent = page.image ? 'Replace image: ' : 'Assign image: ';
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg,image/webp,image/gif';
+    input.addEventListener('change', function onFileSelected() {
+        const file = input.files?.[0];
+        if (file) {
+            void assignImage(documentId, page.id, file);
+        }
+    });
+
+    label.appendChild(input);
+    return label;
+}
+
+async function assignImage(documentId: string, pageId: string, file: File): Promise<void> {
+    const image = await uploadPageImage(documentId, pageId, file);
+    setPageImage(pageId, image);
 }

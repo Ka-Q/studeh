@@ -1,8 +1,8 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import type { NextFunction, Request, Response } from 'express';
-import { HttpError } from '../documents/errors.js';
+import { HttpError, InvalidImageUploadError } from '../documents/errors.js';
 import { createDocument, deleteDocument, listDocuments, readManifest, writeManifest } from '../documents/store.js';
-import { serveDocumentImage } from '../documents/images.js';
+import { serveDocumentImage, writePageImage } from '../documents/images.js';
 import type { DocumentManifest } from '../documents/types.js';
 
 export const documentsRouter = Router();
@@ -30,6 +30,19 @@ documentsRouter.delete('/:id', async function handleDelete(req, res) {
 });
 
 documentsRouter.get('/:id/images/:file', serveDocumentImage);
+
+documentsRouter.post(
+    '/:id/pages/:pageId/image',
+    express.raw({ type: 'image/*', limit: '25mb' }),
+    async function handleUploadPageImage(req, res) {
+        if (!Buffer.isBuffer(req.body)) {
+            throw new InvalidImageUploadError('Request body must be image bytes');
+        }
+        const contentType = (req.get('Content-Type') ?? '').split(';')[0].trim();
+        const image = await writePageImage(req.params.id, req.params.pageId, contentType, req.body);
+        res.status(201).json(image);
+    }
+);
 
 documentsRouter.use(function handleDocumentsError(err: unknown, _req: Request, res: Response, _next: NextFunction) {
     if (err instanceof HttpError) {

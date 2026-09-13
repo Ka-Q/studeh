@@ -24,3 +24,15 @@ export class InvalidManifestError extends HttpError {
         super(400, message);
     }
 }
+
+export class InvalidPageIdError extends HttpError {
+    constructor(id: string) {
+        super(400, `Invalid page id: ${id}`);
+    }
+}
+
+export class InvalidImageUploadError extends HttpError {
+    constructor(message: string) {
+        super(400, message);
+    }
+}
