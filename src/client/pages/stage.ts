@@ -1,4 +1,4 @@
-import { getActivePage, getState, setPageImage, subscribe } from '../document/state.js';
+import { addShape, deleteSelectedShape, getActivePage, getState, selectShape, setPageImage, subscribe } from '../document/state.js';
 import { pageImageUrl, uploadPageImage } from '../document/api.js';
 import type { Page } from '../document/types.js';
 import { requireElement } from '../dom.js';
@@ -79,7 +79,10 @@ function renderCanvas(documentId: string, page: Page): void {
         return;
     }
 
+    const { selectedShapeId } = getState();
+
     if (mountedCanvas?.pageId === page.id && mountedCanvas.imageFile === page.image.file) {
+        mountedCanvas.handle.update(page.shapes, selectedShapeId);
         return;
     }
 
@@ -88,7 +91,17 @@ function renderCanvas(documentId: string, page: Page): void {
     mountedCanvas = {
         pageId: page.id,
         imageFile: page.image.file,
-        handle: mountImageCanvas(canvasMount, pageImageUrl(documentId, page.image))
+        handle: mountImageCanvas(canvasMount, pageImageUrl(documentId, page.image), page.shapes, selectedShapeId, {
+            onCreateShape(rect) {
+                addShape(page.id, rect);
+            },
+            onSelectShape(shapeId) {
+                selectShape(shapeId);
+            },
+            onDeleteSelected() {
+                deleteSelectedShape();
+            }
+        })
     };
 }
 
