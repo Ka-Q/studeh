@@ -107,24 +107,20 @@ function renderPageItem(documentId: string, page: Page, isActive: boolean): HTML
     const item = document.createElement('li');
     item.className = isActive ? 'page-item active' : 'page-item';
 
-    const rowButton = document.createElement('button');
-    rowButton.className = 'page-row';
-    rowButton.append(renderThumbnail(documentId, page), renderName(page));
-    rowButton.addEventListener('click', function onSelect() {
-        setActivePage(page.id);
-    });
+    const body = document.createElement('div');
+    body.className = 'page-body';
+    body.append(renderNameButton(page), renderActions(page));
 
-    const actions = document.createElement('div');
-    actions.className = 'page-actions';
-    actions.append(renderRenameButton(page), renderDeleteButton(page));
-
-    item.append(rowButton, actions);
+    item.append(renderThumbnail(documentId, page), body);
     return item;
 }
 
 function renderThumbnail(documentId: string, page: Page): HTMLSpanElement {
     const thumb = document.createElement('span');
     thumb.className = 'page-thumb';
+    thumb.addEventListener('click', function onSelect() {
+        setActivePage(page.id);
+    });
 
     if (page.image) {
         const img = document.createElement('img');
@@ -145,11 +141,24 @@ function renderIcon(className: string): HTMLSpanElement {
     return icon;
 }
 
-function renderName(page: Page): HTMLSpanElement {
-    const name = document.createElement('span');
-    name.className = 'page-name';
-    name.textContent = page.name;
-    return name;
+function renderNameButton(page: Page): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.className = 'page-name';
+    button.textContent = page.name;
+    button.addEventListener('click', function onSelect() {
+        setActivePage(page.id);
+    });
+    return button;
+}
+
+function renderActions(page: Page): HTMLDivElement {
+    const actions = document.createElement('div');
+    actions.className = 'page-actions';
+    actions.addEventListener('click', function onSelect() {
+        setActivePage(page.id);
+    });
+    actions.append(renderRenameButton(page), renderDeleteButton(page));
+    return actions;
 }
 
 function renderRenameButton(page: Page): HTMLButtonElement {
