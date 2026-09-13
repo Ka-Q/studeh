@@ -13,6 +13,7 @@ import {
 import { pageImageUrl, uploadPageImage } from '../document/api.js';
 import type { Page } from '../document/types.js';
 import { requireElement } from '../dom.js';
+import { reportError } from '../errors.js';
 import { mountImageCanvas, type ImageCanvasHandle } from '../canvas/imageCanvas.js';
 
 interface MountedCanvas {
@@ -167,6 +168,6 @@ async function assignImage(documentId: string, pageId: string, file: File): Prom
         const image = await uploadPageImage(documentId, pageId, file);
         setPageImage(pageId, image);
     } catch (error) {
-        alert(`Failed to upload image: ${error instanceof Error ? error.message : String(error)}`);
+        reportError('upload image', error);
     }
 }
