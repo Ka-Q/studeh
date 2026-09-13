@@ -123,6 +123,16 @@ button {
     mask-image: url('/icons/chevron-right.svg');
 }
 
+.icon-fullscreen {
+    -webkit-mask-image: url('/icons/fullscreen.svg');
+    mask-image: url('/icons/fullscreen.svg');
+}
+
+.icon-close {
+    -webkit-mask-image: url('/icons/close.svg');
+    mask-image: url('/icons/close.svg');
+}
+
 .icon-button {
     padding: var(--space-1);
 }
@@ -313,6 +323,7 @@ dialog {
 }
 
 .canvas-mount {
+    position: relative;
     flex: 1;
     min-height: 0;
     border: 1px solid var(--color-border);
@@ -320,9 +331,22 @@ dialog {
     overflow: hidden;
 }
 
+.canvas-body {
+    width: 100%;
+    height: 100%;
+}
+
 .canvas-mount canvas {
     display: block;
     width: 100%;
     height: 100%;
     outline: none;
+}
+
+.fullscreen-close {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    z-index: 1;
+    background: var(--color-surface);
 }

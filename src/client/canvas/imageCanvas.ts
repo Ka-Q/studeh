@@ -28,6 +28,7 @@ type ActiveDrag =
 
 export interface ImageCanvasHandle {
     update(shapes: RectangleShape[], selectedShapeId: string | null, mode: Mode): void;
+    setFullscreen(isFullscreen: boolean): void;
     destroy(): void;
 }
 
@@ -45,6 +46,8 @@ const occlusionFillStyle = 'rgb(121, 122, 123)';
 const occlusionStrokeStyle = 'rgb(213, 35, 35)';
 const revealedFillStyle = 'rgba(242, 242, 242, 0.05)';
 const revealedStrokeStyle = 'rgb(68, 202, 31)';
+const focusOutlineStyle = 'rgb(37, 99, 235)';
+const focusOutlinePaddingPx = 4;
 interface RectStyle {
     fill: string | null;
     stroke: string;
@@ -71,6 +74,7 @@ export function mountImageCanvas(
     initialShapes: RectangleShape[],
     initialSelectedShapeId: string | null,
     initialMode: Mode,
+    initialIsFullscreen: boolean,
     callbacks: ImageCanvasCallbacks
 ): ImageCanvasHandle {
     const canvas = document.createElement('canvas');
@@ -83,6 +87,8 @@ export function mountImageCanvas(
     let shapes = initialShapes;
     let selectedShapeId = initialSelectedShapeId;
     let mode = initialMode;
+    let isFullscreen = initialIsFullscreen;
+    let focusedShapeIndex: number | null = null;
     let stopPanning: (() => void) | null = null;
     let creatingRect: { start: Point; current: Point } | null = null;
     let activeDrag: ActiveDrag | null = null;
@@ -135,9 +141,12 @@ export function mountImageCanvas(
             image.naturalHeight * viewport.zoom
         );
         if (mode === 'study') {
-            for (const shape of shapes) {
+            shapes.forEach(function drawStudyShape(shape, index) {
                 drawRect(shape, shape.visible ? revealedStyle : occlusionStyle, false);
-            }
+                if (isFullscreen && index === focusedShapeIndex) {
+                    drawFocusOutline(shape);
+                }
+            });
             return;
         }
         for (const shape of shapes) {
@@ -193,6 +202,23 @@ export function mountImageCanvas(
             context.fillRect(topLeft.x, topLeft.y, width, height);
         }
         context.strokeRect(topLeft.x, topLeft.y, width, height);
+        context.restore();
+    }
+
+    function drawFocusOutline(rect: Rect): void {
+        const topLeft = imageToCanvas(viewport, { x: rect.x, y: rect.y });
+        const width = rect.width * viewport.zoom;
+        const height = rect.height * viewport.zoom;
+        context.save();
+        context.setLineDash([6, 4]);
+        context.strokeStyle = focusOutlineStyle;
+        context.lineWidth = 3;
+        context.strokeRect(
+            topLeft.x - focusOutlinePaddingPx,
+            topLeft.y - focusOutlinePaddingPx,
+            width + focusOutlinePaddingPx * 2,
+            height + focusOutlinePaddingPx * 2
+        );
         context.restore();
     }
 
@@ -424,7 +450,11 @@ export function mountImageCanvas(
     }
 
     function onKeyDown(event: KeyboardEvent): void {
-        if (mode !== 'edit' || document.activeElement !== canvas || !selectedShapeId) {
+        if (mode === 'study') {
+            onStudyKeyDown(event);
+            return;
+        }
+        if (document.activeElement !== canvas || !selectedShapeId) {
             return;
         }
         if (event.key !== 'Delete' && event.key !== 'Backspace') {
@@ -432,6 +462,22 @@ export function mountImageCanvas(
         }
         event.preventDefault();
         callbacks.onDeleteSelected();
+    }
+
+    function onStudyKeyDown(event: KeyboardEvent): void {
+        if (!isFullscreen || shapes.length === 0) {
+            return;
+        }
+        if (event.key === 'Tab') {
+            event.preventDefault();
+            focusedShapeIndex = cycleFocusedShapeIndex(focusedShapeIndex, event.shiftKey ? -1 : 1, shapes.length);
+            draw();
+            return;
+        }
+        if ((event.key === ' ' || event.key === 'Enter') && focusedShapeIndex !== null) {
+            event.preventDefault();
+            callbacks.onToggleVisibility(shapes[focusedShapeIndex].id);
+        }
     }
 
     function toCanvasPoint(event: MouseEvent): Point {
@@ -449,6 +495,11 @@ export function mountImageCanvas(
             mode = nextMode;
             draw();
         },
+        setFullscreen(nextIsFullscreen: boolean): void {
+            isFullscreen = nextIsFullscreen;
+            focusedShapeIndex = null;
+            draw();
+        },
         destroy(): void {
             stopPanning?.();
             resizeObserver.disconnect();
@@ -461,6 +512,13 @@ export function mountImageCanvas(
             canvas.remove();
         }
     };
+}
+
+function cycleFocusedShapeIndex(current: number | null, direction: 1 | -1, length: number): number {
+    if (current === null) {
+        return direction === 1 ? 0 : length - 1;
+    }
+    return (current + direction + length) % length;
 }
 
 function getContext2d(canvas: HTMLCanvasElement): CanvasRenderingContext2D {

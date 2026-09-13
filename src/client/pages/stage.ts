@@ -15,6 +15,7 @@ import type { Page } from '../document/types.js';
 import { requireElement } from '../dom.js';
 import { reportError } from '../errors.js';
 import { mountImageCanvas, type ImageCanvasHandle } from '../canvas/imageCanvas.js';
+import { initFullscreenControl, requestFullscreen } from '../canvas/fullscreen.js';
 
 interface MountedCanvas {
     pageId: string;
@@ -24,7 +25,9 @@ interface MountedCanvas {
 
 let controlsEl: HTMLDivElement;
 let canvasMount: HTMLDivElement;
+let canvasBody: HTMLDivElement;
 let mountedCanvas: MountedCanvas | null = null;
+let isFullscreen = false;
 
 export function initStage(): void {
     const container = requireElement('canvas-area');
@@ -33,7 +36,15 @@ export function initStage(): void {
     controlsEl.className = 'stage-controls';
     canvasMount = document.createElement('div');
     canvasMount.className = 'canvas-mount';
+    canvasBody = document.createElement('div');
+    canvasBody.className = 'canvas-body';
+    canvasMount.append(canvasBody);
     container.append(controlsEl, canvasMount);
+
+    initFullscreenControl(canvasMount, function onFullscreenChange(nextIsFullscreen) {
+        isFullscreen = nextIsFullscreen;
+        mountedCanvas?.handle.setFullscreen(isFullscreen);
+    });
 
     subscribe(render);
     render();
@@ -59,7 +70,7 @@ function render(): void {
 function showMessage(message: string): void {
     controlsEl.textContent = message;
     unmountCanvas();
-    canvasMount.textContent = '';
+    canvasBody.textContent = '';
 }
 
 function renderControls(documentId: string, page: Page): void {
@@ -108,14 +119,27 @@ function buildStudyControls(page: Page): HTMLElement {
         setPageShapesVisibility(page.id, true);
     });
 
-    rightGroup.append(hideAllButton, revealAllButton);
+    const fullscreenButton = document.createElement('button');
+    fullscreenButton.append(iconSpan('icon-fullscreen'), document.createTextNode('Fullscreen'));
+    fullscreenButton.addEventListener('click', function onFullscreen() {
+        requestFullscreen(canvasMount);
+    });
+
+    rightGroup.append(hideAllButton, revealAllButton, fullscreenButton);
     return rightGroup;
+}
+
+function iconSpan(className: string): HTMLSpanElement {
+    const icon = document.createElement('span');
+    icon.className = `icon ${className}`;
+    icon.setAttribute('aria-hidden', 'true');
+    return icon;
 }
 
 function renderCanvas(documentId: string, page: Page): void {
     if (!page.image) {
         unmountCanvas();
-        canvasMount.textContent = 'No image assigned to this page yet.';
+        canvasBody.textContent = 'No image assigned to this page yet.';
         return;
     }
 
@@ -127,16 +151,17 @@ function renderCanvas(documentId: string, page: Page): void {
     }
 
     unmountCanvas();
-    canvasMount.textContent = '';
+    canvasBody.textContent = '';
     mountedCanvas = {
         pageId: page.id,
         imageFile: page.image.file,
         handle: mountImageCanvas(
-            canvasMount,
+            canvasBody,
             pageImageUrl(documentId, page.image),
             page.shapes,
             selectedShapeId,
             mode,
+            isFullscreen,
             {
                 onCreateShape(rect) {
                     addShape(page.id, rect);
