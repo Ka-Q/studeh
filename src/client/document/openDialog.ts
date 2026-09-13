@@ -17,8 +17,12 @@ export function initOpenDialog(): void {
 }
 
 export async function openDocumentDialog(): Promise<void> {
-    renderDocumentList(await listDocuments());
-    dialog.showModal();
+    try {
+        renderDocumentList(await listDocuments());
+        dialog.showModal();
+    } catch (error) {
+        alert(`Failed to load documents: ${error instanceof Error ? error.message : String(error)}`);
+    }
 }
 
 function renderDocumentList(summaries: DocumentSummary[]): void {
@@ -47,8 +51,12 @@ function renderDocumentItem(summary: DocumentSummary): HTMLLIElement {
         if (!confirmDiscardIfDirty()) {
             return;
         }
-        setDocument(await getDocument(summary.id));
-        dialog.close();
+        try {
+            setDocument(await getDocument(summary.id));
+            dialog.close();
+        } catch (error) {
+            alert(`Failed to open document: ${error instanceof Error ? error.message : String(error)}`);
+        }
     });
 
     item.appendChild(openButton);
