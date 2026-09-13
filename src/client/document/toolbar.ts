@@ -2,6 +2,7 @@ import { createDocument, saveDocument } from './api.js';
 import { confirmDiscardIfDirty, getState, markClean, renameDocument, setDocument, subscribe } from './state.js';
 import { openDocumentDialog } from './openDialog.js';
 import { requireElement } from '../dom.js';
+import { reportError } from '../errors.js';
 
 export function initToolbar(): void {
     const newButton = requireElement('btn-new');
@@ -35,7 +36,7 @@ async function onNew(): Promise<void> {
     try {
         setDocument(await createDocument(name));
     } catch (error) {
-        alert(`Failed to create document: ${error instanceof Error ? error.message : String(error)}`);
+        reportError('create document', error);
     }
 }
 
@@ -48,7 +49,7 @@ async function onSave(): Promise<void> {
         await saveDocument(doc);
         markClean();
     } catch (error) {
-        alert(`Failed to save document: ${error instanceof Error ? error.message : String(error)}`);
+        reportError('save document', error);
     }
 }
 
