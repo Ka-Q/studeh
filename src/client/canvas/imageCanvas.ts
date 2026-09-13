@@ -88,7 +88,7 @@ export function mountImageCanvas(
     let selectedShapeId = initialSelectedShapeId;
     let mode = initialMode;
     let isFullscreen = initialIsFullscreen;
-    let focusedShapeIndex: number | null = null;
+    let focusedShapeId: string | null = null;
     let stopPanning: (() => void) | null = null;
     let creatingRect: { start: Point; current: Point } | null = null;
     let activeDrag: ActiveDrag | null = null;
@@ -102,12 +102,19 @@ export function mountImageCanvas(
     const loadedImage = new Image();
     function onImageLoad(): void {
         image = loadedImage;
+        refitViewport();
+        draw();
+    }
+
+    function refitViewport(): void {
+        if (!image) {
+            return;
+        }
         resizeCanvasToContainer();
         viewport = fitViewport(
-            { width: loadedImage.naturalWidth, height: loadedImage.naturalHeight },
+            { width: image.naturalWidth, height: image.naturalHeight },
             { width: canvas.clientWidth, height: canvas.clientHeight }
         );
-        draw();
     }
     function onImageError(): void {
         container.textContent = 'Failed to load image.';
@@ -141,12 +148,12 @@ export function mountImageCanvas(
             image.naturalHeight * viewport.zoom
         );
         if (mode === 'study') {
-            shapes.forEach(function drawStudyShape(shape, index) {
+            for (const shape of shapes) {
                 drawRect(shape, shape.visible ? revealedStyle : occlusionStyle, false);
-                if (isFullscreen && index === focusedShapeIndex) {
+                if (isFullscreen && shape.id === focusedShapeId) {
                     drawFocusOutline(shape);
                 }
-            });
+            }
             return;
         }
         for (const shape of shapes) {
@@ -470,13 +477,22 @@ export function mountImageCanvas(
         }
         if (event.key === 'Tab') {
             event.preventDefault();
-            focusedShapeIndex = cycleFocusedShapeIndex(focusedShapeIndex, event.shiftKey ? -1 : 1, shapes.length);
+            const ordered = shapesInReadingOrder(shapes);
+            const currentIndex = ordered.findIndex(function isFocused(shape) {
+                return shape.id === focusedShapeId;
+            });
+            const nextIndex = cycleFocusedShapeIndex(
+                currentIndex === -1 ? null : currentIndex,
+                event.shiftKey ? -1 : 1,
+                ordered.length
+            );
+            focusedShapeId = ordered[nextIndex].id;
             draw();
             return;
         }
-        if ((event.key === ' ' || event.key === 'Enter') && focusedShapeIndex !== null) {
+        if ((event.key === ' ' || event.key === 'Enter') && focusedShapeId !== null) {
             event.preventDefault();
-            callbacks.onToggleVisibility(shapes[focusedShapeIndex].id);
+            callbacks.onToggleVisibility(focusedShapeId);
         }
     }
 
@@ -497,7 +513,8 @@ export function mountImageCanvas(
         },
         setFullscreen(nextIsFullscreen: boolean): void {
             isFullscreen = nextIsFullscreen;
-            focusedShapeIndex = null;
+            focusedShapeId = null;
+            refitViewport();
             draw();
         },
         destroy(): void {
@@ -519,6 +536,12 @@ function cycleFocusedShapeIndex(current: number | null, direction: 1 | -1, lengt
         return direction === 1 ? 0 : length - 1;
     }
     return (current + direction + length) % length;
+}
+
+function shapesInReadingOrder(shapes: RectangleShape[]): RectangleShape[] {
+    return [...shapes].sort(function byTopThenLeft(a, b) {
+        return a.y - b.y || a.x - b.x;
+    });
 }
 
 function getContext2d(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
