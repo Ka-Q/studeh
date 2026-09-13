@@ -1,11 +1,14 @@
 import type { DocumentManifest, Page, PageImage, RectangleShape } from './types.js';
 import type { Rect } from '../shapes/rectangle.js';
 
+export type Mode = 'edit' | 'study';
+
 export interface AppState {
     document: DocumentManifest | null;
     activePageId: string | null;
     selectedShapeId: string | null;
     dirty: boolean;
+    mode: Mode;
 }
 
 type Listener = (state: AppState) => void;
@@ -14,7 +17,8 @@ const state: AppState = {
     document: null,
     activePageId: null,
     selectedShapeId: null,
-    dirty: false
+    dirty: false,
+    mode: 'edit'
 };
 
 const listeners = new Set<Listener>();
@@ -148,6 +152,33 @@ export function updateShapeRect(pageId: string, shapeId: string, rect: Rect): vo
                 ...page,
                 shapes: page.shapes.map(function updateShapeIfTarget(shape) {
                     return shape.id === shapeId ? { ...shape, ...rect } : shape;
+                })
+            };
+        })
+    });
+    markDirty();
+}
+
+export function setMode(mode: Mode): void {
+    state.mode = mode;
+    state.selectedShapeId = null;
+    notify();
+}
+
+export function toggleShapeVisibility(pageId: string, shapeId: string): void {
+    if (!state.document || !findPage(pageId)) {
+        return;
+    }
+    replaceDocument({
+        ...state.document,
+        pages: state.document.pages.map(function togglePageIfTarget(page) {
+            if (page.id !== pageId) {
+                return page;
+            }
+            return {
+                ...page,
+                shapes: page.shapes.map(function toggleShapeIfTarget(shape) {
+                    return shape.id === shapeId ? { ...shape, visible: !shape.visible } : shape;
                 })
             };
         })
