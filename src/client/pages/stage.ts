@@ -66,7 +66,7 @@ function renderControls(documentId: string, page: Page): void {
     controlsEl.innerHTML = '';
 
     const leftGroup = document.createElement('div');
-    leftGroup.className = 'stage-controls-left';
+    leftGroup.className = 'flex-row';
 
     const status = document.createElement('span');
     status.textContent = `Active page: ${page.name}`;
@@ -94,7 +94,7 @@ function renderControls(documentId: string, page: Page): void {
 
 function buildStudyControls(page: Page): HTMLElement {
     const rightGroup = document.createElement('div');
-    rightGroup.className = 'stage-controls-right';
+    rightGroup.className = 'flex-row';
 
     const hideAllButton = document.createElement('button');
     hideAllButton.textContent = 'Hide all';
