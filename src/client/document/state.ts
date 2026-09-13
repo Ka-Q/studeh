@@ -36,6 +36,7 @@ export function setDocument(document: DocumentManifest | null): void {
     state.activePageId = document?.pages[0]?.id ?? null;
     state.selectedShapeId = null;
     state.dirty = false;
+    state.mode = 'edit';
     notify();
 }
 

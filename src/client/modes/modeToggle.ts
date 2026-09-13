@@ -15,5 +15,7 @@ export function initModeToggle(): void {
     subscribe(function renderOnChange(state) {
         editButton.classList.toggle('active', state.mode === 'edit');
         studyButton.classList.toggle('active', state.mode === 'study');
+        editButton.toggleAttribute('disabled', !state.document);
+        studyButton.toggleAttribute('disabled', !state.document);
     });
 }
