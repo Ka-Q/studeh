@@ -56,6 +56,7 @@ function initSidebarPanel(): void {
     handle.addEventListener('mousedown', function onDragStart(event) {
         event.preventDefault();
         handle.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
 
         function onDragMove(moveEvent: MouseEvent): void {
             width = clampSidebarWidth(moveEvent.clientX - sidebar.getBoundingClientRect().left);
@@ -66,6 +67,7 @@ function initSidebarPanel(): void {
             document.removeEventListener('mousemove', onDragMove);
             document.removeEventListener('mouseup', onDragEnd);
             handle.classList.remove('dragging');
+            document.body.style.cursor = '';
             localStorage.setItem(WIDTH_STORAGE_KEY, String(width));
         }
 
