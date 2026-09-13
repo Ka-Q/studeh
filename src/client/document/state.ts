@@ -1,6 +1,7 @@
 import { getDocument } from './api.js';
 import type { DocumentManifest, Page, PageImage, RectangleShape } from './types.js';
 import type { Rect } from '../shapes/rectangle.js';
+import { reportError } from '../errors.js';
 
 export type Mode = 'edit' | 'study';
 
@@ -275,7 +276,7 @@ window.addEventListener('popstate', function onPopState() {
     }
     getDocument(id).then(setDocument).catch(function onRestoreError(error) {
         history.replaceState(null, '', state.document ? `/${state.document.id}` : '/');
-        alert(`Failed to open document: ${error instanceof Error ? error.message : String(error)}`);
+        reportError('open document', error);
     });
 });
 

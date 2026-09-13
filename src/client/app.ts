@@ -5,6 +5,7 @@ import { getState, setDocument } from './document/state.js';
 import { initModeToggle } from './modes/modeToggle.js';
 import { initPageSidebar } from './pages/sidebar.js';
 import { initStage } from './pages/stage.js';
+import { reportError } from './errors.js';
 
 function main(): void {
     initOpenDialog();
@@ -28,7 +29,7 @@ async function restoreDocumentFromUrl(): Promise<void> {
         setDocument(document);
     } catch (error) {
         history.replaceState(null, '', '/');
-        alert(`Failed to open document: ${error instanceof Error ? error.message : String(error)}`);
+        reportError('open document', error);
     }
 }
 

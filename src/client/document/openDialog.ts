@@ -2,6 +2,7 @@ import { getDocument, listDocuments } from './api.js';
 import { confirmDiscardIfDirty, setDocument } from './state.js';
 import type { DocumentSummary } from './types.js';
 import { requireElement } from '../dom.js';
+import { reportError } from '../errors.js';
 
 let dialog: HTMLDialogElement;
 let listEl: HTMLElement;
@@ -21,7 +22,7 @@ export async function openDocumentDialog(): Promise<void> {
         renderDocumentList(await listDocuments());
         dialog.showModal();
     } catch (error) {
-        alert(`Failed to load documents: ${error instanceof Error ? error.message : String(error)}`);
+        reportError('load documents', error);
     }
 }
 
@@ -55,7 +56,7 @@ function renderDocumentItem(summary: DocumentSummary): HTMLLIElement {
             setDocument(await getDocument(summary.id));
             dialog.close();
         } catch (error) {
-            alert(`Failed to open document: ${error instanceof Error ? error.message : String(error)}`);
+            reportError('open document', error);
         }
     });
 
