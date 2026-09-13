@@ -41,18 +41,19 @@ const unselectedStrokeStyle = 'rgba(37, 99, 235, 0.9)';
 const unselectedFillStyle = 'rgba(37, 99, 235, 0.15)';
 const selectedStrokeStyle = 'rgba(220, 38, 38, 0.95)';
 const selectedFillStyle = 'rgba(220, 38, 38, 0.2)';
-const occlusionFillStyle = 'rgba(15, 23, 42, 0.92)';
-const occlusionStrokeStyle = 'rgba(15, 23, 42, 0.95)';
-const revealedStrokeStyle = 'rgba(15, 23, 42, 0.35)';
+const occlusionFillStyle = 'rgb(121, 122, 123)';
+const occlusionStrokeStyle = 'rgb(213, 35, 35)';
+const revealedFillStyle = 'rgba(242, 242, 242, 0.05)';
+const revealedStrokeStyle = 'rgb(68, 202, 31)';
 interface RectStyle {
     fill: string | null;
     stroke: string;
     lineWidth: number;
 }
-const unselectedStyle: RectStyle = { fill: unselectedFillStyle, stroke: unselectedStrokeStyle, lineWidth: 1 };
-const selectedStyle: RectStyle = { fill: selectedFillStyle, stroke: selectedStrokeStyle, lineWidth: 2 };
-const occlusionStyle: RectStyle = { fill: occlusionFillStyle, stroke: occlusionStrokeStyle, lineWidth: 1 };
-const revealedStyle: RectStyle = { fill: null, stroke: revealedStrokeStyle, lineWidth: 1 };
+const unselectedStyle: RectStyle = { fill: unselectedFillStyle, stroke: unselectedStrokeStyle, lineWidth: 2 };
+const selectedStyle: RectStyle = { fill: selectedFillStyle, stroke: selectedStrokeStyle, lineWidth: 3 };
+const occlusionStyle: RectStyle = { fill: occlusionFillStyle, stroke: occlusionStrokeStyle, lineWidth: 3 };
+const revealedStyle: RectStyle = { fill: revealedFillStyle, stroke: revealedStrokeStyle, lineWidth: 3 };
 const handleCursors: Record<ResizeHandle, string> = {
     n: 'ns-resize',
     s: 'ns-resize',
