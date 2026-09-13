@@ -39,9 +39,18 @@
     </header>
     <div id="app">
         <aside id="page-sidebar">
+            <div id="sidebar-header">
+                <button id="btn-collapse-sidebar" class="icon-button" title="Collapse sidebar" aria-label="Collapse sidebar">
+                    <span class="icon icon-chevron-left" aria-hidden="true"></span>
+                </button>
+            </div>
             <ul id="page-list"></ul>
             <button id="btn-add-page">Add page</button>
         </aside>
+        <div id="sidebar-resize-handle"></div>
+        <button id="btn-expand-sidebar" class="icon-button" hidden title="Show sidebar" aria-label="Show sidebar">
+            <span class="icon icon-chevron-right" aria-hidden="true"></span>
+        </button>
         <main id="canvas-area">No document open. Use New or Open to get started.</main>
     </div>
     <dialog id="open-dialog">

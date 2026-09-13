@@ -107,6 +107,16 @@ button {
     mask-image: url('/icons/image-placeholder.svg');
 }
 
+.icon-chevron-left {
+    -webkit-mask-image: url('/icons/chevron-left.svg');
+    mask-image: url('/icons/chevron-left.svg');
+}
+
+.icon-chevron-right {
+    -webkit-mask-image: url('/icons/chevron-right.svg');
+    mask-image: url('/icons/chevron-right.svg');
+}
+
 .icon-button {
     padding: var(--space-1);
 }
@@ -114,6 +124,10 @@ button {
 button:disabled {
     cursor: default;
     opacity: 0.5;
+}
+
+button[hidden] {
+    display: none;
 }
 
 button:focus-visible {
@@ -161,13 +175,48 @@ dialog {
     flex: 1;
     min-height: 0;
     display: flex;
+    position: relative;
 }
 
 #page-sidebar {
+    flex: 0 0 auto;
     width: 220px;
     border-right: 1px solid var(--color-border);
     padding: var(--space-2);
     overflow-y: auto;
+}
+
+#page-sidebar.collapsed {
+    width: 0;
+    padding: 0;
+    border-right: none;
+    overflow: hidden;
+}
+
+#sidebar-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: var(--space-1);
+}
+
+#sidebar-resize-handle {
+    flex: 0 0 auto;
+    width: 4px;
+    cursor: col-resize;
+}
+
+#sidebar-resize-handle:hover,
+#sidebar-resize-handle.dragging {
+    background: var(--color-accent);
+}
+
+#btn-expand-sidebar {
+    position: absolute;
+    top: var(--space-2);
+    left: 0;
+    z-index: 1;
+    border-left: none;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
 }
 
 #page-list {

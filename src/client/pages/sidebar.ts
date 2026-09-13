@@ -3,6 +3,12 @@ import { addPage, deletePage, getState, renamePage, setActivePage, subscribe } f
 import type { Page } from '../document/types.js';
 import { requireElement } from '../dom.js';
 
+const MIN_SIDEBAR_WIDTH = 180;
+const MAX_SIDEBAR_WIDTH = 480;
+const DEFAULT_SIDEBAR_WIDTH = 220;
+const WIDTH_STORAGE_KEY = 'studeh:sidebarWidth';
+const COLLAPSED_STORAGE_KEY = 'studeh:sidebarCollapsed';
+
 export function initPageSidebar(): void {
     const listEl = requireElement('page-list');
     const addButton = requireElement('btn-add-page');
@@ -22,6 +28,66 @@ export function initPageSidebar(): void {
         renderPageList(listEl);
     });
     renderPageList(listEl);
+
+    initSidebarPanel();
+}
+
+function initSidebarPanel(): void {
+    const sidebar = requireElement('page-sidebar');
+    const handle = requireElement('sidebar-resize-handle');
+    const collapseButton = requireElement('btn-collapse-sidebar');
+    const expandButton = requireElement('btn-expand-sidebar');
+
+    let width = loadSidebarWidth();
+    let collapsed = localStorage.getItem(COLLAPSED_STORAGE_KEY) === 'true';
+    applySidebarState();
+
+    collapseButton.addEventListener('click', function onCollapse() {
+        collapsed = true;
+        localStorage.setItem(COLLAPSED_STORAGE_KEY, String(collapsed));
+        applySidebarState();
+    });
+    expandButton.addEventListener('click', function onExpand() {
+        collapsed = false;
+        localStorage.setItem(COLLAPSED_STORAGE_KEY, String(collapsed));
+        applySidebarState();
+    });
+
+    handle.addEventListener('mousedown', function onDragStart(event) {
+        event.preventDefault();
+        handle.classList.add('dragging');
+
+        function onDragMove(moveEvent: MouseEvent): void {
+            width = clampSidebarWidth(moveEvent.clientX - sidebar.getBoundingClientRect().left);
+            applySidebarState();
+        }
+
+        function onDragEnd(): void {
+            document.removeEventListener('mousemove', onDragMove);
+            document.removeEventListener('mouseup', onDragEnd);
+            handle.classList.remove('dragging');
+            localStorage.setItem(WIDTH_STORAGE_KEY, String(width));
+        }
+
+        document.addEventListener('mousemove', onDragMove);
+        document.addEventListener('mouseup', onDragEnd);
+    });
+
+    function applySidebarState(): void {
+        sidebar.classList.toggle('collapsed', collapsed);
+        sidebar.style.width = collapsed ? '0px' : `${width}px`;
+        handle.hidden = collapsed;
+        expandButton.hidden = !collapsed;
+    }
+}
+
+function loadSidebarWidth(): number {
+    const stored = Number(localStorage.getItem(WIDTH_STORAGE_KEY));
+    return clampSidebarWidth(stored || DEFAULT_SIDEBAR_WIDTH);
+}
+
+function clampSidebarWidth(width: number): number {
+    return Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, width));
 }
 
 function renderPageList(listEl: HTMLElement): void {
