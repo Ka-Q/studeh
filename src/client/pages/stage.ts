@@ -163,6 +163,10 @@ function unmountCanvas(): void {
 }
 
 async function assignImage(documentId: string, pageId: string, file: File): Promise<void> {
-    const image = await uploadPageImage(documentId, pageId, file);
-    setPageImage(pageId, image);
+    try {
+        const image = await uploadPageImage(documentId, pageId, file);
+        setPageImage(pageId, image);
+    } catch (error) {
+        alert(`Failed to upload image: ${error instanceof Error ? error.message : String(error)}`);
+    }
 }
