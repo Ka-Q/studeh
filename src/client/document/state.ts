@@ -25,7 +25,7 @@ export function subscribe(listener: Listener): void {
 }
 
 export function setDocument(document: DocumentManifest | null): void {
-    state.document = document;
+    replaceDocument(document);
     state.activePageId = document?.pages[0]?.id ?? null;
     state.dirty = false;
     notify();
@@ -58,17 +58,21 @@ export function addPage(name: string): void {
         image: null,
         shapes: []
     };
-    state.document.pages.push(page);
+    replaceDocument({ ...state.document, pages: [...state.document.pages, page] });
     state.activePageId = page.id;
     markDirty();
 }
 
 export function renamePage(pageId: string, name: string): void {
-    const page = findPage(pageId);
-    if (!page) {
+    if (!state.document || !findPage(pageId)) {
         return;
     }
-    page.name = name;
+    replaceDocument({
+        ...state.document,
+        pages: state.document.pages.map(function renameIfTarget(page) {
+            return page.id === pageId ? { ...page, name } : page;
+        })
+    });
     markDirty();
 }
 
@@ -76,8 +80,11 @@ export function deletePage(pageId: string): void {
     if (!state.document) {
         return;
     }
-    state.document.pages = state.document.pages.filter(function isNotTarget(page) {
-        return page.id !== pageId;
+    replaceDocument({
+        ...state.document,
+        pages: state.document.pages.filter(function isNotTarget(page) {
+            return page.id !== pageId;
+        })
     });
     if (state.activePageId === pageId) {
         state.activePageId = state.document.pages[0]?.id ?? null;
@@ -89,7 +96,7 @@ export function renameDocument(name: string): void {
     if (!state.document) {
         return;
     }
-    state.document.name = name;
+    replaceDocument({ ...state.document, name });
     markDirty();
 }
 
@@ -107,7 +114,23 @@ function findPage(pageId: string): Page | null {
 }
 
 function generateId(prefix: string): string {
-    return `${prefix}-${crypto.randomUUID().split('-')[0]}`;
+    return `${prefix}-${crypto.randomUUID().replace(/-/g, '')}`;
+}
+
+function replaceDocument(document: DocumentManifest | null): void {
+    state.document = document && deepFreezeDocument(document);
+}
+
+function deepFreezeDocument(document: DocumentManifest): DocumentManifest {
+    for (const page of document.pages) {
+        for (const shape of page.shapes) {
+            Object.freeze(shape);
+        }
+        Object.freeze(page.shapes);
+        Object.freeze(page);
+    }
+    Object.freeze(document.pages);
+    return Object.freeze(document);
 }
 
 function markDirty(): void {

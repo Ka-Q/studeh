@@ -55,7 +55,7 @@ export async function writeManifest(id: string, manifest: DocumentManifest): Pro
 }
 
 export async function createDocument(name: string): Promise<DocumentManifest> {
-    const id = `doc-${randomUUID().split('-')[0]}`;
+    const id = await generateUniqueDocumentId();
     const manifest: DocumentManifest = {
         format: MANIFEST_FORMAT,
         version: MANIFEST_VERSION,
@@ -77,6 +77,18 @@ export async function deleteDocument(id: string): Promise<void> {
         throw new DocumentNotFoundError(id);
     }
     await fs.rm(dir, { recursive: true, force: true });
+}
+
+async function generateUniqueDocumentId(): Promise<string> {
+    for (let attempt = 0; attempt < 5; attempt++) {
+        const id = `doc-${randomUUID().replace(/-/g, '')}`;
+        try {
+            await fs.access(documentDir(id));
+        } catch {
+            return id;
+        }
+    }
+    throw new Error('Could not generate a unique document id after multiple attempts');
 }
 
 function validateManifestShape(manifest: DocumentManifest, expectedId: string): void {
