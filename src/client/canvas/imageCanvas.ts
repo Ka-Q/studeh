@@ -12,12 +12,14 @@ import {
     type ResizeHandle
 } from '../shapes/rectangle.js';
 import type { RectangleShape } from '../document/types.js';
+import type { Mode } from '../document/state.js';
 
 export interface ImageCanvasCallbacks {
     onCreateShape(rect: Rect): void;
     onSelectShape(shapeId: string | null): void;
     onUpdateShapeRect(shapeId: string, rect: Rect): void;
     onDeleteSelected(): void;
+    onToggleVisibility(shapeId: string): void;
 }
 
 type ActiveDrag =
@@ -25,7 +27,7 @@ type ActiveDrag =
     | { kind: 'resize'; shapeId: string; handle: ResizeHandle; original: Rect; startCanvasPoint: Point; current: Rect };
 
 export interface ImageCanvasHandle {
-    update(shapes: RectangleShape[], selectedShapeId: string | null): void;
+    update(shapes: RectangleShape[], selectedShapeId: string | null, mode: Mode): void;
     destroy(): void;
 }
 
@@ -39,6 +41,18 @@ const unselectedStrokeStyle = 'rgba(37, 99, 235, 0.9)';
 const unselectedFillStyle = 'rgba(37, 99, 235, 0.15)';
 const selectedStrokeStyle = 'rgba(220, 38, 38, 0.95)';
 const selectedFillStyle = 'rgba(220, 38, 38, 0.2)';
+const occlusionFillStyle = 'rgba(15, 23, 42, 0.92)';
+const occlusionStrokeStyle = 'rgba(15, 23, 42, 0.95)';
+const revealedStrokeStyle = 'rgba(15, 23, 42, 0.35)';
+interface RectStyle {
+    fill: string | null;
+    stroke: string;
+    lineWidth: number;
+}
+const unselectedStyle: RectStyle = { fill: unselectedFillStyle, stroke: unselectedStrokeStyle, lineWidth: 1 };
+const selectedStyle: RectStyle = { fill: selectedFillStyle, stroke: selectedStrokeStyle, lineWidth: 2 };
+const occlusionStyle: RectStyle = { fill: occlusionFillStyle, stroke: occlusionStrokeStyle, lineWidth: 1 };
+const revealedStyle: RectStyle = { fill: null, stroke: revealedStrokeStyle, lineWidth: 1 };
 const handleCursors: Record<ResizeHandle, string> = {
     n: 'ns-resize',
     s: 'ns-resize',
@@ -55,6 +69,7 @@ export function mountImageCanvas(
     imageUrl: string,
     initialShapes: RectangleShape[],
     initialSelectedShapeId: string | null,
+    initialMode: Mode,
     callbacks: ImageCanvasCallbacks
 ): ImageCanvasHandle {
     const canvas = document.createElement('canvas');
@@ -66,6 +81,7 @@ export function mountImageCanvas(
     let viewport: Viewport = { zoom: 1, panX: 0, panY: 0 };
     let shapes = initialShapes;
     let selectedShapeId = initialSelectedShapeId;
+    let mode = initialMode;
     let stopPanning: (() => void) | null = null;
     let creatingRect: { start: Point; current: Point } | null = null;
     let activeDrag: ActiveDrag | null = null;
@@ -115,12 +131,18 @@ export function mountImageCanvas(
             image.naturalWidth * viewport.zoom,
             image.naturalHeight * viewport.zoom
         );
+        if (mode === 'study') {
+            for (const shape of shapes) {
+                drawRect(shape, shape.visible ? revealedStyle : occlusionStyle, false);
+            }
+            return;
+        }
         for (const shape of shapes) {
             const rect = activeDrag?.shapeId === shape.id ? activeDrag.current : shape;
-            drawRect(rect, shape.id === selectedShapeId, false);
+            drawRect(rect, shape.id === selectedShapeId ? selectedStyle : unselectedStyle, false);
         }
         if (creatingRect) {
-            drawRect(rectFromPoints(creatingRect.start, creatingRect.current), false, true);
+            drawRect(rectFromPoints(creatingRect.start, creatingRect.current), unselectedStyle, true);
         }
         const selectedRect = selectedShapeRect();
         if (selectedRect) {
@@ -153,7 +175,7 @@ export function mountImageCanvas(
         }
     }
 
-    function drawRect(rect: Rect, isSelected: boolean, isPreview: boolean): void {
+    function drawRect(rect: Rect, style: RectStyle, isPreview: boolean): void {
         const topLeft = isPreview ? rect : imageToCanvas(viewport, { x: rect.x, y: rect.y });
         const width = isPreview ? rect.width : rect.width * viewport.zoom;
         const height = isPreview ? rect.height : rect.height * viewport.zoom;
@@ -161,10 +183,10 @@ export function mountImageCanvas(
         if (isPreview) {
             context.setLineDash([4, 4]);
         }
-        context.fillStyle = isSelected ? selectedFillStyle : unselectedFillStyle;
-        context.strokeStyle = isSelected ? selectedStrokeStyle : unselectedStrokeStyle;
-        context.lineWidth = isSelected ? 2 : 1;
-        if (!isPreview) {
+        context.strokeStyle = style.stroke;
+        context.lineWidth = style.lineWidth;
+        if (!isPreview && style.fill) {
+            context.fillStyle = style.fill;
             context.fillRect(topLeft.x, topLeft.y, width, height);
         }
         context.strokeRect(topLeft.x, topLeft.y, width, height);
@@ -195,6 +217,14 @@ export function mountImageCanvas(
         canvas.focus();
         const canvasPoint = toCanvasPoint(event);
 
+        if (mode === 'study') {
+            const hitShape = topmostShapeAt(canvasToImage(viewport, canvasPoint), shapes);
+            if (hitShape) {
+                callbacks.onToggleVisibility(hitShape.id);
+            }
+            return;
+        }
+
         const selectedShape = findShape(selectedShapeId);
         const handle = selectedShape ? handleAtCanvasPoint(selectedShape, canvasPoint) : null;
         if (selectedShape && handle) {
@@ -218,6 +248,13 @@ export function mountImageCanvas(
             return;
         }
         const canvasPoint = toCanvasPoint(event);
+
+        if (mode === 'study') {
+            const hitShape = topmostShapeAt(canvasToImage(viewport, canvasPoint), shapes);
+            canvas.style.cursor = hitShape ? 'pointer' : 'default';
+            return;
+        }
+
         const selectedShape = findShape(selectedShapeId);
         const handle = selectedShape ? handleAtCanvasPoint(selectedShape, canvasPoint) : null;
         if (handle) {
@@ -384,7 +421,7 @@ export function mountImageCanvas(
     }
 
     function onKeyDown(event: KeyboardEvent): void {
-        if (document.activeElement !== canvas || !selectedShapeId) {
+        if (mode !== 'edit' || document.activeElement !== canvas || !selectedShapeId) {
             return;
         }
         if (event.key !== 'Delete' && event.key !== 'Backspace') {
@@ -400,9 +437,10 @@ export function mountImageCanvas(
     }
 
     return {
-        update(nextShapes: RectangleShape[], nextSelectedShapeId: string | null): void {
+        update(nextShapes: RectangleShape[], nextSelectedShapeId: string | null, nextMode: Mode): void {
             shapes = nextShapes;
             selectedShapeId = nextSelectedShapeId;
+            mode = nextMode;
             draw();
         },
         destroy(): void {
