@@ -6,6 +6,7 @@ import { initModeToggle } from './modes/modeToggle.js';
 import { initPageSidebar } from './pages/sidebar.js';
 import { initStage } from './pages/stage.js';
 import { initTheme } from './theme.js';
+import { initKeyboardNav } from './keyboardNav.js';
 import { reportError } from './errors.js';
 
 function main(): void {
@@ -15,6 +16,7 @@ function main(): void {
     initModeToggle();
     initPageSidebar();
     initStage();
+    initKeyboardNav();
     restoreDocumentFromUrl();
 }
 
