@@ -5,9 +5,11 @@ import { getState, setDocument } from './document/state.js';
 import { initModeToggle } from './modes/modeToggle.js';
 import { initPageSidebar } from './pages/sidebar.js';
 import { initStage } from './pages/stage.js';
+import { initTheme } from './theme.js';
 import { reportError } from './errors.js';
 
 function main(): void {
+    initTheme();
     initOpenDialog();
     initToolbar();
     initModeToggle();
