@@ -145,6 +145,7 @@ function renderNameButton(page: Page): HTMLButtonElement {
     const button = document.createElement('button');
     button.className = 'page-name';
     button.textContent = page.name;
+    button.title = page.name;
     button.addEventListener('click', function onSelect() {
         setActivePage(page.id);
     });
