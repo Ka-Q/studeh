@@ -8,7 +8,7 @@
 </head>
 <body>
     <header id="toolbar">
-        <div class="toolbar-group">
+        <div class="flex-row">
             <button id="btn-new">
                 <span class="icon icon-new" aria-hidden="true"></span>
                 <span>New</span>
@@ -22,15 +22,15 @@
                 <span>Save</span>
             </button>
         </div>
-        <div id="doc-title-group">
+        <div id="doc-title-group" class="flex-row">
             <span id="doc-title">No document open</span>
             <button id="btn-rename-document" class="icon-button" disabled title="Rename document" aria-label="Rename document">
                 <span class="icon icon-rename" aria-hidden="true"></span>
             </button>
             <span id="dirty-indicator" hidden>Unsaved changes</span>
         </div>
-        <div class="toolbar-group toolbar-end">
-            <span class="mode-toggle">
+        <div class="flex-row toolbar-end">
+            <span class="flex-row">
                 <span id="mode-status">Currently editing</span>
                 <button id="btn-mode-toggle" disabled>Switch to studying</button>
             </span>
