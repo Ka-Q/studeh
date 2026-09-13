@@ -13,7 +13,11 @@ app.use(express.json());
 app.use(express.static(publicDir));
 app.use('/api/documents', documentsRouter);
 
-app.get(/^\/(?!api\/).*/, function serveIndexHtml(_req, res) {
+app.get(/^\/(?!api\/).*/, function serveIndexHtml(req, res, next) {
+    if (path.extname(req.path)) {
+        next();
+        return;
+    }
     res.sendFile(path.join(publicDir, 'index.html'));
 });
 
