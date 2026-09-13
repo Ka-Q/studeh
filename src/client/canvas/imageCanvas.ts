@@ -441,6 +441,9 @@ export function mountImageCanvas(
         update(nextShapes: RectangleShape[], nextSelectedShapeId: string | null, nextMode: Mode): void {
             shapes = nextShapes;
             selectedShapeId = nextSelectedShapeId;
+            if (mode !== nextMode) {
+                canvas.style.cursor = 'default';
+            }
             mode = nextMode;
             draw();
         },
