@@ -94,7 +94,7 @@ export function mountImageCanvas(
     resizeObserver.observe(container);
 
     const loadedImage = new Image();
-    loadedImage.addEventListener('load', function onImageLoad() {
+    function onImageLoad(): void {
         image = loadedImage;
         resizeCanvasToContainer();
         viewport = fitViewport(
@@ -102,10 +102,12 @@ export function mountImageCanvas(
             { width: canvas.clientWidth, height: canvas.clientHeight }
         );
         draw();
-    });
-    loadedImage.addEventListener('error', function onImageError() {
+    }
+    function onImageError(): void {
         container.textContent = 'Failed to load image.';
-    });
+    }
+    loadedImage.addEventListener('load', onImageLoad);
+    loadedImage.addEventListener('error', onImageError);
     loadedImage.src = imageUrl;
 
     canvas.addEventListener('wheel', onWheel, { passive: false });
@@ -450,6 +452,8 @@ export function mountImageCanvas(
         destroy(): void {
             stopPanning?.();
             resizeObserver.disconnect();
+            loadedImage.removeEventListener('load', onImageLoad);
+            loadedImage.removeEventListener('error', onImageError);
             canvas.removeEventListener('wheel', onWheel);
             canvas.removeEventListener('mousedown', onMouseDown);
             canvas.removeEventListener('mousemove', onHoverMove);
