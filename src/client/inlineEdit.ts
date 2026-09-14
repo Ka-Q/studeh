@@ -1,4 +1,5 @@
 const MAX_NAME_LENGTH = 100;
+const MIN_INPUT_WIDTH = 24;
 
 let measureMirror: HTMLSpanElement | null = null;
 
@@ -37,13 +38,13 @@ export function startInlineEdit(
 
     const input = document.createElement('input');
     input.type = 'text';
-    input.className = 'inline-edit';
-    input.style.fontSize = displayStyle.fontSize;
+    input.id = display.id;
+    input.className = display.className ? `${display.className} inline-edit` : 'inline-edit';
     input.value = currentValue;
     input.maxLength = MAX_NAME_LENGTH;
 
     function resizeToContent(): void {
-        input.style.width = `${measureTextWidth(input.value, font)}px`;
+        input.style.width = `${Math.max(MIN_INPUT_WIDTH, measureTextWidth(input.value, font))}px`;
     }
 
     resizeToContent();
