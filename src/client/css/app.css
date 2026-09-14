@@ -108,6 +108,16 @@ button {
     mask-image: url('/icons/trash.svg');
 }
 
+.icon-move-up {
+    -webkit-mask-image: url('/icons/move-up.svg');
+    mask-image: url('/icons/move-up.svg');
+}
+
+.icon-move-down {
+    -webkit-mask-image: url('/icons/move-down.svg');
+    mask-image: url('/icons/move-down.svg');
+}
+
 .icon-image-placeholder {
     -webkit-mask-image: url('/icons/image-placeholder.svg');
     mask-image: url('/icons/image-placeholder.svg');
