@@ -106,6 +106,24 @@ export function deletePage(pageId: string): void {
     markDirty();
 }
 
+export function movePage(pageId: string, direction: -1 | 1): void {
+    if (!state.document) {
+        return;
+    }
+    const pages = state.document.pages;
+    const index = pages.findIndex(function matchesId(page) {
+        return page.id === pageId;
+    });
+    const targetIndex = index + direction;
+    if (index === -1 || targetIndex < 0 || targetIndex >= pages.length) {
+        return;
+    }
+    const reordered = [...pages];
+    [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+    replaceDocument({ ...state.document, pages: reordered });
+    markDirty();
+}
+
 export function setPageImage(pageId: string, image: PageImage): void {
     if (!state.document || !findPage(pageId)) {
         return;

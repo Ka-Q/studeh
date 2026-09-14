@@ -1,5 +1,5 @@
 import { pageImageUrl } from '../document/api.js';
-import { addPage, deletePage, getState, renamePage, setActivePage, subscribe } from '../document/state.js';
+import { addPage, deletePage, getState, movePage, renamePage, setActivePage, subscribe } from '../document/state.js';
 import type { Page } from '../document/types.js';
 import { requireElement } from '../dom.js';
 
@@ -100,12 +100,21 @@ function renderPageList(listEl: HTMLElement): void {
         return;
     }
 
-    for (const page of doc.pages) {
-        listEl.appendChild(renderPageItem(doc.id, page, page.id === activePageId));
-    }
+    doc.pages.forEach(function renderItem(page, index) {
+        const isActive = page.id === activePageId;
+        const isFirst = index === 0;
+        const isLast = index === doc.pages.length - 1;
+        listEl.appendChild(renderPageItem(doc.id, page, isActive, isFirst, isLast));
+    });
 }
 
-function renderPageItem(documentId: string, page: Page, isActive: boolean): HTMLLIElement {
+function renderPageItem(
+    documentId: string,
+    page: Page,
+    isActive: boolean,
+    isFirst: boolean,
+    isLast: boolean
+): HTMLLIElement {
     const item = document.createElement('li');
     item.className = isActive ? 'page-item active' : 'page-item';
     item.addEventListener('click', function onSelect() {
@@ -114,7 +123,7 @@ function renderPageItem(documentId: string, page: Page, isActive: boolean): HTML
 
     const body = document.createElement('div');
     body.className = 'page-body';
-    body.append(renderNameButton(page), renderActions(page));
+    body.append(renderNameButton(page), renderActions(page, isFirst, isLast));
 
     item.append(renderThumbnail(documentId, page), body);
     return item;
@@ -151,11 +160,36 @@ function renderNameButton(page: Page): HTMLButtonElement {
     return button;
 }
 
-function renderActions(page: Page): HTMLDivElement {
+function renderActions(page: Page, isFirst: boolean, isLast: boolean): HTMLDivElement {
     const actions = document.createElement('div');
     actions.className = 'page-actions';
-    actions.append(renderRenameButton(page), renderDeleteButton(page));
+    actions.append(
+        renderMoveButton(page, -1, 'Move page up', 'icon-move-up', isFirst),
+        renderMoveButton(page, 1, 'Move page down', 'icon-move-down', isLast),
+        renderRenameButton(page),
+        renderDeleteButton(page)
+    );
     return actions;
+}
+
+function renderMoveButton(
+    page: Page,
+    direction: -1 | 1,
+    label: string,
+    iconClass: string,
+    disabled: boolean
+): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.className = 'icon-button';
+    button.title = label;
+    button.setAttribute('aria-label', label);
+    button.disabled = disabled;
+    button.appendChild(renderIcon(iconClass));
+    button.addEventListener('click', function onMove(event) {
+        event.stopPropagation();
+        movePage(page.id, direction);
+    });
+    return button;
 }
 
 function renderRenameButton(page: Page): HTMLButtonElement {
