@@ -5,3 +5,11 @@ export function requireElement(id: string): HTMLElement {
     }
     return element;
 }
+
+export function closeOnBackdropClick(dialog: HTMLDialogElement): void {
+    dialog.addEventListener('click', function onBackdropClick(event) {
+        if (event.target === dialog) {
+            dialog.close();
+        }
+    });
+}

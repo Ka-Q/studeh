@@ -1,7 +1,8 @@
 import { deleteDocument, getDocument, listDocuments } from './api.js';
 import { confirmDiscardIfDirty, getState, setDocument } from './state.js';
 import type { DocumentSummary } from './types.js';
-import { requireElement } from '../dom.js';
+import { confirmDialog } from '../dialogs/confirmDialog.js';
+import { closeOnBackdropClick, requireElement } from '../dom.js';
 import { reportError } from '../errors.js';
 
 type SortMode = 'updatedAt' | 'name';
@@ -27,11 +28,7 @@ export function initOpenDialog(): void {
         dialog.close();
     });
 
-    dialog.addEventListener('click', function onBackdropClick(event) {
-        if (event.target === dialog) {
-            dialog.close();
-        }
-    });
+    closeOnBackdropClick(dialog);
 
     sortButton.addEventListener('click', function onToggleSort() {
         sortMode = sortMode === 'updatedAt' ? 'name' : 'updatedAt';
@@ -130,7 +127,11 @@ function renderDeleteButton(summary: DocumentSummary): HTMLButtonElement {
     button.setAttribute('aria-label', 'Delete document');
     button.appendChild(renderIcon('icon-trash'));
     button.addEventListener('click', async function onDelete() {
-        if (!confirm(`Delete "${summary.name}"? This cannot be undone.`)) {
+        const confirmed = await confirmDialog({
+            title: 'Delete document',
+            message: `Delete "${summary.name}"? This cannot be undone.`
+        });
+        if (!confirmed) {
             return;
         }
         try {

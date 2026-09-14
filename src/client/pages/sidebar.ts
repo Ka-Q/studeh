@@ -1,6 +1,7 @@
 import { pageImageUrl } from '../document/api.js';
 import { addPage, deletePage, getState, movePage, renamePage, setActivePage, subscribe } from '../document/state.js';
 import type { Page } from '../document/types.js';
+import { confirmDialog } from '../dialogs/confirmDialog.js';
 import { requireElement } from '../dom.js';
 import { startInlineEdit } from '../inlineEdit.js';
 
@@ -232,11 +233,17 @@ function renderDeleteButton(page: Page): HTMLButtonElement {
     button.title = 'Delete page';
     button.setAttribute('aria-label', 'Delete page');
     button.appendChild(renderIcon('icon-trash'));
-    button.addEventListener('click', function onDelete(event) {
+    button.addEventListener('click', async function onDelete(event) {
         event.stopPropagation();
         const hasContent = page.image !== null || page.shapes.length > 0;
-        if (hasContent && !confirm(`Delete page "${page.name}"? This page has content.`)) {
-            return;
+        if (hasContent) {
+            const confirmed = await confirmDialog({
+                title: 'Delete page',
+                message: `Delete page "${page.name}"? This page has content.`
+            });
+            if (!confirmed) {
+                return;
+            }
         }
         deletePage(page.id);
     });

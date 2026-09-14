@@ -2,6 +2,7 @@ import { getDocument } from './document/api.js';
 import { initToolbar } from './document/toolbar.js';
 import { initOpenDialog } from './document/openDialog.js';
 import { getState, setDocument } from './document/state.js';
+import { initConfirmDialog } from './dialogs/confirmDialog.js';
 import { initModeToggle } from './modes/modeToggle.js';
 import { initPageSidebar } from './pages/sidebar.js';
 import { initStage } from './pages/stage.js';
@@ -11,6 +12,7 @@ import { reportError } from './errors.js';
 
 function main(): void {
     initTheme();
+    initConfirmDialog();
     initOpenDialog();
     initToolbar();
     initModeToggle();
