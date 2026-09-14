@@ -22,6 +22,7 @@ export function initToolbar(): void {
 
     subscribe(function renderOnChange(state) {
         titleEl.textContent = state.document?.name ?? 'No document open';
+        titleEl.title = state.document?.name ?? '';
         dirtyEl.hidden = !state.dirty;
         saveButton.toggleAttribute('disabled', !state.document);
         renameButton.toggleAttribute('disabled', !state.document);
