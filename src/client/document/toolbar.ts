@@ -3,6 +3,7 @@ import { confirmDiscardIfDirty, getState, markClean, renameDocument, setDocument
 import { openDocumentDialog } from './openDialog.js';
 import { requireElement } from '../dom.js';
 import { reportError } from '../errors.js';
+import { startInlineEdit } from '../inlineEdit.js';
 
 export function initToolbar(): void {
     const newButton = requireElement('btn-new');
@@ -15,7 +16,9 @@ export function initToolbar(): void {
     newButton.addEventListener('click', onNew);
     openButton.addEventListener('click', openDocumentDialog);
     saveButton.addEventListener('click', onSave);
-    renameButton.addEventListener('click', onRenameDocument);
+    renameButton.addEventListener('click', function onRename() {
+        onRenameDocument(titleEl);
+    });
 
     subscribe(function renderOnChange(state) {
         titleEl.textContent = state.document?.name ?? 'No document open';
@@ -53,13 +56,15 @@ async function onSave(): Promise<void> {
     }
 }
 
-function onRenameDocument(): void {
+function onRenameDocument(titleEl: HTMLElement): void {
     const doc = getState().document;
     if (!doc) {
         return;
     }
-    const name = prompt('Rename document', doc.name);
-    if (name) {
-        renameDocument(name);
-    }
+    const documentId = doc.id;
+    startInlineEdit(titleEl, doc.name, function onCommit(name) {
+        if (getState().document?.id === documentId) {
+            renameDocument(name);
+        }
+    });
 }

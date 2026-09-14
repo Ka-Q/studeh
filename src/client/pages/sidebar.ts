@@ -2,12 +2,15 @@ import { pageImageUrl } from '../document/api.js';
 import { addPage, deletePage, getState, movePage, renamePage, setActivePage, subscribe } from '../document/state.js';
 import type { Page } from '../document/types.js';
 import { requireElement } from '../dom.js';
+import { startInlineEdit } from '../inlineEdit.js';
 
 const MIN_SIDEBAR_WIDTH = 180;
 const MAX_SIDEBAR_WIDTH = 480;
 const DEFAULT_SIDEBAR_WIDTH = 220;
 const WIDTH_STORAGE_KEY = 'studeh:sidebarWidth';
 const COLLAPSED_STORAGE_KEY = 'studeh:sidebarCollapsed';
+
+let pendingAutoRename = false;
 
 export function initPageSidebar(): void {
     const listEl = requireElement('page-list');
@@ -18,10 +21,8 @@ export function initPageSidebar(): void {
         if (!doc) {
             return;
         }
-        const name = prompt('Page name', `Page ${doc.pages.length + 1}`);
-        if (name) {
-            addPage(name);
-        }
+        pendingAutoRename = true;
+        addPage(`Page ${doc.pages.length + 1}`);
     });
 
     subscribe(function renderOnChange() {
@@ -97,6 +98,7 @@ function renderPageList(listEl: HTMLElement): void {
     listEl.innerHTML = '';
 
     if (!doc) {
+        pendingAutoRename = false;
         return;
     }
 
@@ -106,6 +108,17 @@ function renderPageList(listEl: HTMLElement): void {
         const isLast = index === doc.pages.length - 1;
         listEl.appendChild(renderPageItem(doc.id, page, isActive, isFirst, isLast));
     });
+
+    if (pendingAutoRename) {
+        pendingAutoRename = false;
+        const activePage = doc.pages.find(function matchesActive(page) {
+            return page.id === activePageId;
+        });
+        const nameButton = listEl.querySelector(`[data-page-id="${activePageId}"] .page-name`);
+        if (activePage && nameButton instanceof HTMLElement) {
+            startPageRename(activePage, nameButton);
+        }
+    }
 }
 
 function renderPageItem(
@@ -117,13 +130,15 @@ function renderPageItem(
 ): HTMLLIElement {
     const item = document.createElement('li');
     item.className = isActive ? 'page-item active' : 'page-item';
+    item.dataset.pageId = page.id;
     item.addEventListener('click', function onSelect() {
         setActivePage(page.id);
     });
 
+    const nameButton = renderNameButton(page);
     const body = document.createElement('div');
     body.className = 'page-body';
-    body.append(renderNameButton(page), renderActions(page, isFirst, isLast));
+    body.append(nameButton, renderActions(page, isFirst, isLast, nameButton));
 
     item.append(renderThumbnail(documentId, page), body);
     return item;
@@ -160,13 +175,13 @@ function renderNameButton(page: Page): HTMLButtonElement {
     return button;
 }
 
-function renderActions(page: Page, isFirst: boolean, isLast: boolean): HTMLDivElement {
+function renderActions(page: Page, isFirst: boolean, isLast: boolean, nameButton: HTMLElement): HTMLDivElement {
     const actions = document.createElement('div');
     actions.className = 'page-actions';
     actions.append(
         renderMoveButton(page, -1, 'Move page up', 'icon-move-up', isFirst),
         renderMoveButton(page, 1, 'Move page down', 'icon-move-down', isLast),
-        renderRenameButton(page),
+        renderRenameButton(page, nameButton),
         renderDeleteButton(page)
     );
     return actions;
@@ -192,7 +207,7 @@ function renderMoveButton(
     return button;
 }
 
-function renderRenameButton(page: Page): HTMLButtonElement {
+function renderRenameButton(page: Page, nameButton: HTMLElement): HTMLButtonElement {
     const button = document.createElement('button');
     button.className = 'icon-button';
     button.title = 'Rename page';
@@ -200,12 +215,15 @@ function renderRenameButton(page: Page): HTMLButtonElement {
     button.appendChild(renderIcon('icon-rename'));
     button.addEventListener('click', function onRename(event) {
         event.stopPropagation();
-        const name = prompt('Rename page', page.name);
-        if (name) {
-            renamePage(page.id, name);
-        }
+        startPageRename(page, nameButton);
     });
     return button;
+}
+
+function startPageRename(page: Page, nameButton: HTMLElement): void {
+    startInlineEdit(nameButton, page.name, function onCommit(name) {
+        renamePage(page.id, name);
+    });
 }
 
 function renderDeleteButton(page: Page): HTMLButtonElement {
