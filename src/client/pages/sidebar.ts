@@ -114,9 +114,9 @@ function renderPageList(listEl: HTMLElement): void {
         const activePage = doc.pages.find(function matchesActive(page) {
             return page.id === activePageId;
         });
-        const nameButton = listEl.querySelector(`[data-page-id="${activePageId}"] .page-name`);
-        if (activePage && nameButton instanceof HTMLElement) {
-            startPageRename(activePage, nameButton);
+        const nameEl = listEl.querySelector(`[data-page-id="${activePageId}"] .page-name`);
+        if (activePage && nameEl instanceof HTMLElement) {
+            startPageRename(activePage, nameEl);
         }
     }
 }
@@ -135,10 +135,10 @@ function renderPageItem(
         setActivePage(page.id);
     });
 
-    const nameButton = renderNameButton(page);
+    const nameEl = renderPageName(page);
     const body = document.createElement('div');
     body.className = 'page-body';
-    body.append(nameButton, renderActions(page, isFirst, isLast, nameButton));
+    body.append(nameEl, renderActions(page, isFirst, isLast, nameEl));
 
     item.append(renderThumbnail(documentId, page), body);
     return item;
@@ -167,21 +167,21 @@ function renderIcon(className: string): HTMLSpanElement {
     return icon;
 }
 
-function renderNameButton(page: Page): HTMLButtonElement {
-    const button = document.createElement('button');
-    button.className = 'page-name';
-    button.textContent = page.name;
-    button.title = page.name;
-    return button;
+function renderPageName(page: Page): HTMLSpanElement {
+    const name = document.createElement('span');
+    name.className = 'page-name';
+    name.textContent = page.name;
+    name.title = page.name;
+    return name;
 }
 
-function renderActions(page: Page, isFirst: boolean, isLast: boolean, nameButton: HTMLElement): HTMLDivElement {
+function renderActions(page: Page, isFirst: boolean, isLast: boolean, nameEl: HTMLElement): HTMLDivElement {
     const actions = document.createElement('div');
     actions.className = 'page-actions';
     actions.append(
         renderMoveButton(page, -1, 'Move page up', 'icon-move-up', isFirst),
         renderMoveButton(page, 1, 'Move page down', 'icon-move-down', isLast),
-        renderRenameButton(page, nameButton),
+        renderRenameButton(page, nameEl),
         renderDeleteButton(page)
     );
     return actions;
@@ -207,7 +207,7 @@ function renderMoveButton(
     return button;
 }
 
-function renderRenameButton(page: Page, nameButton: HTMLElement): HTMLButtonElement {
+function renderRenameButton(page: Page, nameEl: HTMLElement): HTMLButtonElement {
     const button = document.createElement('button');
     button.className = 'icon-button';
     button.title = 'Rename page';
@@ -215,13 +215,13 @@ function renderRenameButton(page: Page, nameButton: HTMLElement): HTMLButtonElem
     button.appendChild(renderIcon('icon-rename'));
     button.addEventListener('click', function onRename(event) {
         event.stopPropagation();
-        startPageRename(page, nameButton);
+        startPageRename(page, nameEl);
     });
     return button;
 }
 
-function startPageRename(page: Page, nameButton: HTMLElement): void {
-    startInlineEdit(nameButton, page.name, function onCommit(name) {
+function startPageRename(page: Page, nameEl: HTMLElement): void {
+    startInlineEdit(nameEl, page.name, function onCommit(name) {
         renamePage(page.id, name);
     });
 }
