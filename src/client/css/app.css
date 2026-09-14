@@ -23,6 +23,7 @@
     --color-accent-text: #ffffff;
     --color-danger: #dc2626;
     --color-focus-ring: #2563eb;
+    --color-surface-hover: #e8e8e8;
 }
 
 [data-theme='dark'] {
@@ -35,6 +36,7 @@
     --color-accent-text: #ffffff;
     --color-danger: #ef4444;
     --color-focus-ring: #60a5fa;
+    --color-surface-hover: #323232;
 }
 
 *,
@@ -68,6 +70,10 @@ button {
     padding: var(--space-1) var(--space-3);
     background: var(--color-surface);
     cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+    background: var(--color-surface-hover);
 }
 
 .icon {
@@ -181,15 +187,16 @@ dialog {
 .inline-edit {
     font: inherit;
     color: inherit;
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    padding: 0 var(--space-1);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid transparent;
+    border-radius: 0;
+    padding: 0;
 }
 
 .inline-edit:focus-visible {
-    outline: 2px solid var(--color-focus-ring);
-    outline-offset: 1px;
+    outline: none;
+    border-bottom-color: var(--color-focus-ring);
 }
 
 .flex-row {
@@ -274,6 +281,13 @@ dialog {
     padding: 0;
 }
 
+#btn-add-page {
+    display: block;
+    margin-top: var(--space-1);
+    width: 100%;
+    text-align: center;
+}
+
 .page-item {
     display: flex;
     align-items: stretch;
@@ -353,6 +367,7 @@ dialog {
     align-items: center;
     justify-content: space-between;
     gap: var(--space-2);
+    min-height: 32px;
 }
 
 .canvas-mount {

@@ -4,7 +4,7 @@ import type { Page } from '../document/types.js';
 import { requireElement } from '../dom.js';
 import { startInlineEdit } from '../inlineEdit.js';
 
-const MIN_SIDEBAR_WIDTH = 180;
+const MIN_SIDEBAR_WIDTH = 200;
 const MAX_SIDEBAR_WIDTH = 480;
 const DEFAULT_SIDEBAR_WIDTH = 220;
 const WIDTH_STORAGE_KEY = 'studeh:sidebarWidth';
