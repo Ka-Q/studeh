@@ -26,6 +26,10 @@ export async function saveDocument(manifest: DocumentManifest): Promise<Document
     });
 }
 
+export async function deleteDocument(id: string): Promise<void> {
+    return requestJson<void>(`${baseUrl}/${id}`, { method: 'DELETE' });
+}
+
 export async function uploadPageImage(documentId: string, pageId: string, file: File): Promise<PageImage> {
     return requestJson<PageImage>(`${baseUrl}/${documentId}/pages/${pageId}/image`, {
         method: 'POST',

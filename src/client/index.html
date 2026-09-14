@@ -56,9 +56,15 @@
         <main id="canvas-area">No document open. Use New or Open to get started.</main>
     </div>
     <dialog id="open-dialog">
-        <h2>Open document</h2>
+        <div id="open-dialog-header">
+            <button id="btn-close-open-dialog">
+                <span class="icon icon-cancel" aria-hidden="true"></span>
+                <span>Cancel</span>
+            </button>
+            <h2>Choose a document</h2>
+            <button id="btn-sort-documents"></button>
+        </div>
         <ul id="document-list"></ul>
-        <button id="btn-close-open-dialog">Cancel</button>
     </dialog>
     <script type="module" src="/js/app.js"></script>
 </body>
