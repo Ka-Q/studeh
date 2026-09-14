@@ -356,10 +356,6 @@ dialog {
 .page-name {
     display: block;
     width: 100%;
-    border: none;
-    background: none;
-    padding: 0;
-    text-align: left;
     font-size: var(--font-size-lg);
     white-space: nowrap;
     overflow: hidden;

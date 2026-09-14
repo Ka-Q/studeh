@@ -1,31 +1,28 @@
 const MAX_NAME_LENGTH = 100;
 const MIN_INPUT_WIDTH = 24;
 
-let measureMirror: HTMLSpanElement | null = null;
+let measureContext: CanvasRenderingContext2D | null = null;
 
 export function sanitizeName(value: string): string | null {
     const trimmed = value.trim();
     return trimmed && trimmed.length <= MAX_NAME_LENGTH ? trimmed : null;
 }
 
-function getMeasureMirror(): HTMLSpanElement {
-    if (!measureMirror) {
-        measureMirror = document.createElement('span');
-        measureMirror.style.position = 'absolute';
-        measureMirror.style.visibility = 'hidden';
-        measureMirror.style.whiteSpace = 'pre';
-        measureMirror.style.left = '-9999px';
-        measureMirror.style.top = '0';
-        document.body.appendChild(measureMirror);
+function getMeasureContext(): CanvasRenderingContext2D {
+    if (!measureContext) {
+        const context = document.createElement('canvas').getContext('2d');
+        if (!context) {
+            throw new Error('2d canvas context unavailable');
+        }
+        measureContext = context;
     }
-    return measureMirror;
+    return measureContext;
 }
 
 function measureTextWidth(text: string, font: string): number {
-    const mirror = getMeasureMirror();
-    mirror.style.font = font;
-    mirror.textContent = text;
-    return mirror.getBoundingClientRect().width;
+    const context = getMeasureContext();
+    context.font = font;
+    return context.measureText(text).width;
 }
 
 export function startInlineEdit(
@@ -75,6 +72,10 @@ export function startInlineEdit(
         settled = true;
         finish();
     }
+
+    input.addEventListener('click', function onClick(event) {
+        event.stopPropagation();
+    });
 
     input.addEventListener('keydown', function onKeyDown(event) {
         if (event.key === 'Enter') {
