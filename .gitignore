@@ -5,6 +5,7 @@ design-doc.md
 UI-doc.md
 additional-features.md
 progress.md
+tech-debt.md
 public/
 data/documents/*
 !data/documents/.gitkeep
