@@ -143,6 +143,16 @@ button {
     mask-image: url('/icons/close.svg');
 }
 
+.icon-moon {
+    -webkit-mask-image: url('/icons/moon.svg');
+    mask-image: url('/icons/moon.svg');
+}
+
+.icon-sun {
+    -webkit-mask-image: url('/icons/sun.svg');
+    mask-image: url('/icons/sun.svg');
+}
+
 .icon-button {
     padding: var(--space-1);
 }
