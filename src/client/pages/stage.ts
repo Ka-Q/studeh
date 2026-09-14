@@ -68,7 +68,11 @@ function render(): void {
 }
 
 function showMessage(message: string): void {
-    controlsEl.textContent = message;
+    controlsEl.innerHTML = '';
+    const text = document.createElement('span');
+    text.className = 'stage-page-title';
+    text.textContent = message;
+    controlsEl.append(text);
     unmountCanvas();
     canvasBody.textContent = '';
 }
@@ -77,25 +81,36 @@ function renderControls(documentId: string, page: Page): void {
     controlsEl.innerHTML = '';
 
     const leftGroup = document.createElement('div');
-    leftGroup.className = 'flex-row';
+    leftGroup.className = 'flex-row stage-controls-left';
 
-    const status = document.createElement('span');
-    status.textContent = `Active page: ${page.name}`;
+    const title = document.createElement('span');
+    title.className = 'stage-page-title';
+    title.textContent = page.name;
+    title.title = page.name;
 
-    const label = document.createElement('label');
-    label.textContent = page.image ? ' Replace image: ' : ' Assign image: ';
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/png,image/jpeg,image/webp,image/gif';
+    input.hidden = true;
     input.addEventListener('change', function onFileSelected() {
         const file = input.files?.[0];
         if (file) {
             void assignImage(documentId, page.id, file);
         }
     });
-    label.appendChild(input);
 
-    leftGroup.append(status, label);
+    const replaceButton = document.createElement('button');
+    replaceButton.type = 'button';
+    replaceButton.className = 'stage-controls-fixed';
+    replaceButton.append(
+        iconSpan('icon-image-placeholder'),
+        document.createTextNode(page.image ? 'Replace image' : 'Assign image')
+    );
+    replaceButton.addEventListener('click', function onReplaceClick() {
+        input.click();
+    });
+
+    leftGroup.append(title, replaceButton, input);
     controlsEl.append(leftGroup);
 
     if (getState().mode === 'study') {
@@ -105,7 +120,7 @@ function renderControls(documentId: string, page: Page): void {
 
 function buildStudyControls(page: Page): HTMLElement {
     const rightGroup = document.createElement('div');
-    rightGroup.className = 'flex-row';
+    rightGroup.className = 'flex-row stage-controls-fixed';
 
     const hideAllButton = document.createElement('button');
     hideAllButton.textContent = 'Hide all';
