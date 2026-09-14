@@ -13,3 +13,18 @@ export function closeOnBackdropClick(dialog: HTMLDialogElement): void {
         }
     });
 }
+
+export function wireDialogClose(dialog: HTMLDialogElement, cancelButton: HTMLElement): void {
+    cancelButton.addEventListener('click', function onCancel() {
+        dialog.close();
+    });
+    closeOnBackdropClick(dialog);
+}
+
+export function awaitDialogClose(dialog: HTMLDialogElement): Promise<string> {
+    return new Promise(function executor(resolve) {
+        dialog.addEventListener('close', function onClose() {
+            resolve(dialog.returnValue);
+        }, { once: true });
+    });
+}

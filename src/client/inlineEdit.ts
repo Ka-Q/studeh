@@ -1,4 +1,4 @@
-const MAX_NAME_LENGTH = 100;
+export const MAX_NAME_LENGTH = 100;
 const MIN_INPUT_WIDTH = 24;
 
 let measureContext: CanvasRenderingContext2D | null = null;
