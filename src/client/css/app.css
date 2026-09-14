@@ -22,6 +22,7 @@
     --color-accent: #2563eb;
     --color-accent-text: #ffffff;
     --color-danger: #dc2626;
+    --color-danger-hover: #b91c1c;
     --color-focus-ring: #2563eb;
     --color-surface-hover: #e8e8e8;
 }
@@ -35,6 +36,7 @@
     --color-accent: #3b82f6;
     --color-accent-text: #ffffff;
     --color-danger: #ef4444;
+    --color-danger-hover: #f87171;
     --color-focus-ring: #60a5fa;
     --color-surface-hover: #323232;
 }
@@ -234,6 +236,39 @@ dialog::backdrop {
 
 #btn-sort-documents {
     justify-self: end;
+}
+
+#confirm-dialog {
+    width: 360px;
+    max-width: calc(100vw - var(--space-6) * 2);
+    padding: var(--space-4);
+}
+
+#confirm-dialog h2 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--font-size-xl);
+}
+
+#confirm-dialog p {
+    margin: 0 0 var(--space-4);
+    color: var(--color-text-muted);
+}
+
+#confirm-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+}
+
+.button-danger {
+    background: var(--color-danger);
+    border-color: var(--color-danger);
+    color: var(--color-accent-text);
+}
+
+.button-danger:hover:not(:disabled) {
+    background: var(--color-danger-hover);
+    border-color: var(--color-danger-hover);
 }
 
 .inline-edit {
