@@ -2,7 +2,7 @@ import { deleteDocument, getDocument, listDocuments } from './api.js';
 import { confirmDiscardIfDirty, getState, setDocument } from './state.js';
 import type { DocumentSummary } from './types.js';
 import { confirmDialog } from '../dialogs/confirmDialog.js';
-import { closeOnBackdropClick, requireElement } from '../dom.js';
+import { requireElement, wireDialogClose } from '../dom.js';
 import { reportError } from '../errors.js';
 
 type SortMode = 'updatedAt' | 'name';
@@ -24,11 +24,7 @@ export function initOpenDialog(): void {
     sortButton = requireElement('btn-sort-documents') as HTMLButtonElement;
     const closeButton = requireElement('btn-close-open-dialog');
 
-    closeButton.addEventListener('click', function onClose() {
-        dialog.close();
-    });
-
-    closeOnBackdropClick(dialog);
+    wireDialogClose(dialog, closeButton);
 
     sortButton.addEventListener('click', function onToggleSort() {
         sortMode = sortMode === 'updatedAt' ? 'name' : 'updatedAt';
@@ -107,7 +103,7 @@ function renderOpenButton(summary: DocumentSummary): HTMLButtonElement {
 
     button.append(name, meta);
     button.addEventListener('click', async function onOpenDocument() {
-        if (!confirmDiscardIfDirty()) {
+        if (!(await confirmDiscardIfDirty())) {
             return;
         }
         try {

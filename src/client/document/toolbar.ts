@@ -31,7 +31,7 @@ export function initToolbar(): void {
 }
 
 async function onNew(): Promise<void> {
-    if (!confirmDiscardIfDirty()) {
+    if (!(await confirmDiscardIfDirty())) {
         return;
     }
     const name = await newDocumentDialog();
