@@ -159,6 +159,16 @@ button:hover:not(:disabled) {
     mask-image: url('/icons/sun.svg');
 }
 
+.icon-cancel {
+    -webkit-mask-image: url('/icons/cancel.svg');
+    mask-image: url('/icons/cancel.svg');
+}
+
+.icon-sort {
+    -webkit-mask-image: url('/icons/sort.svg');
+    mask-image: url('/icons/sort.svg');
+}
+
 .icon-button {
     padding: var(--space-1);
 }
@@ -182,6 +192,48 @@ dialog {
     border-radius: var(--radius-md);
     background: var(--color-bg);
     color: var(--color-text);
+}
+
+dialog::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+#open-dialog {
+    width: 560px;
+    max-width: calc(100vw - var(--space-6) * 2);
+    height: 520px;
+    max-height: calc(100vh - var(--space-6) * 2);
+    padding: 0;
+    overflow: hidden;
+}
+
+#open-dialog[open] {
+    display: flex;
+    flex-direction: column;
+}
+
+#open-dialog-header {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: minmax(max-content, 1fr) minmax(0, max-content) minmax(max-content, 1fr);
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+}
+
+#open-dialog-header h2 {
+    margin: 0;
+    text-align: center;
+    font-size: var(--font-size-xl);
+}
+
+#btn-close-open-dialog {
+    justify-self: start;
+}
+
+#btn-sort-documents {
+    justify-self: end;
 }
 
 .inline-edit {
@@ -298,6 +350,41 @@ dialog {
     list-style: none;
     margin: 0;
     padding: 0;
+}
+
+#document-list {
+    list-style: none;
+    margin: 0;
+    padding: var(--space-4);
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.document-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.document-open {
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+    text-align: left;
+}
+
+.document-name {
+    font-size: var(--font-size-lg);
+}
+
+.document-meta {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
 }
 
 #btn-add-page {
