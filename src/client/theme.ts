@@ -30,6 +30,6 @@ function applyTheme(theme: Theme, button: HTMLElement, icon: HTMLElement): void 
     const label = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
     button.title = label;
     button.setAttribute('aria-label', label);
-    icon.classList.toggle('icon-sun', theme === 'dark');
-    icon.classList.toggle('icon-moon', theme !== 'dark');
+    icon.classList.toggle('icon-moon', theme === 'dark');
+    icon.classList.toggle('icon-sun', theme !== 'dark');
 }
