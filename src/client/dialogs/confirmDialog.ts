@@ -1,43 +1,52 @@
-import { closeOnBackdropClick, requireElement } from '../dom.js';
+import { awaitDialogClose, requireElement, wireDialogClose } from '../dom.js';
 
 interface ConfirmOptions {
     title: string;
     message: string;
+    confirmLabel?: string;
+    confirmIcon?: string;
+    danger?: boolean;
 }
+
+const DEFAULT_CONFIRM_LABEL = 'Delete';
+const DEFAULT_CONFIRM_ICON = 'icon-trash';
 
 let dialog: HTMLDialogElement;
 let titleEl: HTMLElement;
 let messageEl: HTMLElement;
-let resolveCurrent: ((confirmed: boolean) => void) | null = null;
-let pendingAnswer = false;
+let confirmButton: HTMLButtonElement;
+let confirmIconEl: HTMLElement;
+let confirmLabelEl: HTMLElement;
 
 export function initConfirmDialog(): void {
     dialog = requireElement('confirm-dialog') as HTMLDialogElement;
     titleEl = requireElement('confirm-dialog-title');
     messageEl = requireElement('confirm-dialog-message');
+    confirmButton = requireElement('btn-confirm-delete') as HTMLButtonElement;
+    confirmIconEl = requireElement('confirm-dialog-icon');
+    confirmLabelEl = requireElement('confirm-dialog-label');
     const cancelButton = requireElement('btn-cancel-confirm');
-    const confirmButton = requireElement('btn-confirm-delete');
 
-    cancelButton.addEventListener('click', function onCancel() {
-        dialog.close();
-    });
+    wireDialogClose(dialog, cancelButton);
     confirmButton.addEventListener('click', function onConfirm() {
-        pendingAnswer = true;
-        dialog.close();
-    });
-    closeOnBackdropClick(dialog);
-    dialog.addEventListener('close', function onClose() {
-        resolveCurrent?.(pendingAnswer);
-        resolveCurrent = null;
-        pendingAnswer = false;
+        dialog.close('confirmed');
     });
 }
 
 export function confirmDialog(options: ConfirmOptions): Promise<boolean> {
+    if (dialog.open) {
+        return awaitDialogClose(dialog).then(function afterExistingDialog() {
+            return confirmDialog(options);
+        });
+    }
     titleEl.textContent = options.title;
     messageEl.textContent = options.message;
+    confirmLabelEl.textContent = options.confirmLabel ?? DEFAULT_CONFIRM_LABEL;
+    confirmIconEl.className = `icon ${options.confirmIcon ?? DEFAULT_CONFIRM_ICON}`;
+    confirmButton.classList.toggle('button-danger', options.danger ?? true);
+    dialog.returnValue = '';
     dialog.showModal();
-    return new Promise(function executor(resolve) {
-        resolveCurrent = resolve;
+    return awaitDialogClose(dialog).then(function toBoolean(value) {
+        return value === 'confirmed';
     });
 }
