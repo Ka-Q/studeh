@@ -1,6 +1,7 @@
 import { createDocument, saveDocument } from './api.js';
 import { confirmDiscardIfDirty, getState, markClean, renameDocument, setDocument, subscribe } from './state.js';
 import { openDocumentDialog } from './openDialog.js';
+import { newDocumentDialog } from '../dialogs/newDocumentDialog.js';
 import { requireElement } from '../dom.js';
 import { reportError } from '../errors.js';
 import { startInlineEdit } from '../inlineEdit.js';
@@ -33,7 +34,7 @@ async function onNew(): Promise<void> {
     if (!confirmDiscardIfDirty()) {
         return;
     }
-    const name = prompt('Document name', 'Untitled document');
+    const name = await newDocumentDialog();
     if (!name) {
         return;
     }
