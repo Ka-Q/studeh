@@ -1,22 +1,30 @@
 const MAX_NAME_LENGTH = 100;
-const CARET_WIDTH_BUFFER = 3;
 
-let measureContext: CanvasRenderingContext2D | null = null;
+let measureMirror: HTMLSpanElement | null = null;
 
 export function sanitizeName(value: string): string | null {
     const trimmed = value.trim();
     return trimmed && trimmed.length <= MAX_NAME_LENGTH ? trimmed : null;
 }
 
+function getMeasureMirror(): HTMLSpanElement {
+    if (!measureMirror) {
+        measureMirror = document.createElement('span');
+        measureMirror.style.position = 'absolute';
+        measureMirror.style.visibility = 'hidden';
+        measureMirror.style.whiteSpace = 'pre';
+        measureMirror.style.left = '-9999px';
+        measureMirror.style.top = '0';
+        document.body.appendChild(measureMirror);
+    }
+    return measureMirror;
+}
+
 function measureTextWidth(text: string, font: string): number {
-    if (!measureContext) {
-        measureContext = document.createElement('canvas').getContext('2d');
-    }
-    if (!measureContext) {
-        return 0;
-    }
-    measureContext.font = font;
-    return measureContext.measureText(text).width;
+    const mirror = getMeasureMirror();
+    mirror.style.font = font;
+    mirror.textContent = text;
+    return mirror.getBoundingClientRect().width;
 }
 
 export function startInlineEdit(
@@ -35,7 +43,7 @@ export function startInlineEdit(
     input.maxLength = MAX_NAME_LENGTH;
 
     function resizeToContent(): void {
-        input.style.width = `${measureTextWidth(input.value, font) + CARET_WIDTH_BUFFER}px`;
+        input.style.width = `${measureTextWidth(input.value, font)}px`;
     }
 
     resizeToContent();
