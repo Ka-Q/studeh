@@ -385,8 +385,38 @@ dialog::backdrop {
 
 #sidebar-header {
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
     margin-bottom: var(--space-1);
+}
+
+#sidebar-bulk-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+#select-all-pages {
+    flex: 0 0 auto;
+}
+
+#btn-delete-selected-pages {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+#delete-selected-label {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#btn-collapse-sidebar {
+    flex: 0 0 auto;
 }
 
 #sidebar-resize-handle {
@@ -466,6 +496,11 @@ dialog::backdrop {
     padding: var(--space-2);
     border-radius: var(--radius-md);
     cursor: pointer;
+}
+
+.page-select-checkbox {
+    flex: 0 0 auto;
+    align-self: center;
 }
 
 .page-item.active {

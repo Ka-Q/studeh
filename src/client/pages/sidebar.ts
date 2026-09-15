@@ -2,6 +2,7 @@ import { pageImageUrl, uploadPageImage } from '../document/api.js';
 import {
     addPage,
     deletePage,
+    deletePages,
     getState,
     movePage,
     renamePage,
@@ -23,6 +24,9 @@ const COLLAPSED_STORAGE_KEY = 'studeh:sidebarCollapsed';
 
 let pendingAutoRename = false;
 let listEl: HTMLElement;
+let selectAllCheckbox: HTMLInputElement;
+let deleteSelectedButton: HTMLButtonElement;
+const selectedPageIds = new Set<string>();
 
 export function initPageSidebar(): void {
     listEl = requireElement('page-list');
@@ -30,6 +34,8 @@ export function initPageSidebar(): void {
     const addFromImagesButton = requireElement('btn-add-pages-from-images');
     const imagesInput = createImagesFileInput();
     addFromImagesButton.after(imagesInput);
+    selectAllCheckbox = requireElement('select-all-pages') as HTMLInputElement;
+    deleteSelectedButton = requireElement('btn-delete-selected-pages') as HTMLButtonElement;
 
     addButton.addEventListener('click', function onAddPage() {
         const doc = getState().document;
@@ -42,6 +48,38 @@ export function initPageSidebar(): void {
 
     addFromImagesButton.addEventListener('click', function onAddFromImages() {
         imagesInput.click();
+    });
+
+    selectAllCheckbox.addEventListener('change', function onToggleSelectAll() {
+        const doc = getState().document;
+        if (!doc) {
+            return;
+        }
+        const allSelected = doc.pages.length > 0 && doc.pages.every(function isSelected(page) {
+            return selectedPageIds.has(page.id);
+        });
+        selectedPageIds.clear();
+        if (!allSelected) {
+            for (const page of doc.pages) {
+                selectedPageIds.add(page.id);
+            }
+        }
+        renderPageList(listEl);
+    });
+
+    deleteSelectedButton.addEventListener('click', async function onDeleteSelected() {
+        const count = selectedPageIds.size;
+        if (count === 0) {
+            return;
+        }
+        const confirmed = await confirmDialog({
+            title: 'Delete pages',
+            message: `Delete all ${count} pages?`
+        });
+        if (!confirmed) {
+            return;
+        }
+        deletePages(Array.from(selectedPageIds));
     });
 
     subscribe(function renderOnChange() {
@@ -200,7 +238,18 @@ function renderPageList(listEl: HTMLElement): void {
 
     if (!doc) {
         pendingAutoRename = false;
+        selectedPageIds.clear();
+        updateSelectionControls(0, 0);
         return;
+    }
+
+    const pageIds = new Set(doc.pages.map(function toId(page) {
+        return page.id;
+    }));
+    for (const selectedId of selectedPageIds) {
+        if (!pageIds.has(selectedId)) {
+            selectedPageIds.delete(selectedId);
+        }
     }
 
     doc.pages.forEach(function renderItem(page, index) {
@@ -209,6 +258,8 @@ function renderPageList(listEl: HTMLElement): void {
         const isLast = index === doc.pages.length - 1;
         listEl.appendChild(renderPageItem(doc.id, page, isActive, isFirst, isLast));
     });
+
+    updateSelectionControls(selectedPageIds.size, doc.pages.length);
 
     if (pendingAutoRename) {
         pendingAutoRename = false;
@@ -220,6 +271,12 @@ function renderPageList(listEl: HTMLElement): void {
             startPageRename(activePage, nameEl);
         }
     }
+}
+
+function updateSelectionControls(selectedCount: number, totalCount: number): void {
+    selectAllCheckbox.checked = totalCount > 0 && selectedCount === totalCount;
+    selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalCount;
+    deleteSelectedButton.disabled = selectedCount === 0;
 }
 
 function renderPageItem(
@@ -241,8 +298,29 @@ function renderPageItem(
     body.className = 'page-body';
     body.append(nameEl, renderActions(page, isFirst, isLast, nameEl));
 
-    item.append(renderThumbnail(documentId, page), body);
+    item.append(renderSelectCheckbox(page), renderThumbnail(documentId, page), body);
     return item;
+}
+
+function renderSelectCheckbox(page: Page): HTMLInputElement {
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'page-select-checkbox';
+    checkbox.checked = selectedPageIds.has(page.id);
+    checkbox.title = 'Select page';
+    checkbox.setAttribute('aria-label', 'Select page');
+    checkbox.addEventListener('click', function onCheckboxClick(event) {
+        event.stopPropagation();
+    });
+    checkbox.addEventListener('change', function onToggle() {
+        if (checkbox.checked) {
+            selectedPageIds.add(page.id);
+        } else {
+            selectedPageIds.delete(page.id);
+        }
+        renderPageList(listEl);
+    });
+    return checkbox;
 }
 
 function renderThumbnail(documentId: string, page: Page): HTMLSpanElement {
