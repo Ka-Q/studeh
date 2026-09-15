@@ -12,7 +12,7 @@ import {
 } from '../document/state.js';
 import { pageImageUrl, uploadPageImage } from '../document/api.js';
 import type { Page } from '../document/types.js';
-import { requireElement } from '../dom.js';
+import { getDroppedImageFiles, isFileDrag, requireElement } from '../dom.js';
 import { reportError } from '../errors.js';
 import { mountImageCanvas, type ImageCanvasHandle } from '../canvas/imageCanvas.js';
 import { initFullscreenControl, requestFullscreen } from '../canvas/fullscreen.js';
@@ -85,17 +85,13 @@ function initImageDrop(): void {
         }
         event.preventDefault();
         canvasMount.classList.remove('drag-over');
-        const file = event.dataTransfer?.files[0];
+        const file = getDroppedImageFiles(event)[0];
         const documentId = getState().document?.id;
         const page = getActivePage();
         if (file && documentId && page) {
             void assignImageWithConfirm(documentId, page, file);
         }
     });
-}
-
-function isFileDrag(event: DragEvent): boolean {
-    return event.dataTransfer !== null && Array.from(event.dataTransfer.types).includes('Files');
 }
 
 function initImagePaste(): void {
