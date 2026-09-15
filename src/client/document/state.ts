@@ -126,6 +126,24 @@ export function movePage(pageId: string, direction: -1 | 1): void {
     markDirty();
 }
 
+export function deletePages(pageIds: string[]): void {
+    if (!state.document) {
+        return;
+    }
+    const idsToDelete = new Set(pageIds);
+    replaceDocument({
+        ...state.document,
+        pages: state.document.pages.filter(function isNotTarget(page) {
+            return !idsToDelete.has(page.id);
+        })
+    });
+    if (state.activePageId && idsToDelete.has(state.activePageId)) {
+        state.activePageId = state.document.pages[0]?.id ?? null;
+    }
+    state.selectedShapeId = null;
+    markDirty();
+}
+
 export function setPageImage(pageId: string, image: PageImage): void {
     if (!state.document || !findPage(pageId)) {
         return;

@@ -42,6 +42,13 @@
     <div id="app">
         <aside id="page-sidebar">
             <div id="sidebar-header">
+                <div id="sidebar-bulk-actions">
+                    <input type="checkbox" id="select-all-pages" title="Select all pages" aria-label="Select all pages">
+                    <button id="btn-delete-selected-pages" disabled title="Delete selected pages" aria-label="Delete selected pages">
+                        <span class="icon icon-trash" aria-hidden="true"></span>
+                        <span id="delete-selected-label">Delete selected</span>
+                    </button>
+                </div>
                 <button id="btn-collapse-sidebar" class="icon-button" title="Collapse sidebar" aria-label="Collapse sidebar">
                     <span class="icon icon-chevron-left" aria-hidden="true"></span>
                 </button>
