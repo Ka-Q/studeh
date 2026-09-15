@@ -62,9 +62,9 @@ export function getActivePage(): Page | null {
     return findPage(state.activePageId);
 }
 
-export function addPage(name: string): void {
+export function addPage(name: string): Page | null {
     if (!state.document) {
-        return;
+        return null;
     }
     const page: Page = {
         id: generateId('page'),
@@ -75,6 +75,7 @@ export function addPage(name: string): void {
     replaceDocument({ ...state.document, pages: [...state.document.pages, page] });
     state.activePageId = page.id;
     markDirty();
+    return page;
 }
 
 export function renamePage(pageId: string, name: string): void {

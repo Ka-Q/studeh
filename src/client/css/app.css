@@ -445,8 +445,10 @@ dialog::backdrop {
     color: var(--color-text-muted);
 }
 
-#btn-add-page {
-    display: block;
+#btn-add-page,
+#btn-add-pages-from-images {
+    display: flex;
+    justify-content: center;
     margin-top: var(--space-1);
     width: 100%;
     text-align: center;
