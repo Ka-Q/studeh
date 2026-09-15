@@ -1,8 +1,18 @@
-import { pageImageUrl } from '../document/api.js';
-import { addPage, deletePage, getState, movePage, renamePage, setActivePage, subscribe } from '../document/state.js';
+import { pageImageUrl, uploadPageImage } from '../document/api.js';
+import {
+    addPage,
+    deletePage,
+    getState,
+    movePage,
+    renamePage,
+    setActivePage,
+    setPageImage,
+    subscribe
+} from '../document/state.js';
 import type { Page } from '../document/types.js';
 import { confirmDialog } from '../dialogs/confirmDialog.js';
 import { requireElement } from '../dom.js';
+import { reportError } from '../errors.js';
 import { startInlineEdit } from '../inlineEdit.js';
 
 const MIN_SIDEBAR_WIDTH = 200;
@@ -12,10 +22,14 @@ const WIDTH_STORAGE_KEY = 'studeh:sidebarWidth';
 const COLLAPSED_STORAGE_KEY = 'studeh:sidebarCollapsed';
 
 let pendingAutoRename = false;
+let listEl: HTMLElement;
 
 export function initPageSidebar(): void {
-    const listEl = requireElement('page-list');
+    listEl = requireElement('page-list');
     const addButton = requireElement('btn-add-page');
+    const addFromImagesButton = requireElement('btn-add-pages-from-images');
+    const imagesInput = createImagesFileInput();
+    addFromImagesButton.after(imagesInput);
 
     addButton.addEventListener('click', function onAddPage() {
         const doc = getState().document;
@@ -26,12 +40,56 @@ export function initPageSidebar(): void {
         addPage(`Page ${doc.pages.length + 1}`);
     });
 
+    addFromImagesButton.addEventListener('click', function onAddFromImages() {
+        imagesInput.click();
+    });
+
     subscribe(function renderOnChange() {
         renderPageList(listEl);
     });
     renderPageList(listEl);
 
     initSidebarPanel();
+}
+
+function createImagesFileInput(): HTMLInputElement {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.accept = 'image/png,image/jpeg,image/webp,image/gif';
+    input.hidden = true;
+    input.addEventListener('change', function onFilesSelected() {
+        const files = input.files ? Array.from(input.files) : [];
+        input.value = '';
+        const documentId = getState().document?.id;
+        if (documentId && files.length > 0) {
+            void createPagesFromImages(documentId, files);
+        }
+    });
+    return input;
+}
+
+async function createPagesFromImages(documentId: string, files: File[]): Promise<void> {
+    let createdCount = 0;
+    for (const file of files) {
+        const doc = getState().document;
+        const page = doc && addPage(`Page ${doc.pages.length + 1}`);
+        if (!page) {
+            continue;
+        }
+        try {
+            const image = await uploadPageImage(documentId, page.id, file);
+            setPageImage(page.id, image);
+            createdCount += 1;
+        } catch (error) {
+            deletePage(page.id);
+            reportError('add page from image', error);
+        }
+    }
+    if (createdCount === 1) {
+        pendingAutoRename = true;
+        renderPageList(listEl);
+    }
 }
 
 function initSidebarPanel(): void {
