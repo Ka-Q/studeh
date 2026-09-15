@@ -15,7 +15,7 @@
     "dev:client": "tsc -p tsconfig.client.json --watch --preserveWatchOutput",
     "dev:static": "node --watch-path=src/client/index.html --watch-path=src/client/css --watch-path=src/client/icons scripts/copyStatic.ts",
     "dev:server": "tsc -p tsconfig.server.json --watch --preserveWatchOutput",
-    "dev:run": "node --watch dist/server/index.js"
+    "dev:run": "SKIP_OPEN_BROWSER=1 node --watch dist/server/index.js"
   },
   "repository": {
     "type": "git",

@@ -24,7 +24,9 @@ app.get(/^\/(?!api\/).*/, function serveIndexHtml(req, res, next) {
 app.listen(port, function onListening() {
     const url = `http://localhost:${port}`;
     console.log(`Studeh listening on ${url}`);
-    openBrowser(url);
+    if (!process.env.SKIP_OPEN_BROWSER) {
+        openBrowser(url);
+    }
 });
 
 function openBrowser(url: string): void {
