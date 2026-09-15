@@ -168,16 +168,7 @@ function renderControls(documentId: string, page: Page): void {
     title.textContent = page.name;
     title.title = page.name;
 
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/png,image/jpeg,image/webp,image/gif';
-    input.hidden = true;
-    input.addEventListener('change', function onFileSelected() {
-        const file = input.files?.[0];
-        if (file) {
-            void assignImage(documentId, page.id, file);
-        }
-    });
+    const input = createImageFileInput(documentId, page.id);
 
     const replaceButton = document.createElement('button');
     replaceButton.type = 'button';
@@ -224,6 +215,41 @@ function buildStudyControls(page: Page): HTMLElement {
     return rightGroup;
 }
 
+function buildAssignImagePrompt(documentId: string, pageId: string): HTMLElement {
+    const input = createImageFileInput(documentId, pageId);
+
+    const assignButton = document.createElement('button');
+    assignButton.type = 'button';
+    assignButton.className = 'canvas-empty-state';
+    assignButton.append(iconSpan('icon-image-placeholder'), document.createTextNode('Assign image'));
+    assignButton.addEventListener('click', function onAssignClick() {
+        input.click();
+    });
+
+    const hint = document.createElement('span');
+    hint.className = 'canvas-empty-state-hint';
+    hint.textContent = 'Drag & Drop or Paste supported!';
+
+    const container = document.createElement('div');
+    container.className = 'canvas-empty-state-container';
+    container.append(assignButton, hint, input);
+    return container;
+}
+
+function createImageFileInput(documentId: string, pageId: string): HTMLInputElement {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg,image/webp,image/gif';
+    input.hidden = true;
+    input.addEventListener('change', function onFileSelected() {
+        const file = input.files?.[0];
+        if (file) {
+            void assignImage(documentId, pageId, file);
+        }
+    });
+    return input;
+}
+
 function iconSpan(className: string): HTMLSpanElement {
     const icon = document.createElement('span');
     icon.className = `icon ${className}`;
@@ -234,7 +260,8 @@ function iconSpan(className: string): HTMLSpanElement {
 function renderCanvas(documentId: string, page: Page): void {
     if (!page.image) {
         unmountCanvas();
-        canvasBody.textContent = 'No image assigned to this page yet.';
+        canvasBody.textContent = '';
+        canvasBody.append(buildAssignImagePrompt(documentId, page.id));
         return;
     }
 
