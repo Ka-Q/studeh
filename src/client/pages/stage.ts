@@ -59,16 +59,20 @@ export function initStage(): void {
     render();
 }
 
+function isEditMode(): boolean {
+    return getState().mode === 'edit';
+}
+
 function initImageDrop(): void {
     canvasMount.addEventListener('dragenter', function onDragEnter(event) {
-        if (!isFileDrag(event)) {
+        if (!isEditMode() || !isFileDrag(event)) {
             return;
         }
         event.preventDefault();
         canvasMount.classList.add('drag-over');
     });
     canvasMount.addEventListener('dragover', function onDragOver(event) {
-        if (!isFileDrag(event)) {
+        if (!isEditMode() || !isFileDrag(event)) {
             return;
         }
         event.preventDefault();
@@ -80,7 +84,7 @@ function initImageDrop(): void {
         }
     });
     canvasMount.addEventListener('drop', function onDrop(event) {
-        if (!isFileDrag(event)) {
+        if (!isEditMode() || !isFileDrag(event)) {
             return;
         }
         event.preventDefault();
@@ -102,7 +106,7 @@ function initImagePaste(): void {
         isHoveringCanvas = false;
     });
     document.addEventListener('paste', function onPaste(event) {
-        if (!isHoveringCanvas || isBlockedByInputOrDialog()) {
+        if (!isEditMode() || !isHoveringCanvas || isBlockedByInputOrDialog()) {
             return;
         }
         const file = firstImageFile(event.clipboardData?.items);
@@ -163,24 +167,28 @@ function renderControls(documentId: string, page: Page): void {
     title.className = 'stage-page-title';
     title.textContent = page.name;
     title.title = page.name;
+    leftGroup.append(title);
 
-    const input = createImageFileInput(documentId, page.id);
+    if (isEditMode()) {
+        const input = createImageFileInput(documentId, page.id);
 
-    const replaceButton = document.createElement('button');
-    replaceButton.type = 'button';
-    replaceButton.className = 'stage-controls-fixed';
-    replaceButton.append(
-        iconSpan('icon-image-placeholder'),
-        document.createTextNode(page.image ? 'Replace image' : 'Assign image')
-    );
-    replaceButton.addEventListener('click', function onReplaceClick() {
-        input.click();
-    });
+        const replaceButton = document.createElement('button');
+        replaceButton.type = 'button';
+        replaceButton.className = 'stage-controls-fixed';
+        replaceButton.append(
+            iconSpan('icon-image-placeholder'),
+            document.createTextNode(page.image ? 'Replace image' : 'Assign image')
+        );
+        replaceButton.addEventListener('click', function onReplaceClick() {
+            input.click();
+        });
 
-    leftGroup.append(title, replaceButton, input);
+        leftGroup.append(replaceButton, input);
+    }
+
     controlsEl.append(leftGroup);
 
-    if (getState().mode === 'study') {
+    if (!isEditMode()) {
         controlsEl.append(buildStudyControls(page));
     }
 }

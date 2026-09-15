@@ -177,6 +177,11 @@ button:hover:not(:disabled) {
     mask-image: url('/icons/sort.svg');
 }
 
+.icon-mode-toggle {
+    -webkit-mask-image: url('/icons/mode-toggle.svg');
+    mask-image: url('/icons/mode-toggle.svg');
+}
+
 .icon-button {
     padding: var(--space-1);
 }
