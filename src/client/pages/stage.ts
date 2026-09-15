@@ -17,6 +17,7 @@ import { reportError } from '../errors.js';
 import { mountImageCanvas, type ImageCanvasHandle } from '../canvas/imageCanvas.js';
 import { initFullscreenControl, requestFullscreen } from '../canvas/fullscreen.js';
 import { confirmDialog } from '../dialogs/confirmDialog.js';
+import { isBlockedByInputOrDialog } from '../keyboardNav.js';
 
 interface MountedCanvas {
     pageId: string;
@@ -30,6 +31,7 @@ let canvasBody: HTMLDivElement;
 let dragOverlay: HTMLDivElement;
 let mountedCanvas: MountedCanvas | null = null;
 let isFullscreen = false;
+let isHoveringCanvas = false;
 
 export function initStage(): void {
     const container = requireElement('canvas-area');
@@ -51,6 +53,7 @@ export function initStage(): void {
         mountedCanvas?.handle.setFullscreen(isFullscreen);
     });
     initImageDrop();
+    initImagePaste();
 
     subscribe(render);
     render();
@@ -93,6 +96,38 @@ function initImageDrop(): void {
 
 function isFileDrag(event: DragEvent): boolean {
     return event.dataTransfer !== null && Array.from(event.dataTransfer.types).includes('Files');
+}
+
+function initImagePaste(): void {
+    canvasMount.addEventListener('mouseenter', function onMouseEnter() {
+        isHoveringCanvas = true;
+    });
+    canvasMount.addEventListener('mouseleave', function onMouseLeave() {
+        isHoveringCanvas = false;
+    });
+    document.addEventListener('paste', function onPaste(event) {
+        if (!isHoveringCanvas || isBlockedByInputOrDialog()) {
+            return;
+        }
+        const file = firstImageFile(event.clipboardData?.items);
+        const documentId = getState().document?.id;
+        const page = getActivePage();
+        if (file && documentId && page) {
+            void assignImageWithConfirm(documentId, page, file);
+        }
+    });
+}
+
+function firstImageFile(items: DataTransferItemList | undefined): File | null {
+    if (!items) {
+        return null;
+    }
+    for (const item of items) {
+        if (item.type.startsWith('image/')) {
+            return item.getAsFile();
+        }
+    }
+    return null;
 }
 
 function render(): void {
