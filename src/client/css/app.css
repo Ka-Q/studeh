@@ -557,6 +557,7 @@ dialog::backdrop {
 
 .page-actions {
     display: flex;
+    justify-content: flex-end;
     gap: var(--space-1);
 }
 
