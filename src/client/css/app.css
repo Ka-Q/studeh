@@ -375,7 +375,9 @@ dialog::backdrop {
     width: 220px;
     border-right: 1px solid var(--color-border);
     padding: var(--space-2);
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 #page-sidebar.collapsed {
@@ -390,6 +392,7 @@ dialog::backdrop {
 }
 
 #sidebar-header {
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -446,9 +449,20 @@ dialog::backdrop {
 }
 
 #page-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
     list-style: none;
     margin: 0;
     padding: 0;
+}
+
+#sidebar-footer {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin-top: var(--space-1);
 }
 
 #document-list {
@@ -490,7 +504,6 @@ dialog::backdrop {
 #btn-add-pages-from-images {
     display: flex;
     justify-content: center;
-    margin-top: var(--space-1);
     width: 100%;
     text-align: center;
 }
