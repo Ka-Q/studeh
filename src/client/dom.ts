@@ -28,3 +28,15 @@ export function awaitDialogClose(dialog: HTMLDialogElement): Promise<string> {
         }, { once: true });
     });
 }
+
+export function initScrollFade(scrollEl: HTMLElement, fadeEl: HTMLElement): () => void {
+    function update(): void {
+        const scrollable = scrollEl.scrollHeight > scrollEl.clientHeight;
+        const atBottom = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight <= 1;
+        fadeEl.classList.toggle('visible', scrollable && !atBottom);
+    }
+    scrollEl.addEventListener('scroll', update);
+    new ResizeObserver(update).observe(scrollEl);
+    update();
+    return update;
+}

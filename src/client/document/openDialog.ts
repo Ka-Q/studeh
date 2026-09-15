@@ -2,7 +2,7 @@ import { deleteDocument, getDocument, listDocuments } from './api.js';
 import { confirmDiscardIfDirty, getState, setDocument } from './state.js';
 import type { DocumentSummary } from './types.js';
 import { confirmDialog } from '../dialogs/confirmDialog.js';
-import { requireElement, wireDialogClose } from '../dom.js';
+import { initScrollFade, requireElement, wireDialogClose } from '../dom.js';
 import { reportError } from '../errors.js';
 
 type SortMode = 'updatedAt' | 'name';
@@ -15,12 +15,14 @@ const SORT_LABELS: Record<SortMode, string> = {
 let dialog: HTMLDialogElement;
 let listEl: HTMLElement;
 let sortButton: HTMLButtonElement;
+let updateListScrollFade: () => void;
 let currentSummaries: DocumentSummary[] = [];
 let sortMode: SortMode = 'updatedAt';
 
 export function initOpenDialog(): void {
     dialog = requireElement('open-dialog') as HTMLDialogElement;
     listEl = requireElement('document-list');
+    updateListScrollFade = initScrollFade(listEl, requireElement('document-list-fade'));
     sortButton = requireElement('btn-sort-documents') as HTMLButtonElement;
     const closeButton = requireElement('btn-close-open-dialog');
 
@@ -73,12 +75,14 @@ function renderDocumentList(): void {
         const empty = document.createElement('li');
         empty.textContent = 'No documents saved yet.';
         listEl.appendChild(empty);
+        updateListScrollFade();
         return;
     }
 
     for (const summary of summaries) {
         listEl.appendChild(renderDocumentItem(summary));
     }
+    updateListScrollFade();
 }
 
 function renderDocumentItem(summary: DocumentSummary): HTMLLIElement {

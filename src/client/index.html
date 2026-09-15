@@ -53,7 +53,10 @@
                     <span class="icon icon-chevron-left" aria-hidden="true"></span>
                 </button>
             </div>
-            <ul id="page-list"></ul>
+            <div id="page-list-wrapper" class="scroll-fade-wrapper">
+                <ul id="page-list"></ul>
+                <div id="page-list-fade" class="scroll-fade" aria-hidden="true"></div>
+            </div>
             <div id="sidebar-footer">
                 <button id="btn-add-page">New empty page</button>
                 <button id="btn-add-pages-from-images">
@@ -77,7 +80,10 @@
             <h2>Choose a document</h2>
             <button id="btn-sort-documents"></button>
         </div>
-        <ul id="document-list"></ul>
+        <div id="document-list-wrapper" class="scroll-fade-wrapper">
+            <ul id="document-list"></ul>
+            <div id="document-list-fade" class="scroll-fade" aria-hidden="true"></div>
+        </div>
     </dialog>
     <dialog id="confirm-dialog" class="simple-dialog">
         <h2 id="confirm-dialog-title"></h2>
