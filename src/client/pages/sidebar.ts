@@ -92,11 +92,53 @@ async function createPagesFromImages(documentId: string, files: File[]): Promise
     }
 }
 
+function initSidebarImageDrop(sidebar: HTMLElement): void {
+    sidebar.addEventListener('dragenter', function onDragEnter(event) {
+        if (!isFileDrag(event)) {
+            return;
+        }
+        event.preventDefault();
+        sidebar.classList.add('drag-over');
+    });
+    sidebar.addEventListener('dragover', function onDragOver(event) {
+        if (!isFileDrag(event)) {
+            return;
+        }
+        event.preventDefault();
+    });
+    sidebar.addEventListener('dragleave', function onDragLeave(event) {
+        const relatedTarget = event.relatedTarget as Node | null;
+        if (!relatedTarget || !sidebar.contains(relatedTarget)) {
+            sidebar.classList.remove('drag-over');
+        }
+    });
+    sidebar.addEventListener('drop', function onDrop(event) {
+        if (!isFileDrag(event)) {
+            return;
+        }
+        event.preventDefault();
+        sidebar.classList.remove('drag-over');
+        const documentId = getState().document?.id;
+        const files = Array.from(event.dataTransfer?.files ?? []).filter(function isImage(file) {
+            return file.type.startsWith('image/');
+        });
+        if (documentId && files.length > 0) {
+            void createPagesFromImages(documentId, files);
+        }
+    });
+}
+
+function isFileDrag(event: DragEvent): boolean {
+    return event.dataTransfer !== null && Array.from(event.dataTransfer.types).includes('Files');
+}
+
 function initSidebarPanel(): void {
     const sidebar = requireElement('page-sidebar');
     const handle = requireElement('sidebar-resize-handle');
     const collapseButton = requireElement('btn-collapse-sidebar');
     const expandButton = requireElement('btn-expand-sidebar');
+
+    initSidebarImageDrop(sidebar);
 
     let width = loadSidebarWidth();
     let collapsed = localStorage.getItem(COLLAPSED_STORAGE_KEY) === 'true';

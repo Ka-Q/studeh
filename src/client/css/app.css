@@ -378,6 +378,11 @@ dialog::backdrop {
     overflow: hidden;
 }
 
+#page-sidebar.drag-over {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+}
+
 #sidebar-header {
     display: flex;
     justify-content: flex-end;
