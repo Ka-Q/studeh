@@ -16,6 +16,7 @@ import { requireElement } from '../dom.js';
 import { reportError } from '../errors.js';
 import { mountImageCanvas, type ImageCanvasHandle } from '../canvas/imageCanvas.js';
 import { initFullscreenControl, requestFullscreen } from '../canvas/fullscreen.js';
+import { confirmDialog } from '../dialogs/confirmDialog.js';
 
 interface MountedCanvas {
     pageId: string;
@@ -26,6 +27,7 @@ interface MountedCanvas {
 let controlsEl: HTMLDivElement;
 let canvasMount: HTMLDivElement;
 let canvasBody: HTMLDivElement;
+let dragOverlay: HTMLDivElement;
 let mountedCanvas: MountedCanvas | null = null;
 let isFullscreen = false;
 
@@ -38,16 +40,59 @@ export function initStage(): void {
     canvasMount.className = 'canvas-mount';
     canvasBody = document.createElement('div');
     canvasBody.className = 'canvas-body';
-    canvasMount.append(canvasBody);
+    dragOverlay = document.createElement('div');
+    dragOverlay.className = 'drag-overlay';
+    dragOverlay.append(iconSpan('icon-image-placeholder'));
+    canvasMount.append(canvasBody, dragOverlay);
     container.append(controlsEl, canvasMount);
 
     initFullscreenControl(canvasMount, function onFullscreenChange(nextIsFullscreen) {
         isFullscreen = nextIsFullscreen;
         mountedCanvas?.handle.setFullscreen(isFullscreen);
     });
+    initImageDrop();
 
     subscribe(render);
     render();
+}
+
+function initImageDrop(): void {
+    canvasMount.addEventListener('dragenter', function onDragEnter(event) {
+        if (!isFileDrag(event)) {
+            return;
+        }
+        event.preventDefault();
+        canvasMount.classList.add('drag-over');
+    });
+    canvasMount.addEventListener('dragover', function onDragOver(event) {
+        if (!isFileDrag(event)) {
+            return;
+        }
+        event.preventDefault();
+    });
+    canvasMount.addEventListener('dragleave', function onDragLeave(event) {
+        const relatedTarget = event.relatedTarget as Node | null;
+        if (!relatedTarget || !canvasMount.contains(relatedTarget)) {
+            canvasMount.classList.remove('drag-over');
+        }
+    });
+    canvasMount.addEventListener('drop', function onDrop(event) {
+        if (!isFileDrag(event)) {
+            return;
+        }
+        event.preventDefault();
+        canvasMount.classList.remove('drag-over');
+        const file = event.dataTransfer?.files[0];
+        const documentId = getState().document?.id;
+        const page = getActivePage();
+        if (file && documentId && page) {
+            void assignImageWithConfirm(documentId, page, file);
+        }
+    });
+}
+
+function isFileDrag(event: DragEvent): boolean {
+    return event.dataTransfer !== null && Array.from(event.dataTransfer.types).includes('Files');
 }
 
 function render(): void {
@@ -209,5 +254,26 @@ async function assignImage(documentId: string, pageId: string, file: File): Prom
         setPageImage(pageId, image);
     } catch (error) {
         reportError('upload image', error);
+    }
+}
+
+async function assignImageWithConfirm(documentId: string, page: Page, file: File): Promise<void> {
+    if (page.image) {
+        const confirmed = await confirmDialog({
+            title: 'Replace image?',
+            message: `This page already has an image. Replace it with "${file.name}"?`,
+            confirmLabel: 'Replace',
+            confirmIcon: 'icon-image-placeholder',
+            danger: false
+        });
+        if (!confirmed) {
+            return;
+        }
+    }
+    try {
+        const image = await uploadPageImage(documentId, page.id, file);
+        setPageImage(page.id, image);
+    } catch {
+        // ADD-FR-11/12: drag/paste is a less deliberate input path than the button, so failures fail silently.
     }
 }

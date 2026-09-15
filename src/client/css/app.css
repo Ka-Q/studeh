@@ -560,6 +560,31 @@ dialog::backdrop {
     overflow: hidden;
 }
 
+.canvas-mount.drag-over {
+    border-color: var(--color-accent);
+}
+
+.drag-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg);
+    opacity: 0.85;
+    pointer-events: none;
+}
+
+.canvas-mount.drag-over .drag-overlay {
+    display: flex;
+}
+
+.drag-overlay .icon {
+    width: 48px;
+    height: 48px;
+    color: var(--color-accent);
+}
+
 .canvas-body {
     width: 100%;
     height: 100%;
