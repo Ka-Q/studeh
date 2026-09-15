@@ -18,7 +18,7 @@ import { startInlineEdit } from '../inlineEdit.js';
 
 const MIN_SIDEBAR_WIDTH = 224;
 const MAX_SIDEBAR_WIDTH = 480;
-const DEFAULT_SIDEBAR_WIDTH = 220;
+const DEFAULT_SIDEBAR_WIDTH = 248;
 const WIDTH_STORAGE_KEY = 'studeh:sidebarWidth';
 const COLLAPSED_STORAGE_KEY = 'studeh:sidebarCollapsed';
 
