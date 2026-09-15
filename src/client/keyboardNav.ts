@@ -8,7 +8,7 @@ export function initKeyboardNav(): void {
 }
 
 function onKeyDown(event: KeyboardEvent): void {
-    if (isTypingTarget() || document.querySelector('dialog[open]')) {
+    if (isBlockedByInputOrDialog()) {
         return;
     }
     if (previousPageKeys.has(event.key)) {
@@ -33,6 +33,10 @@ function selectAdjacentPage(direction: -1 | 1): void {
     if (nextIndex !== currentIndex) {
         setActivePage(doc.pages[nextIndex].id);
     }
+}
+
+export function isBlockedByInputOrDialog(): boolean {
+    return isTypingTarget() || document.querySelector('dialog[open]') !== null;
 }
 
 function isTypingTarget(): boolean {
