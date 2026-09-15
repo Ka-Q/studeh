@@ -1,3 +1,13 @@
+export function isFileDrag(event: DragEvent): boolean {
+    return event.dataTransfer !== null && Array.from(event.dataTransfer.types).includes('Files');
+}
+
+export function getDroppedImageFiles(event: DragEvent): File[] {
+    return Array.from(event.dataTransfer?.files ?? []).filter(function isImage(file) {
+        return file.type.startsWith('image/');
+    });
+}
+
 export function requireElement(id: string): HTMLElement {
     const element = document.getElementById(id);
     if (!element) {
