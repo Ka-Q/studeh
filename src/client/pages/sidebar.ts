@@ -12,7 +12,7 @@ import {
 } from '../document/state.js';
 import type { Page } from '../document/types.js';
 import { confirmDialog } from '../dialogs/confirmDialog.js';
-import { initScrollFade, requireElement } from '../dom.js';
+import { getDroppedImageFiles, initScrollFade, isFileDrag, requireElement } from '../dom.js';
 import { reportError } from '../errors.js';
 import { startInlineEdit } from '../inlineEdit.js';
 
@@ -159,17 +159,11 @@ function initSidebarImageDrop(sidebar: HTMLElement): void {
         event.preventDefault();
         sidebar.classList.remove('drag-over');
         const documentId = getState().document?.id;
-        const files = Array.from(event.dataTransfer?.files ?? []).filter(function isImage(file) {
-            return file.type.startsWith('image/');
-        });
+        const files = getDroppedImageFiles(event);
         if (documentId && files.length > 0) {
             void createPagesFromImages(documentId, files);
         }
     });
-}
-
-function isFileDrag(event: DragEvent): boolean {
-    return event.dataTransfer !== null && Array.from(event.dataTransfer.types).includes('Files');
 }
 
 function initSidebarPanel(): void {
