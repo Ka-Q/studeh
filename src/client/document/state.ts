@@ -95,14 +95,13 @@ export function deletePage(pageId: string): void {
     if (!state.document) {
         return;
     }
-    replaceDocument({
-        ...state.document,
-        pages: state.document.pages.filter(function isNotTarget(page) {
-            return page.id !== pageId;
-        })
+    const pages = state.document.pages;
+    const remaining = pages.filter(function isNotTarget(page) {
+        return page.id !== pageId;
     });
+    replaceDocument({ ...state.document, pages: remaining });
     if (state.activePageId === pageId) {
-        state.activePageId = state.document.pages[0]?.id ?? null;
+        state.activePageId = pickActivePageIdAfterDeletion(pages, new Set([pageId]), pageId, remaining);
     }
     state.selectedShapeId = null;
     markDirty();
@@ -131,14 +130,13 @@ export function deletePages(pageIds: string[]): void {
         return;
     }
     const idsToDelete = new Set(pageIds);
-    replaceDocument({
-        ...state.document,
-        pages: state.document.pages.filter(function isNotTarget(page) {
-            return !idsToDelete.has(page.id);
-        })
+    const pages = state.document.pages;
+    const remaining = pages.filter(function isNotTarget(page) {
+        return !idsToDelete.has(page.id);
     });
+    replaceDocument({ ...state.document, pages: remaining });
     if (state.activePageId && idsToDelete.has(state.activePageId)) {
-        state.activePageId = state.document.pages[0]?.id ?? null;
+        state.activePageId = pickActivePageIdAfterDeletion(pages, idsToDelete, state.activePageId, remaining);
     }
     state.selectedShapeId = null;
     markDirty();
@@ -328,6 +326,23 @@ function findPage(pageId: string): Page | null {
     return state.document?.pages.find(function matchesId(page) {
         return page.id === pageId;
     }) ?? null;
+}
+
+function pickActivePageIdAfterDeletion(
+    pages: readonly Page[],
+    idsToDelete: Set<string>,
+    activePageId: string,
+    remaining: readonly Page[]
+): string | null {
+    const activeIndex = pages.findIndex(function matchesId(page) {
+        return page.id === activePageId;
+    });
+    for (let index = activeIndex - 1; index >= 0; index--) {
+        if (!idsToDelete.has(pages[index].id)) {
+            return pages[index].id;
+        }
+    }
+    return remaining[0]?.id ?? null;
 }
 
 function generateId(prefix: string): string {
