@@ -12,7 +12,7 @@ import {
 } from '../document/state.js';
 import type { Page } from '../document/types.js';
 import { confirmDialog } from '../dialogs/confirmDialog.js';
-import { requireElement } from '../dom.js';
+import { initScrollFade, requireElement } from '../dom.js';
 import { reportError } from '../errors.js';
 import { startInlineEdit } from '../inlineEdit.js';
 
@@ -26,10 +26,12 @@ let pendingAutoRename = false;
 let listEl: HTMLElement;
 let selectAllCheckbox: HTMLInputElement;
 let deleteSelectedButton: HTMLButtonElement;
+let updateListScrollFade: () => void;
 const selectedPageIds = new Set<string>();
 
 export function initPageSidebar(): void {
     listEl = requireElement('page-list');
+    updateListScrollFade = initScrollFade(listEl, requireElement('page-list-fade'));
     const addButton = requireElement('btn-add-page');
     const addFromImagesButton = requireElement('btn-add-pages-from-images');
     const imagesInput = createImagesFileInput();
@@ -240,6 +242,7 @@ function renderPageList(listEl: HTMLElement): void {
         pendingAutoRename = false;
         selectedPageIds.clear();
         updateSelectionControls(0, 0);
+        updateListScrollFade();
         return;
     }
 
@@ -260,6 +263,7 @@ function renderPageList(listEl: HTMLElement): void {
     });
 
     updateSelectionControls(selectedPageIds.size, doc.pages.length);
+    updateListScrollFade();
 
     if (pendingAutoRename) {
         pendingAutoRename = false;
