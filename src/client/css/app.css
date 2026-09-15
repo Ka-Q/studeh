@@ -537,6 +537,10 @@ dialog::backdrop {
     cursor: pointer;
 }
 
+.page-item:hover {
+    background: var(--color-surface-hover);
+}
+
 .page-select-checkbox {
     flex: 0 0 auto;
     align-self: center;
@@ -544,6 +548,10 @@ dialog::backdrop {
 
 .page-item.active {
     background: var(--color-surface);
+}
+
+.page-item.active:hover {
+    background: var(--color-surface-hover);
 }
 
 .page-thumb {
