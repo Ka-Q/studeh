@@ -590,6 +590,21 @@ dialog::backdrop {
     height: 100%;
 }
 
+.canvas-empty-state-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    width: 100%;
+    height: 100%;
+}
+
+.canvas-empty-state-hint {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
 .canvas-mount canvas {
     display: block;
     width: 100%;
