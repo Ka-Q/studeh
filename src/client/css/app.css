@@ -1,4 +1,6 @@
 :root {
+    color-scheme: light;
+
     --space-1: 4px;
     --space-2: 8px;
     --space-3: 12px;
@@ -25,9 +27,12 @@
     --color-danger-hover: #b91c1c;
     --color-focus-ring: #2563eb;
     --color-surface-hover: #e8e8e8;
+    accent-color: var(--color-accent);
 }
 
 [data-theme='dark'] {
+    color-scheme: dark;
+
     --color-bg: #1a1a1a;
     --color-surface: #242424;
     --color-border: #3a3a3a;
@@ -39,6 +44,7 @@
     --color-danger-hover: #f87171;
     --color-focus-ring: #60a5fa;
     --color-surface-hover: #323232;
+    accent-color: var(--color-accent);
 }
 
 *,
@@ -405,7 +411,7 @@ dialog::backdrop {
 
 #btn-delete-selected-pages {
     min-width: 0;
-    flex: 1 1 auto;
+    flex: 0 1 auto;
 }
 
 #delete-selected-label {
