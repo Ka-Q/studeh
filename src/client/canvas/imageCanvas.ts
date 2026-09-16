@@ -48,14 +48,17 @@ const revealedFillStyle = 'rgba(242, 242, 242, 0.05)';
 const revealedStrokeStyle = 'rgb(68, 202, 31)';
 const focusOutlineStyle = 'rgb(37, 99, 235)';
 const focusOutlinePaddingPx = 4;
+const editModeHatchSpacingPx = 256;
+const editModeHatchLineWidthPx = 1;
+const editModeHatchLineColor = 'rgba(106, 106, 106, 0.2)';
 interface RectStyle {
     fill: string | null;
     stroke: string;
     lineWidth: number;
 }
 const unselectedStyle: RectStyle = { fill: unselectedFillStyle, stroke: unselectedStrokeStyle, lineWidth: 2 };
-const selectedStyle: RectStyle = { fill: selectedFillStyle, stroke: selectedStrokeStyle, lineWidth: 3 };
-const occlusionStyle: RectStyle = { fill: occlusionFillStyle, stroke: occlusionStrokeStyle, lineWidth: 3 };
+const selectedStyle: RectStyle = { fill: selectedFillStyle, stroke: selectedStrokeStyle, lineWidth: 2 };
+const occlusionStyle: RectStyle = { fill: occlusionFillStyle, stroke: occlusionStrokeStyle, lineWidth: 2 };
 const revealedStyle: RectStyle = { fill: revealedFillStyle, stroke: revealedStrokeStyle, lineWidth: 3 };
 const handleCursors: Record<ResizeHandle, string> = {
     n: 'ns-resize',
@@ -140,6 +143,9 @@ export function mountImageCanvas(
         if (!image) {
             return;
         }
+        if (mode === 'edit') {
+            drawEditModeHatch();
+        }
         context.drawImage(
             image,
             viewport.panX,
@@ -179,6 +185,27 @@ export function mountImageCanvas(
         return shapes.find(function isSelected(shape) {
             return shape.id === selectedShapeId;
         }) ?? null;
+    }
+
+    function drawEditModeHatch(): void {
+        const topLeft = canvasToImage(viewport, { x: 0, y: 0 });
+        const bottomRight = canvasToImage(viewport, { x: canvas.clientWidth, y: canvas.clientHeight });
+        const minOffset = Math.floor((topLeft.x + topLeft.y) / editModeHatchSpacingPx) * editModeHatchSpacingPx;
+        const maxOffset = Math.ceil((bottomRight.x + bottomRight.y) / editModeHatchSpacingPx) * editModeHatchSpacingPx;
+
+        const diagonalLines = new Path2D();
+        for (let offset = minOffset; offset <= maxOffset; offset += editModeHatchSpacingPx) {
+            const start = imageToCanvas(viewport, { x: topLeft.x, y: offset - topLeft.x });
+            const end = imageToCanvas(viewport, { x: bottomRight.x, y: offset - bottomRight.x });
+            diagonalLines.moveTo(start.x, start.y);
+            diagonalLines.lineTo(end.x, end.y);
+        }
+
+        context.save();
+        context.strokeStyle = editModeHatchLineColor;
+        context.lineWidth = editModeHatchLineWidthPx;
+        context.stroke(diagonalLines);
+        context.restore();
     }
 
     function drawHandles(rect: Rect): void {
@@ -280,14 +307,16 @@ export function mountImageCanvas(
     }
 
     function onHoverMove(event: MouseEvent): void {
-        if (!image || activeDrag || creatingRect) {
+        if (!image || activeDrag || creatingRect || stopPanning) {
             return;
         }
-        const canvasPoint = toCanvasPoint(event);
+        updateHoverCursor(toCanvasPoint(event));
+    }
 
+    function updateHoverCursor(canvasPoint: Point): void {
         if (mode === 'study') {
             const hitShape = topmostShapeAt(canvasToImage(viewport, canvasPoint), shapes);
-            canvas.style.cursor = hitShape ? 'pointer' : 'default';
+            canvas.style.cursor = hitShape ? 'pointer' : 'grab';
             return;
         }
 
@@ -391,6 +420,7 @@ export function mountImageCanvas(
 
     function startPanning(event: MouseEvent): void {
         event.preventDefault();
+        canvas.style.cursor = 'grabbing';
         const startPoint = toCanvasPoint(event);
         let lastPoint = startPoint;
         let didPan = false;
@@ -409,6 +439,7 @@ export function mountImageCanvas(
             window.removeEventListener('mousemove', onMouseMove);
             window.removeEventListener('mouseup', onMouseUp);
             stopPanning = null;
+            updateHoverCursor(lastPoint);
         }
 
         function onMouseUp(upEvent: MouseEvent): void {
