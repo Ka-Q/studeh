@@ -35,7 +35,7 @@ export interface ImageCanvasHandle {
 const middleMouseButton = 1;
 const leftMouseButton = 0;
 const zoomStepPerWheelTick = 1.1;
-const dragCreateThresholdPx = 3;
+const clickDragThresholdPx = 3;
 const handleHitRadiusPx = 6;
 const handleSizePx = 8;
 const unselectedStrokeStyle = 'rgba(37, 99, 235, 0.9)';
@@ -391,24 +391,41 @@ export function mountImageCanvas(
 
     function startPanning(event: MouseEvent): void {
         event.preventDefault();
-        let lastPoint = toCanvasPoint(event);
+        const startPoint = toCanvasPoint(event);
+        let lastPoint = startPoint;
+        let didPan = false;
 
         function onMouseMove(moveEvent: MouseEvent): void {
             const point = toCanvasPoint(moveEvent);
+            if (!didPan && Math.hypot(point.x - startPoint.x, point.y - startPoint.y) >= clickDragThresholdPx) {
+                didPan = true;
+            }
             viewport = panViewport(viewport, point.x - lastPoint.x, point.y - lastPoint.y);
             lastPoint = point;
             draw();
         }
 
-        function onMouseUp(): void {
+        function stop(): void {
             window.removeEventListener('mousemove', onMouseMove);
             window.removeEventListener('mouseup', onMouseUp);
             stopPanning = null;
         }
 
+        function onMouseUp(upEvent: MouseEvent): void {
+            stop();
+            if (didPan) {
+                upEvent.preventDefault();
+                window.addEventListener('auxclick', suppressMiddleClickPaste, { capture: true, once: true });
+            }
+        }
+
         window.addEventListener('mousemove', onMouseMove);
         window.addEventListener('mouseup', onMouseUp);
-        stopPanning = onMouseUp;
+        stopPanning = stop;
+    }
+
+    function suppressMiddleClickPaste(event: MouseEvent): void {
+        event.preventDefault();
     }
 
     function startCreating(startCanvasPoint: Point): void {
@@ -441,7 +458,7 @@ export function mountImageCanvas(
             return;
         }
         const dragDistance = Math.hypot(rect.current.x - rect.start.x, rect.current.y - rect.start.y);
-        if (dragDistance < dragCreateThresholdPx) {
+        if (dragDistance < clickDragThresholdPx) {
             callbacks.onSelectShape(null);
             draw();
             return;
