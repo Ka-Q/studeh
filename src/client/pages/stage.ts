@@ -219,7 +219,7 @@ function buildStudyControls(page: Page): HTMLElement {
         requestFullscreen(canvasMount);
     });
 
-    rightGroup.append(hideAllButton, revealAllButton, fullscreenButton);
+    rightGroup.append(revealAllButton, hideAllButton, fullscreenButton);
     return rightGroup;
 }
 
