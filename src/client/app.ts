@@ -4,7 +4,6 @@ import { initOpenDialog } from './document/openDialog.js';
 import { getState, setDocument } from './document/state.js';
 import { initConfirmDialog } from './dialogs/confirmDialog.js';
 import { initNewDocumentDialog } from './dialogs/newDocumentDialog.js';
-import { initModeToggle } from './modes/modeToggle.js';
 import { initPageSidebar } from './pages/sidebar.js';
 import { initStage } from './pages/stage.js';
 import { initTheme } from './theme.js';
@@ -17,7 +16,6 @@ function main(): void {
     initNewDocumentDialog();
     initOpenDialog();
     initToolbar();
-    initModeToggle();
     initPageSidebar();
     initStage();
     initKeyboardNav();

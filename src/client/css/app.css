@@ -16,9 +16,9 @@
     --radius-sm: 4px;
     --radius-md: 8px;
 
-    --color-bg: #ffffff;
+    --color-bg: #fafafa;
     --color-surface: #f5f5f5;
-    --color-border: #d0d0d0;
+    --color-border: #c4c4c4;
     --color-text: #1a1a1a;
     --color-text-muted: #666666;
     --color-accent: #2563eb;
@@ -27,6 +27,8 @@
     --color-danger-hover: #b91c1c;
     --color-focus-ring: #2563eb;
     --color-surface-hover: #e8e8e8;
+    --color-surface-secondary: rgb(222, 222, 222);
+    --color-canvas-vignette: rgba(0, 0, 0, 0.1);
     accent-color: var(--color-accent);
 }
 
@@ -44,6 +46,8 @@
     --color-danger-hover: #f87171;
     --color-focus-ring: #60a5fa;
     --color-surface-hover: #323232;
+    --color-surface-secondary: rgb(19, 19, 19);
+    --color-canvas-vignette: rgba(0, 0, 0, 0.4);
     accent-color: var(--color-accent);
 }
 
@@ -383,6 +387,7 @@ dialog::backdrop {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    background: var(--color-surface-secondary);
 }
 
 #page-sidebar.collapsed {
@@ -653,6 +658,7 @@ dialog::backdrop {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     overflow: hidden;
+    background: var(--color-surface-secondary);
 }
 
 .canvas-mount.drag-over {
@@ -681,8 +687,21 @@ dialog::backdrop {
 }
 
 .canvas-body {
+    position: relative;
     width: 100%;
     height: 100%;
+}
+
+.canvas-body::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to right, var(--color-canvas-vignette), transparent 5px, transparent calc(100% - 5px), var(--color-canvas-vignette)),
+        linear-gradient(to bottom, var(--color-canvas-vignette), transparent 5px, transparent calc(100% - 5px), var(--color-canvas-vignette));
+    pointer-events: none;
 }
 
 .canvas-empty-state-container {
@@ -708,6 +727,14 @@ dialog::backdrop {
 }
 
 .fullscreen-close {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    z-index: 1;
+    background: var(--color-surface);
+}
+
+.canvas-mode-toggle {
     position: absolute;
     top: var(--space-2);
     right: var(--space-2);
