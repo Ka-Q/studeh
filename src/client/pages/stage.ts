@@ -18,6 +18,7 @@ import { mountImageCanvas, type ImageCanvasHandle } from '../canvas/imageCanvas.
 import { initFullscreenControl, requestFullscreen } from '../canvas/fullscreen.js';
 import { confirmDialog } from '../dialogs/confirmDialog.js';
 import { isBlockedByInputOrDialog } from '../keyboardNav.js';
+import { createModeToggle } from '../modes/modeToggle.js';
 
 interface MountedCanvas {
     pageId: string;
@@ -29,6 +30,7 @@ let controlsEl: HTMLDivElement;
 let canvasMount: HTMLDivElement;
 let canvasBody: HTMLDivElement;
 let dragOverlay: HTMLDivElement;
+let modeToggle: HTMLButtonElement;
 let mountedCanvas: MountedCanvas | null = null;
 let isFullscreen = false;
 let isHoveringCanvas = false;
@@ -45,11 +47,13 @@ export function initStage(): void {
     dragOverlay = document.createElement('div');
     dragOverlay.className = 'drag-overlay';
     dragOverlay.append(iconSpan('icon-image-placeholder'));
-    canvasMount.append(canvasBody, dragOverlay);
+    modeToggle = createModeToggle();
+    canvasMount.append(canvasBody, dragOverlay, modeToggle);
     container.append(controlsEl, canvasMount);
 
     initFullscreenControl(canvasMount, function onFullscreenChange(nextIsFullscreen) {
         isFullscreen = nextIsFullscreen;
+        modeToggle.hidden = isFullscreen;
         mountedCanvas?.handle.setFullscreen(isFullscreen);
     });
     initImageDrop();
