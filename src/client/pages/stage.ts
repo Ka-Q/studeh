@@ -19,6 +19,8 @@ import { initFullscreenControl, requestFullscreen } from '../canvas/fullscreen.j
 import { confirmDialog } from '../dialogs/confirmDialog.js';
 import { isBlockedByInputOrDialog } from '../keyboardNav.js';
 import { createModeToggle } from '../modes/modeToggle.js';
+import { browseDialog } from '../document/browseDialog.js';
+import { onNew } from '../document/toolbar.js';
 
 interface MountedCanvas {
     pageId: string;
@@ -137,7 +139,7 @@ function firstImageFile(items: DataTransferItemList | undefined): File | null {
 function render(): void {
     const { document: doc } = getState();
     if (!doc) {
-        showMessage('No document open. Use New or Browse to get started.');
+        renderNoDocumentState();
         return;
     }
 
@@ -159,6 +161,36 @@ function showMessage(message: string): void {
     controlsEl.append(text);
     unmountCanvas();
     canvasBody.textContent = '';
+}
+
+function renderNoDocumentState(): void {
+    controlsEl.innerHTML = '';
+    unmountCanvas();
+    canvasBody.textContent = '';
+
+    const message = document.createElement('span');
+    message.textContent = 'No document open. Use New or Browse to get started.';
+
+    const newButton = document.createElement('button');
+    newButton.type = 'button';
+    newButton.className = 'button-large';
+    newButton.append(iconSpan('icon-new'), document.createTextNode('New'));
+    newButton.addEventListener('click', onNew);
+
+    const browseButton = document.createElement('button');
+    browseButton.type = 'button';
+    browseButton.className = 'button-large';
+    browseButton.append(iconSpan('icon-browse'), document.createTextNode('Browse'));
+    browseButton.addEventListener('click', browseDialog);
+
+    const actions = document.createElement('div');
+    actions.className = 'flex-row';
+    actions.append(newButton, browseButton);
+
+    const container = document.createElement('div');
+    container.className = 'canvas-empty-state-container';
+    container.append(message, actions);
+    canvasBody.append(container);
 }
 
 function renderControls(documentId: string, page: Page): void {

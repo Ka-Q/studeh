@@ -31,7 +31,7 @@ export function initToolbar(): void {
     });
 }
 
-async function onNew(): Promise<void> {
+export async function onNew(): Promise<void> {
     if (!(await confirmDiscardIfDirty())) {
         return;
     }
