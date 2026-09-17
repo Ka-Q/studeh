@@ -3,7 +3,7 @@ import { getState, setDocument } from './state.js';
 import { confirmDiscardIfDirty } from './discardGuard.js';
 import type { DocumentSummary } from './types.js';
 import { confirmDialog } from '../dialogs/confirmDialog.js';
-import { initScrollFade, requireElement, wireDialogClose } from '../dom.js';
+import { initScrollFade, requireElement, showDialog, wireDialogClose } from '../dom.js';
 import { reportError } from '../errors.js';
 
 type SortMode = 'updatedAt' | 'name';
@@ -39,11 +39,13 @@ export function initBrowseDialog(): void {
 export async function browseDialog(): Promise<void> {
     try {
         currentSummaries = await listDocuments();
-        renderDocumentList();
-        dialog.showModal();
     } catch (error) {
         reportError('load documents', error);
+        return;
     }
+    await showDialog(dialog, function populate() {
+        renderDocumentList();
+    });
 }
 
 function updateSortButtonLabel(): void {
