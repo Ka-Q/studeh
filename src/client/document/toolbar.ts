@@ -1,7 +1,7 @@
 import { createDocument, saveDocument } from './api.js';
 import { getState, markClean, renameDocument, setDocument, subscribe } from './state.js';
 import { confirmDiscardIfDirty } from './navigation.js';
-import { openDocumentDialog } from './openDialog.js';
+import { browseDialog } from './browseDialog.js';
 import { newDocumentDialog } from '../dialogs/newDocumentDialog.js';
 import { requireElement } from '../dom.js';
 import { reportError } from '../errors.js';
@@ -9,14 +9,14 @@ import { startInlineEdit } from '../inlineEdit.js';
 
 export function initToolbar(): void {
     const newButton = requireElement('btn-new');
-    const openButton = requireElement('btn-open');
+    const browseButton = requireElement('btn-browse');
     const saveButton = requireElement('btn-save');
     const renameButton = requireElement('btn-rename-document');
     const titleEl = requireElement('doc-title');
     const dirtyEl = requireElement('dirty-indicator');
 
     newButton.addEventListener('click', onNew);
-    openButton.addEventListener('click', openDocumentDialog);
+    browseButton.addEventListener('click', browseDialog);
     saveButton.addEventListener('click', onSave);
     renameButton.addEventListener('click', function onRename() {
         onRenameDocument(titleEl);

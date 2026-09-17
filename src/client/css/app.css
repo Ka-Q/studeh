@@ -106,9 +106,9 @@ button:hover:not(:disabled) {
     mask-image: url('/icons/new.svg');
 }
 
-.icon-open {
-    -webkit-mask-image: url('/icons/open.svg');
-    mask-image: url('/icons/open.svg');
+.icon-browse {
+    -webkit-mask-image: url('/icons/browse.svg');
+    mask-image: url('/icons/browse.svg');
 }
 
 .icon-save {
@@ -220,7 +220,7 @@ dialog::backdrop {
     background: rgba(0, 0, 0, 0.5);
 }
 
-#open-dialog {
+#browse-dialog {
     width: 560px;
     max-width: calc(100vw - var(--space-6) * 2);
     height: 520px;
@@ -229,12 +229,12 @@ dialog::backdrop {
     overflow: hidden;
 }
 
-#open-dialog[open] {
+#browse-dialog[open] {
     display: flex;
     flex-direction: column;
 }
 
-#open-dialog-header {
+#browse-dialog-header {
     flex: 0 0 auto;
     display: grid;
     grid-template-columns: minmax(max-content, 1fr) minmax(0, max-content) minmax(max-content, 1fr);
@@ -244,13 +244,13 @@ dialog::backdrop {
     border-bottom: 1px solid var(--color-border);
 }
 
-#open-dialog-header h2 {
+#browse-dialog-header h2 {
     margin: 0;
     text-align: center;
     font-size: var(--font-size-xl);
 }
 
-#btn-close-open-dialog {
+#btn-close-browse-dialog {
     justify-self: start;
 }
 

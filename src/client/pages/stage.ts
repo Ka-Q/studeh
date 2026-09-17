@@ -137,7 +137,7 @@ function firstImageFile(items: DataTransferItemList | undefined): File | null {
 function render(): void {
     const { document: doc } = getState();
     if (!doc) {
-        showMessage('No document open. Use New or Open to get started.');
+        showMessage('No document open. Use New or Browse to get started.');
         return;
     }
 
