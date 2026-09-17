@@ -1,5 +1,6 @@
 import { createDocument, saveDocument } from './api.js';
-import { confirmDiscardIfDirty, getState, markClean, renameDocument, setDocument, subscribe } from './state.js';
+import { getState, markClean, renameDocument, setDocument, subscribe } from './state.js';
+import { confirmDiscardIfDirty } from './navigation.js';
 import { openDocumentDialog } from './openDialog.js';
 import { newDocumentDialog } from '../dialogs/newDocumentDialog.js';
 import { requireElement } from '../dom.js';
