@@ -39,6 +39,15 @@ export function awaitDialogClose(dialog: HTMLDialogElement): Promise<string> {
     });
 }
 
+export function waitForDialogFree(dialog: HTMLDialogElement): Promise<void> {
+    if (!dialog.open) {
+        return Promise.resolve();
+    }
+    return awaitDialogClose(dialog).then(function retry() {
+        return waitForDialogFree(dialog);
+    });
+}
+
 export function initScrollFade(scrollEl: HTMLElement, fadeEl: HTMLElement): () => void {
     function update(): void {
         const scrollable = scrollEl.scrollHeight > scrollEl.clientHeight;
