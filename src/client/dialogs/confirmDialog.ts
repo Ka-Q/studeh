@@ -1,4 +1,4 @@
-import { awaitDialogClose, requireElement, waitForDialogFree, wireDialogClose } from '../dom.js';
+import { requireElement, showDialog, wireDialogClose } from '../dom.js';
 
 interface ConfirmOptions {
     title: string;
@@ -34,16 +34,13 @@ export function initConfirmDialog(): void {
 }
 
 export function confirmDialog(options: ConfirmOptions): Promise<boolean> {
-    return waitForDialogFree(dialog).then(function afterFree() {
+    return showDialog(dialog, function populate() {
         titleEl.textContent = options.title;
         messageEl.textContent = options.message;
         confirmLabelEl.textContent = options.confirmLabel ?? DEFAULT_CONFIRM_LABEL;
         confirmIconEl.className = `icon ${options.confirmIcon ?? DEFAULT_CONFIRM_ICON}`;
         confirmButton.classList.toggle('button-danger', options.danger ?? true);
-        dialog.returnValue = '';
-        dialog.showModal();
-        return awaitDialogClose(dialog).then(function toBoolean(value) {
-            return value === 'confirmed';
-        });
+    }).then(function toBoolean(value) {
+        return value === 'confirmed';
     });
 }
