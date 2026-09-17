@@ -290,7 +290,9 @@ export function confirmDiscardIfDirty(): Promise<boolean> {
     return confirmDialog({
         title: 'Discard changes?',
         message: 'You have unsaved changes. Discard them?',
-        confirmLabel: 'Discard'
+        confirmLabel: 'Discard',
+        confirmIcon: 'icon-trash',
+        danger: true
     });
 }
 
