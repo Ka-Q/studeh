@@ -1,3 +1,5 @@
+import { noticeDialog } from './dialogs/noticeDialog.js';
+
 export function reportError(action: string, error: unknown): void {
-    alert(`Failed to ${action}: ${error instanceof Error ? error.message : String(error)}`);
+    void noticeDialog('Something went wrong', `Failed to ${action}: ${error instanceof Error ? error.message : String(error)}`);
 }
