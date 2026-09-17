@@ -1,20 +1,7 @@
 import { getDocument } from './api.js';
-import { getState, setDocument } from './state.js';
-import { confirmDialog } from '../dialogs/confirmDialog.js';
+import { documentUrlPath, getState, setDocument } from './state.js';
+import { confirmDiscardIfDirty } from './discardGuard.js';
 import { reportError } from '../errors.js';
-
-export function confirmDiscardIfDirty(): Promise<boolean> {
-    if (!getState().dirty) {
-        return Promise.resolve(true);
-    }
-    return confirmDialog({
-        title: 'Discard changes?',
-        message: 'You have unsaved changes. Discard them?',
-        confirmLabel: 'Discard',
-        confirmIcon: 'icon-trash',
-        danger: true
-    });
-}
 
 export function initNavigationGuard(): void {
     window.addEventListener('popstate', async function onPopState() {
@@ -24,7 +11,7 @@ export function initNavigationGuard(): void {
             return;
         }
         if (!(await confirmDiscardIfDirty())) {
-            history.pushState(null, '', openDocument ? `/${openDocument.id}` : '/');
+            history.pushState(null, '', documentUrlPath(getState().document));
             return;
         }
         if (!id) {
@@ -34,8 +21,7 @@ export function initNavigationGuard(): void {
         try {
             setDocument(await getDocument(id));
         } catch (error) {
-            const current = getState().document;
-            history.replaceState(null, '', current ? `/${current.id}` : '/');
+            history.replaceState(null, '', documentUrlPath(getState().document));
             reportError('open document', error);
         }
     });

@@ -280,8 +280,12 @@ export function renameDocument(name: string): void {
     markDirty();
 }
 
+export function documentUrlPath(document: DocumentManifest | null): string {
+    return document ? `/${document.id}` : '/';
+}
+
 function syncUrlWithDocument(document: DocumentManifest | null): void {
-    const targetPath = document ? `/${document.id}` : '/';
+    const targetPath = documentUrlPath(document);
     if (location.pathname !== targetPath) {
         history.pushState(null, '', targetPath);
     }
