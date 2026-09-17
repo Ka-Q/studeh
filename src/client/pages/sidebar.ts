@@ -84,8 +84,10 @@ export function initPageSidebar(): void {
         deletePages(Array.from(selectedPageIds));
     });
 
-    subscribe(function renderOnChange() {
+    subscribe(function renderOnChange(state) {
         renderPageList(listEl);
+        addButton.toggleAttribute('disabled', !state.document);
+        addFromImagesButton.toggleAttribute('disabled', !state.document);
     });
     renderPageList(listEl);
 
