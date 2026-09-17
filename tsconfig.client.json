@@ -7,5 +7,6 @@
         "outDir": "public/js",
         "rootDir": "src/client"
     },
-    "include": ["src/client/**/*.ts"]
+    "include": ["src/client/**/*.ts"],
+    "exclude": ["src/client/themeInit.ts"]
 }

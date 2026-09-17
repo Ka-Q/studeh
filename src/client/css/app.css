@@ -51,6 +51,26 @@
     accent-color: var(--color-accent);
 }
 
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+        color-scheme: dark;
+
+        --color-bg: #1a1a1a;
+        --color-surface: #242424;
+        --color-border: #3a3a3a;
+        --color-text: #eaeaea;
+        --color-text-muted: #a0a0a0;
+        --color-accent: #3b82f6;
+        --color-accent-text: #ffffff;
+        --color-danger: #ef4444;
+        --color-danger-hover: #f87171;
+        --color-focus-ring: #60a5fa;
+        --color-surface-hover: #323232;
+        --color-surface-secondary: rgb(19, 19, 19);
+        --color-canvas-vignette: rgba(0, 0, 0, 0.4);
+    }
+}
+
 *,
 *::before,
 *::after {
