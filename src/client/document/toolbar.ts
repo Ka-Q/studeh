@@ -27,7 +27,7 @@ export function initToolbar(): void {
         titleEl.title = state.document?.name ?? '';
         dirtyEl.hidden = !state.dirty;
         saveButton.toggleAttribute('disabled', !state.document);
-        renameButton.toggleAttribute('disabled', !state.document);
+        renameButton.hidden = !state.document;
     });
 }
 
