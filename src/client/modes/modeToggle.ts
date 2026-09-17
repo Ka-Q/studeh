@@ -1,10 +1,16 @@
 import { getState, setMode, subscribe } from '../document/state.js';
 
-export function createModeToggle(): HTMLButtonElement {
+export interface ModeToggleHandle {
+    button: HTMLButtonElement;
+    setFullscreen(isFullscreen: boolean): void;
+}
+
+export function createModeToggle(): ModeToggleHandle {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'canvas-mode-toggle';
     button.disabled = true;
+    button.hidden = true;
 
     const icon = document.createElement('span');
     icon.className = 'icon icon-mode-toggle';
@@ -13,6 +19,13 @@ export function createModeToggle(): HTMLButtonElement {
     const label = document.createElement('span');
 
     button.append(icon, label);
+
+    let isFullscreen = false;
+    let hasDocument = false;
+
+    function updateVisibility(): void {
+        button.hidden = isFullscreen || !hasDocument;
+    }
 
     button.addEventListener('click', function onToggleClick() {
         setMode(getState().mode === 'edit' ? 'study' : 'edit');
@@ -23,7 +36,15 @@ export function createModeToggle(): HTMLButtonElement {
         label.textContent = toggleLabel;
         button.title = toggleLabel;
         button.toggleAttribute('disabled', !state.document);
+        hasDocument = !!state.document;
+        updateVisibility();
     });
 
-    return button;
+    return {
+        button,
+        setFullscreen(nextIsFullscreen: boolean): void {
+            isFullscreen = nextIsFullscreen;
+            updateVisibility();
+        }
+    };
 }
