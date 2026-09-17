@@ -1,8 +1,5 @@
-import { getDocument } from './api.js';
 import type { DocumentManifest, Page, PageImage, RectangleShape } from './types.js';
 import type { Rect } from '../shapes/rectangle.js';
-import { confirmDialog } from '../dialogs/confirmDialog.js';
-import { reportError } from '../errors.js';
 
 export type Mode = 'edit' | 'study';
 
@@ -283,46 +280,12 @@ export function renameDocument(name: string): void {
     markDirty();
 }
 
-export function confirmDiscardIfDirty(): Promise<boolean> {
-    if (!state.dirty) {
-        return Promise.resolve(true);
-    }
-    return confirmDialog({
-        title: 'Discard changes?',
-        message: 'You have unsaved changes. Discard them?',
-        confirmLabel: 'Discard',
-        confirmIcon: 'icon-trash',
-        danger: true
-    });
-}
-
 function syncUrlWithDocument(document: DocumentManifest | null): void {
     const targetPath = document ? `/${document.id}` : '/';
     if (location.pathname !== targetPath) {
         history.pushState(null, '', targetPath);
     }
 }
-
-window.addEventListener('popstate', async function onPopState() {
-    const id = location.pathname.slice(1);
-    if (id === state.document?.id || (!id && !state.document)) {
-        return;
-    }
-    if (!(await confirmDiscardIfDirty())) {
-        history.pushState(null, '', state.document ? `/${state.document.id}` : '/');
-        return;
-    }
-    if (!id) {
-        setDocument(null);
-        return;
-    }
-    try {
-        setDocument(await getDocument(id));
-    } catch (error) {
-        history.replaceState(null, '', state.document ? `/${state.document.id}` : '/');
-        reportError('open document', error);
-    }
-});
 
 function findPage(pageId: string): Page | null {
     return state.document?.pages.find(function matchesId(page) {

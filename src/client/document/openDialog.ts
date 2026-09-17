@@ -1,5 +1,6 @@
 import { deleteDocument, getDocument, listDocuments } from './api.js';
-import { confirmDiscardIfDirty, getState, setDocument } from './state.js';
+import { getState, setDocument } from './state.js';
+import { confirmDiscardIfDirty } from './navigation.js';
 import type { DocumentSummary } from './types.js';
 import { confirmDialog } from '../dialogs/confirmDialog.js';
 import { initScrollFade, requireElement, wireDialogClose } from '../dom.js';
