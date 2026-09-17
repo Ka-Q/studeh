@@ -21,7 +21,10 @@ export async function listDocuments(): Promise<DocumentSummary[]> {
                 id: manifest.id,
                 name: manifest.name,
                 pageCount: manifest.pages.length,
-                updatedAt: stats.mtime.toISOString()
+                updatedAt: stats.mtime.toISOString(),
+                thumbnail: manifest.pages.find(function hasImage(page) {
+                    return page.image !== null;
+                })?.image ?? null
             });
         } catch (error) {
             console.warn(`Skipping invalid document folder "${entry.name}":`, error);
