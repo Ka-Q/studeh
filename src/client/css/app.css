@@ -186,6 +186,11 @@ button:hover:not(:disabled) {
     mask-image: url('/icons/mode-toggle.svg');
 }
 
+.icon-warning {
+    -webkit-mask-image: url('/icons/warning.svg');
+    mask-image: url('/icons/warning.svg');
+}
+
 .icon-button {
     padding: var(--space-1);
 }
@@ -262,6 +267,17 @@ dialog::backdrop {
 .simple-dialog h2 {
     margin: 0 0 var(--space-2);
     font-size: var(--font-size-xl);
+}
+
+.notice-dialog-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.notice-dialog-header h2 {
+    margin: 0;
 }
 
 .simple-dialog p {
