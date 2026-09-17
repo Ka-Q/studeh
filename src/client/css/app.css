@@ -339,6 +339,12 @@ dialog::backdrop {
     font-size: var(--font-size-lg);
 }
 
+.button-accent {
+    border-width: 2px;
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+
 .button-danger {
     background: var(--color-danger);
     border-color: var(--color-danger);
@@ -813,4 +819,5 @@ dialog::backdrop {
     right: var(--space-2);
     z-index: 1;
     background: var(--color-surface);
+    color: var(--color-accent);
 }
