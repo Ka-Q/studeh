@@ -334,6 +334,11 @@ dialog::backdrop {
     outline-offset: 1px;
 }
 
+.button-large {
+    padding: var(--space-3) var(--space-5);
+    font-size: var(--font-size-lg);
+}
+
 .button-danger {
     background: var(--color-danger);
     border-color: var(--color-danger);
