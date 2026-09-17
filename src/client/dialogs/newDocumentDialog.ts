@@ -1,4 +1,4 @@
-import { awaitDialogClose, requireElement, wireDialogClose } from '../dom.js';
+import { awaitDialogClose, requireElement, waitForDialogFree, wireDialogClose } from '../dom.js';
 import { MAX_NAME_LENGTH, sanitizeName } from '../inlineEdit.js';
 
 const DEFAULT_NAME = 'Untitled document';
@@ -30,14 +30,14 @@ export function initNewDocumentDialog(): void {
 }
 
 export function newDocumentDialog(): Promise<string | null> {
-    if (dialog.open) {
-        return Promise.resolve(null);
-    }
-    dialog.returnValue = '';
-    nameInput.value = DEFAULT_NAME;
-    dialog.showModal();
-    nameInput.select();
-    return awaitDialogClose(dialog).then(function toNameOrNull(value) {
-        return value || null;
+    return waitForDialogFree(dialog).then(function afterFree() {
+        dialog.returnValue = '';
+        nameInput.setCustomValidity('');
+        nameInput.value = DEFAULT_NAME;
+        dialog.showModal();
+        nameInput.select();
+        return awaitDialogClose(dialog).then(function toNameOrNull(value) {
+            return value || null;
+        });
     });
 }
