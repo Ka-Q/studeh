@@ -173,13 +173,13 @@ function renderNoDocumentState(): void {
 
     const newButton = document.createElement('button');
     newButton.type = 'button';
-    newButton.className = 'button-large';
+    newButton.className = 'button-large button-accent';
     newButton.append(iconSpan('icon-new'), document.createTextNode('New'));
     newButton.addEventListener('click', onNew);
 
     const browseButton = document.createElement('button');
     browseButton.type = 'button';
-    browseButton.className = 'button-large';
+    browseButton.className = 'button-large button-accent';
     browseButton.append(iconSpan('icon-browse'), document.createTextNode('Browse'));
     browseButton.addEventListener('click', browseDialog);
 
