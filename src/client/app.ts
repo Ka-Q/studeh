@@ -1,6 +1,6 @@
 import { getDocument } from './document/api.js';
 import { initToolbar } from './document/toolbar.js';
-import { initOpenDialog } from './document/openDialog.js';
+import { initBrowseDialog } from './document/browseDialog.js';
 import { getState, setDocument } from './document/state.js';
 import { initNavigationGuard } from './document/navigation.js';
 import { initConfirmDialog } from './dialogs/confirmDialog.js';
@@ -17,7 +17,7 @@ function main(): void {
     initNoticeDialog();
     initConfirmDialog();
     initNewDocumentDialog();
-    initOpenDialog();
+    initBrowseDialog();
     initToolbar();
     initPageSidebar();
     initStage();

@@ -20,12 +20,12 @@ let updateListScrollFade: () => void;
 let currentSummaries: DocumentSummary[] = [];
 let sortMode: SortMode = 'updatedAt';
 
-export function initOpenDialog(): void {
-    dialog = requireElement('open-dialog') as HTMLDialogElement;
+export function initBrowseDialog(): void {
+    dialog = requireElement('browse-dialog') as HTMLDialogElement;
     listEl = requireElement('document-list');
     updateListScrollFade = initScrollFade(listEl, requireElement('document-list-fade'));
     sortButton = requireElement('btn-sort-documents') as HTMLButtonElement;
-    const closeButton = requireElement('btn-close-open-dialog');
+    const closeButton = requireElement('btn-close-browse-dialog');
 
     wireDialogClose(dialog, closeButton);
 
@@ -36,7 +36,7 @@ export function initOpenDialog(): void {
     updateSortButtonLabel();
 }
 
-export async function openDocumentDialog(): Promise<void> {
+export async function browseDialog(): Promise<void> {
     try {
         currentSummaries = await listDocuments();
         renderDocumentList();
