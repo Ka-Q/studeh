@@ -2,6 +2,7 @@ import { getDocument } from './document/api.js';
 import { initToolbar } from './document/toolbar.js';
 import { initOpenDialog } from './document/openDialog.js';
 import { getState, setDocument } from './document/state.js';
+import { initNavigationGuard } from './document/navigation.js';
 import { initConfirmDialog } from './dialogs/confirmDialog.js';
 import { initNewDocumentDialog } from './dialogs/newDocumentDialog.js';
 import { initNoticeDialog } from './dialogs/noticeDialog.js';
@@ -21,6 +22,7 @@ function main(): void {
     initPageSidebar();
     initStage();
     initKeyboardNav();
+    initNavigationGuard();
     restoreDocumentFromUrl();
 }
 
