@@ -1,4 +1,4 @@
-import { awaitDialogClose, closeOnBackdropClick, requireElement, waitForDialogFree } from '../dom.js';
+import { requireElement, showDialog, wireDialogClose } from '../dom.js';
 
 let dialog: HTMLDialogElement;
 let titleEl: HTMLElement;
@@ -10,19 +10,14 @@ export function initNoticeDialog(): void {
     messageEl = requireElement('notice-dialog-message');
     const okButton = requireElement('btn-notice-ok');
 
-    okButton.addEventListener('click', function onOk() {
-        dialog.close();
-    });
-    closeOnBackdropClick(dialog);
+    wireDialogClose(dialog, okButton);
 }
 
 export function noticeDialog(title: string, message: string): Promise<void> {
-    return waitForDialogFree(dialog).then(function afterFree() {
+    return showDialog(dialog, function populate() {
         titleEl.textContent = title;
         messageEl.textContent = message;
-        dialog.showModal();
-        return awaitDialogClose(dialog).then(function toVoid() {
-            return undefined;
-        });
+    }).then(function toVoid() {
+        return undefined;
     });
 }

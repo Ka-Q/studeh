@@ -39,13 +39,27 @@ export function awaitDialogClose(dialog: HTMLDialogElement): Promise<string> {
     });
 }
 
-export function waitForDialogFree(dialog: HTMLDialogElement): Promise<void> {
-    if (!dialog.open) {
-        return Promise.resolve();
-    }
-    return awaitDialogClose(dialog).then(function retry() {
-        return waitForDialogFree(dialog);
+const dialogQueues = new WeakMap<HTMLDialogElement, Promise<void>>();
+
+export function showDialog(
+    dialog: HTMLDialogElement,
+    populate: () => void,
+    afterShow?: () => void
+): Promise<string> {
+    const previous = dialogQueues.get(dialog) ?? Promise.resolve();
+    const opened = previous.then(function open(): Promise<string> {
+        dialog.returnValue = '';
+        populate();
+        dialog.showModal();
+        afterShow?.();
+        return awaitDialogClose(dialog);
     });
+    dialogQueues.set(dialog, opened.then(function toSettled() {
+        return undefined;
+    }, function toSettled() {
+        return undefined;
+    }));
+    return opened;
 }
 
 export function initScrollFade(scrollEl: HTMLElement, fadeEl: HTMLElement): () => void {
