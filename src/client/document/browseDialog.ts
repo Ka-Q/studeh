@@ -1,4 +1,4 @@
-import { deleteDocument, getDocument, listDocuments } from './api.js';
+import { deleteDocument, getDocument, listDocuments, pageImageUrl } from './api.js';
 import { getState, setDocument } from './state.js';
 import { confirmDiscardIfDirty } from './discardGuard.js';
 import type { DocumentSummary } from './types.js';
@@ -95,6 +95,22 @@ function renderDocumentItem(summary: DocumentSummary): HTMLLIElement {
     return item;
 }
 
+function renderThumbnail(summary: DocumentSummary): HTMLSpanElement {
+    const thumb = document.createElement('span');
+    thumb.className = 'document-thumb';
+
+    if (summary.thumbnail) {
+        const img = document.createElement('img');
+        img.src = pageImageUrl(summary.id, summary.thumbnail);
+        img.alt = '';
+        thumb.appendChild(img);
+    } else {
+        thumb.appendChild(renderIcon('icon-image-placeholder'));
+    }
+
+    return thumb;
+}
+
 function renderOpenButton(summary: DocumentSummary): HTMLButtonElement {
     const button = document.createElement('button');
     button.className = 'document-open';
@@ -108,7 +124,11 @@ function renderOpenButton(summary: DocumentSummary): HTMLButtonElement {
     const pageLabel = summary.pageCount === 1 ? 'page' : 'pages';
     meta.textContent = `${summary.pageCount} ${pageLabel} · Edited ${formatUpdatedAt(summary.updatedAt)}`;
 
-    button.append(name, meta);
+    const text = document.createElement('span');
+    text.className = 'document-text';
+    text.append(name, meta);
+
+    button.append(renderThumbnail(summary), text);
     button.addEventListener('click', async function onOpenDocument() {
         if (!(await confirmDiscardIfDirty())) {
             return;
