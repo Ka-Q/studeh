@@ -38,4 +38,5 @@ export interface DocumentSummary {
     name: string;
     pageCount: number;
     updatedAt: string;
+    thumbnail: PageImage | null;
 }
