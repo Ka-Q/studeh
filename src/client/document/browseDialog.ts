@@ -3,7 +3,7 @@ import { getState, setDocument } from './state.js';
 import { confirmDiscardIfDirty } from './discardGuard.js';
 import type { DocumentSummary } from './types.js';
 import { confirmDialog } from '../dialogs/confirmDialog.js';
-import { initScrollFade, requireElement, showDialog, wireDialogClose } from '../dom.js';
+import { iconSpan, initScrollFade, requireElement, showDialog, wireDialogClose } from '../dom.js';
 import { reportError } from '../errors.js';
 
 type SortMode = 'updatedAt' | 'name';
@@ -52,7 +52,7 @@ function updateSortButtonLabel(): void {
     sortButton.innerHTML = '';
     const label = document.createElement('span');
     label.textContent = SORT_LABELS[sortMode];
-    sortButton.append(renderIcon('icon-sort'), label);
+    sortButton.append(iconSpan('icon-sort'), label);
 }
 
 function sortedSummaries(): DocumentSummary[] {
@@ -105,7 +105,7 @@ function renderThumbnail(summary: DocumentSummary): HTMLSpanElement {
         img.alt = '';
         thumb.appendChild(img);
     } else {
-        thumb.appendChild(renderIcon('icon-image-placeholder'));
+        thumb.appendChild(iconSpan('icon-image-placeholder'));
     }
 
     return thumb;
@@ -148,7 +148,7 @@ function renderDeleteButton(summary: DocumentSummary): HTMLButtonElement {
     button.className = 'icon-button';
     button.title = 'Delete document';
     button.setAttribute('aria-label', 'Delete document');
-    button.appendChild(renderIcon('icon-trash'));
+    button.appendChild(iconSpan('icon-trash'));
     button.addEventListener('click', async function onDelete() {
         const confirmed = await confirmDialog({
             title: 'Delete document',
@@ -169,13 +169,6 @@ function renderDeleteButton(summary: DocumentSummary): HTMLButtonElement {
         }
     });
     return button;
-}
-
-function renderIcon(className: string): HTMLSpanElement {
-    const icon = document.createElement('span');
-    icon.className = `icon ${className}`;
-    icon.setAttribute('aria-hidden', 'true');
-    return icon;
 }
 
 function formatUpdatedAt(iso: string): string {

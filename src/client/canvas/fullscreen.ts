@@ -1,3 +1,5 @@
+import { iconSpan } from '../dom.js';
+
 export interface FullscreenControl {
     destroy(): void;
 }
@@ -12,10 +14,7 @@ export function initFullscreenControl(
     closeButton.setAttribute('aria-label', 'Exit fullscreen');
     closeButton.hidden = true;
 
-    const icon = document.createElement('span');
-    icon.className = 'icon icon-close';
-    icon.setAttribute('aria-hidden', 'true');
-    closeButton.appendChild(icon);
+    closeButton.appendChild(iconSpan('icon-close'));
 
     closeButton.addEventListener('click', function onClose() {
         void document.exitFullscreen();
