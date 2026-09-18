@@ -1,4 +1,5 @@
 import { getState, setMode, subscribe } from '../document/state.js';
+import { iconSpan } from '../dom.js';
 
 export interface ModeToggleHandle {
     button: HTMLButtonElement;
@@ -12,10 +13,7 @@ export function createModeToggle(): ModeToggleHandle {
     button.disabled = true;
     button.hidden = true;
 
-    const icon = document.createElement('span');
-    icon.className = 'icon icon-mode-toggle';
-    icon.setAttribute('aria-hidden', 'true');
-
+    const icon = iconSpan('icon-mode-toggle');
     const label = document.createElement('span');
 
     button.append(icon, label);
