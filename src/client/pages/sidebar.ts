@@ -12,7 +12,7 @@ import {
 } from '../document/state.js';
 import type { Page } from '../document/types.js';
 import { confirmDialog } from '../dialogs/confirmDialog.js';
-import { getDroppedImageFiles, initScrollFade, isFileDrag, requireElement } from '../dom.js';
+import { getDroppedImageFiles, iconSpan, initScrollFade, isFileDrag, requireElement } from '../dom.js';
 import { reportError } from '../errors.js';
 import { startInlineEdit } from '../inlineEdit.js';
 
@@ -333,17 +333,10 @@ function renderThumbnail(documentId: string, page: Page): HTMLSpanElement {
         img.alt = '';
         thumb.appendChild(img);
     } else {
-        thumb.appendChild(renderIcon('icon-image-placeholder'));
+        thumb.appendChild(iconSpan('icon-image-placeholder'));
     }
 
     return thumb;
-}
-
-function renderIcon(className: string): HTMLSpanElement {
-    const icon = document.createElement('span');
-    icon.className = `icon ${className}`;
-    icon.setAttribute('aria-hidden', 'true');
-    return icon;
 }
 
 function renderPageName(page: Page): HTMLSpanElement {
@@ -378,7 +371,7 @@ function renderMoveButton(
     button.title = label;
     button.setAttribute('aria-label', label);
     button.disabled = disabled;
-    button.appendChild(renderIcon(iconClass));
+    button.appendChild(iconSpan(iconClass));
     button.addEventListener('click', function onMove(event) {
         event.stopPropagation();
         movePage(page.id, direction);
@@ -391,7 +384,7 @@ function renderRenameButton(page: Page, nameEl: HTMLElement): HTMLButtonElement 
     button.className = 'icon-button';
     button.title = 'Rename page';
     button.setAttribute('aria-label', 'Rename page');
-    button.appendChild(renderIcon('icon-rename'));
+    button.appendChild(iconSpan('icon-rename'));
     button.addEventListener('click', function onRename(event) {
         event.stopPropagation();
         startPageRename(page, nameEl);
@@ -410,7 +403,7 @@ function renderDeleteButton(page: Page): HTMLButtonElement {
     button.className = 'icon-button';
     button.title = 'Delete page';
     button.setAttribute('aria-label', 'Delete page');
-    button.appendChild(renderIcon('icon-trash'));
+    button.appendChild(iconSpan('icon-trash'));
     button.addEventListener('click', async function onDelete(event) {
         event.stopPropagation();
         const hasContent = page.image !== null || page.shapes.length > 0;

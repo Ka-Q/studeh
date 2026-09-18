@@ -12,7 +12,7 @@ import {
 } from '../document/state.js';
 import { pageImageUrl, uploadPageImage } from '../document/api.js';
 import type { Page } from '../document/types.js';
-import { getDroppedImageFiles, isFileDrag, requireElement } from '../dom.js';
+import { getDroppedImageFiles, iconSpan, isFileDrag, requireElement } from '../dom.js';
 import { reportError } from '../errors.js';
 import { mountImageCanvas, type ImageCanvasHandle } from '../canvas/imageCanvas.js';
 import { initFullscreenControl, requestFullscreen } from '../canvas/fullscreen.js';
@@ -288,13 +288,6 @@ function createImageFileInput(documentId: string, pageId: string): HTMLInputElem
         }
     });
     return input;
-}
-
-function iconSpan(className: string): HTMLSpanElement {
-    const icon = document.createElement('span');
-    icon.className = `icon ${className}`;
-    icon.setAttribute('aria-hidden', 'true');
-    return icon;
 }
 
 function renderCanvas(documentId: string, page: Page): void {

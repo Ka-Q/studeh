@@ -8,6 +8,13 @@ export function getDroppedImageFiles(event: DragEvent): File[] {
     });
 }
 
+export function iconSpan(className: string): HTMLSpanElement {
+    const icon = document.createElement('span');
+    icon.className = `icon ${className}`;
+    icon.setAttribute('aria-hidden', 'true');
+    return icon;
+}
+
 export function requireElement(id: string): HTMLElement {
     const element = document.getElementById(id);
     if (!element) {
