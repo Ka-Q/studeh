@@ -14,8 +14,8 @@ export interface Size {
     height: number;
 }
 
-const minZoom = 0.1;
-const maxZoom = 8;
+const MIN_ZOOM = 0.1;
+const MAX_ZOOM = 8;
 
 export function fitViewport(imageSize: Size, canvasSize: Size): Viewport {
     const zoom = Math.min(canvasSize.width / imageSize.width, canvasSize.height / imageSize.height, 1);
@@ -41,7 +41,7 @@ export function canvasToImage(viewport: Viewport, point: Point): Point {
 }
 
 export function zoomAtCanvasPoint(viewport: Viewport, canvasPoint: Point, zoomFactor: number): Viewport {
-    const zoom = clamp(viewport.zoom * zoomFactor, minZoom, maxZoom);
+    const zoom = clamp(viewport.zoom * zoomFactor, MIN_ZOOM, MAX_ZOOM);
     const imagePoint = canvasToImage(viewport, canvasPoint);
     return {
         zoom,
