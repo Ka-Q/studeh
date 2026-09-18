@@ -359,34 +359,35 @@ export function mountImageCanvas(
 
     function startMoving(shape: RectangleShape, startCanvasPoint: Point): void {
         const original: Rect = { x: shape.x, y: shape.y, width: shape.width, height: shape.height };
-        activeDrag = { kind: 'move', shapeId: shape.id, original, startCanvasPoint, current: original };
-        draw();
-
-        startDragSession(function onMouseMove(moveEvent) {
-            const drag = activeDrag;
-            if (!drag || drag.kind !== 'move') {
-                return;
+        startRectDrag(
+            { kind: 'move', shapeId: shape.id, original, startCanvasPoint, current: original },
+            function computeNext(rectOriginal, delta) {
+                return clampMoveToBounds(moveRect(rectOriginal, delta.x, delta.y), imageBounds());
             }
-            const delta = imagePointDelta(startCanvasPoint, toCanvasPoint(moveEvent));
-            const current = clampMoveToBounds(moveRect(drag.original, delta.x, delta.y), imageBounds());
-            activeDrag = { ...drag, current };
-            draw();
-        }, finishDrag);
+        );
     }
 
     function startResizing(shape: RectangleShape, handle: ResizeHandle, startCanvasPoint: Point): void {
         const original: Rect = { x: shape.x, y: shape.y, width: shape.width, height: shape.height };
-        activeDrag = { kind: 'resize', shapeId: shape.id, handle, original, startCanvasPoint, current: original };
+        startRectDrag(
+            { kind: 'resize', shapeId: shape.id, handle, original, startCanvasPoint, current: original },
+            function computeNext(rectOriginal, delta) {
+                return clampRectToBounds(resizeRect(rectOriginal, handle, delta.x, delta.y), imageBounds());
+            }
+        );
+    }
+
+    function startRectDrag(drag: ActiveDrag, computeNext: (original: Rect, delta: Point) => Rect): void {
+        activeDrag = drag;
         draw();
 
         startDragSession(function onMouseMove(moveEvent) {
-            const drag = activeDrag;
-            if (!drag || drag.kind !== 'resize') {
+            const current = activeDrag;
+            if (!current || current.kind !== drag.kind || current.shapeId !== drag.shapeId) {
                 return;
             }
-            const delta = imagePointDelta(startCanvasPoint, toCanvasPoint(moveEvent));
-            const current = clampRectToBounds(resizeRect(drag.original, drag.handle, delta.x, delta.y), imageBounds());
-            activeDrag = { ...drag, current };
+            const delta = imagePointDelta(drag.startCanvasPoint, toCanvasPoint(moveEvent));
+            activeDrag = { ...current, current: computeNext(drag.original, delta) };
             draw();
         }, finishDrag);
     }
@@ -408,12 +409,7 @@ export function mountImageCanvas(
         let lastPoint = startPoint;
         let didPan = false;
 
-        function finishPanning(): void {
-            stopPanning = null;
-            updateHoverCursor(lastPoint);
-        }
-
-        const stopListeners = startDragSession(function onMouseMove(moveEvent) {
+        stopPanning = startDragSession(function onMouseMove(moveEvent) {
             const point = toCanvasPoint(moveEvent);
             if (!didPan && Math.hypot(point.x - startPoint.x, point.y - startPoint.y) >= CLICK_DRAG_THRESHOLD_PX) {
                 didPan = true;
@@ -422,17 +418,14 @@ export function mountImageCanvas(
             lastPoint = point;
             draw();
         }, function onMouseUp(upEvent) {
-            finishPanning();
             if (didPan) {
                 upEvent.preventDefault();
                 window.addEventListener('auxclick', suppressMiddleClickPaste, { capture: true, once: true });
             }
+        }, function finishPanning() {
+            stopPanning = null;
+            updateHoverCursor(lastPoint);
         });
-
-        stopPanning = function stopExternally(): void {
-            stopListeners();
-            finishPanning();
-        };
     }
 
     function suppressMiddleClickPaste(event: MouseEvent): void {
