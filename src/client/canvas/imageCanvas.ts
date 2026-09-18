@@ -383,7 +383,7 @@ export function mountImageCanvas(
 
         startDragSession(function onMouseMove(moveEvent) {
             const current = activeDrag;
-            if (!current || current.kind !== drag.kind || current.shapeId !== drag.shapeId) {
+            if (!current || current.kind !== drag.kind) {
                 return;
             }
             const delta = imagePointDelta(drag.startCanvasPoint, toCanvasPoint(moveEvent));
