@@ -1,7 +1,7 @@
 import { deleteDocument, getDocument, listDocuments, pageImageUrl } from './api.js';
 import { getState, setDocument } from './state.js';
 import { confirmDiscardIfDirty } from './discardGuard.js';
-import type { DocumentSummary } from './types.js';
+import type { DocumentSummary } from '../shared/types.js';
 import { confirmDialog } from '../dialogs/confirmDialog.js';
 import { initScrollFade, requireElement, showDialog, wireDialogClose } from '../dom.js';
 import { reportError } from '../errors.js';
