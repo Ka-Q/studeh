@@ -13,6 +13,7 @@ import {
 } from '../shapes/rectangle.js';
 import type { RectangleShape } from '../document/types.js';
 import type { Mode } from '../document/state.js';
+import { startDragSession } from '../dom.js';
 
 export interface ImageCanvasCallbacks {
     onCreateShape(rect: Rect): void;
@@ -547,23 +548,6 @@ export function mountImageCanvas(
             canvas.remove();
         }
     };
-}
-
-function startDragSession(onMove: (event: MouseEvent) => void, onUp: (event: MouseEvent) => void): () => void {
-    function handleMouseMove(event: MouseEvent): void {
-        onMove(event);
-    }
-    function handleMouseUp(event: MouseEvent): void {
-        stop();
-        onUp(event);
-    }
-    function stop(): void {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
-    }
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return stop;
 }
 
 function cycleFocusedShapeIndex(current: number | null, direction: 1 | -1, length: number): number {

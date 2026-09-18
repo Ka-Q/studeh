@@ -12,7 +12,7 @@ import {
 } from '../document/state.js';
 import type { Page } from '../document/types.js';
 import { confirmDialog } from '../dialogs/confirmDialog.js';
-import { getDroppedImageFiles, iconSpan, initScrollFade, isFileDrag, requireElement } from '../dom.js';
+import { getDroppedImageFiles, iconSpan, initScrollFade, isFileDrag, requireElement, startDragSession } from '../dom.js';
 import { reportError } from '../errors.js';
 import { startInlineEdit } from '../inlineEdit.js';
 
@@ -196,21 +196,14 @@ function initSidebarPanel(): void {
         handle.classList.add('dragging');
         document.body.style.cursor = 'col-resize';
 
-        function onDragMove(moveEvent: MouseEvent): void {
+        startDragSession(function onDragMove(moveEvent) {
             width = clampSidebarWidth(moveEvent.clientX - sidebar.getBoundingClientRect().left);
             applySidebarState();
-        }
-
-        function onDragEnd(): void {
-            document.removeEventListener('mousemove', onDragMove);
-            document.removeEventListener('mouseup', onDragEnd);
+        }, function onDragEnd() {
             handle.classList.remove('dragging');
             document.body.style.cursor = '';
             localStorage.setItem(WIDTH_STORAGE_KEY, String(width));
-        }
-
-        document.addEventListener('mousemove', onDragMove);
-        document.addEventListener('mouseup', onDragEnd);
+        });
     });
 
     function applySidebarState(): void {
