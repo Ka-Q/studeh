@@ -32,34 +32,34 @@ export interface ImageCanvasHandle {
     destroy(): void;
 }
 
-const middleMouseButton = 1;
-const leftMouseButton = 0;
-const zoomStepPerWheelTick = 1.1;
-const clickDragThresholdPx = 3;
-const handleHitRadiusPx = 6;
-const handleSizePx = 8;
-const unselectedStrokeStyle = 'rgba(37, 99, 235, 0.9)';
-const unselectedFillStyle = 'rgba(37, 99, 235, 0.15)';
-const selectedStrokeStyle = 'rgba(220, 38, 38, 0.95)';
-const selectedFillStyle = 'rgba(220, 38, 38, 0.2)';
-const occlusionFillStyle = 'rgb(121, 122, 123)';
-const occlusionStrokeStyle = 'rgb(213, 35, 35)';
-const revealedFillStyle = 'rgba(242, 242, 242, 0.05)';
-const revealedStrokeStyle = 'rgb(68, 202, 31)';
-const focusOutlineStyle = 'rgb(37, 99, 235)';
-const focusOutlinePaddingPx = 4;
-const editModeHatchSpacingPx = 256;
-const editModeHatchLineWidthPx = 1;
-const editModeHatchLineColor = 'rgba(106, 106, 106, 0.2)';
+const MIDDLE_MOUSE_BUTTON = 1;
+const LEFT_MOUSE_BUTTON = 0;
+const ZOOM_STEP_PER_WHEEL_TICK = 1.1;
+const CLICK_DRAG_THRESHOLD_PX = 3;
+const HANDLE_HIT_RADIUS_PX = 6;
+const HANDLE_SIZE_PX = 8;
+const UNSELECTED_STROKE_STYLE = 'rgba(37, 99, 235, 0.9)';
+const UNSELECTED_FILL_STYLE = 'rgba(37, 99, 235, 0.15)';
+const SELECTED_STROKE_STYLE = 'rgba(220, 38, 38, 0.95)';
+const SELECTED_FILL_STYLE = 'rgba(220, 38, 38, 0.2)';
+const OCCLUSION_FILL_STYLE = 'rgb(121, 122, 123)';
+const OCCLUSION_STROKE_STYLE = 'rgb(213, 35, 35)';
+const REVEALED_FILL_STYLE = 'rgba(242, 242, 242, 0.05)';
+const REVEALED_STROKE_STYLE = 'rgb(68, 202, 31)';
+const FOCUS_OUTLINE_STYLE = 'rgb(37, 99, 235)';
+const FOCUS_OUTLINE_PADDING_PX = 4;
+const EDIT_MODE_HATCH_SPACING_PX = 256;
+const EDIT_MODE_HATCH_LINE_WIDTH_PX = 1;
+const EDIT_MODE_HATCH_LINE_COLOR = 'rgba(106, 106, 106, 0.2)';
 interface RectStyle {
     fill: string | null;
     stroke: string;
     lineWidth: number;
 }
-const unselectedStyle: RectStyle = { fill: unselectedFillStyle, stroke: unselectedStrokeStyle, lineWidth: 2 };
-const selectedStyle: RectStyle = { fill: selectedFillStyle, stroke: selectedStrokeStyle, lineWidth: 2 };
-const occlusionStyle: RectStyle = { fill: occlusionFillStyle, stroke: occlusionStrokeStyle, lineWidth: 2 };
-const revealedStyle: RectStyle = { fill: revealedFillStyle, stroke: revealedStrokeStyle, lineWidth: 3 };
+const unselectedStyle: RectStyle = { fill: UNSELECTED_FILL_STYLE, stroke: UNSELECTED_STROKE_STYLE, lineWidth: 2 };
+const selectedStyle: RectStyle = { fill: SELECTED_FILL_STYLE, stroke: SELECTED_STROKE_STYLE, lineWidth: 2 };
+const occlusionStyle: RectStyle = { fill: OCCLUSION_FILL_STYLE, stroke: OCCLUSION_STROKE_STYLE, lineWidth: 2 };
+const revealedStyle: RectStyle = { fill: REVEALED_FILL_STYLE, stroke: REVEALED_STROKE_STYLE, lineWidth: 3 };
 const handleCursors: Record<ResizeHandle, string> = {
     n: 'ns-resize',
     s: 'ns-resize',
@@ -190,11 +190,11 @@ export function mountImageCanvas(
     function drawEditModeHatch(): void {
         const topLeft = canvasToImage(viewport, { x: 0, y: 0 });
         const bottomRight = canvasToImage(viewport, { x: canvas.clientWidth, y: canvas.clientHeight });
-        const minOffset = Math.floor((topLeft.x + topLeft.y) / editModeHatchSpacingPx) * editModeHatchSpacingPx;
-        const maxOffset = Math.ceil((bottomRight.x + bottomRight.y) / editModeHatchSpacingPx) * editModeHatchSpacingPx;
+        const minOffset = Math.floor((topLeft.x + topLeft.y) / EDIT_MODE_HATCH_SPACING_PX) * EDIT_MODE_HATCH_SPACING_PX;
+        const maxOffset = Math.ceil((bottomRight.x + bottomRight.y) / EDIT_MODE_HATCH_SPACING_PX) * EDIT_MODE_HATCH_SPACING_PX;
 
         const diagonalLines = new Path2D();
-        for (let offset = minOffset; offset <= maxOffset; offset += editModeHatchSpacingPx) {
+        for (let offset = minOffset; offset <= maxOffset; offset += EDIT_MODE_HATCH_SPACING_PX) {
             const start = imageToCanvas(viewport, { x: topLeft.x, y: offset - topLeft.x });
             const end = imageToCanvas(viewport, { x: bottomRight.x, y: offset - bottomRight.x });
             diagonalLines.moveTo(start.x, start.y);
@@ -202,21 +202,21 @@ export function mountImageCanvas(
         }
 
         context.save();
-        context.strokeStyle = editModeHatchLineColor;
-        context.lineWidth = editModeHatchLineWidthPx;
+        context.strokeStyle = EDIT_MODE_HATCH_LINE_COLOR;
+        context.lineWidth = EDIT_MODE_HATCH_LINE_WIDTH_PX;
         context.stroke(diagonalLines);
         context.restore();
     }
 
     function drawHandles(rect: Rect): void {
-        context.fillStyle = selectedStrokeStyle;
+        context.fillStyle = SELECTED_STROKE_STYLE;
         for (const { point } of handlePoints(rect)) {
             const screenPoint = imageToCanvas(viewport, point);
             context.fillRect(
-                screenPoint.x - handleSizePx / 2,
-                screenPoint.y - handleSizePx / 2,
-                handleSizePx,
-                handleSizePx
+                screenPoint.x - HANDLE_SIZE_PX / 2,
+                screenPoint.y - HANDLE_SIZE_PX / 2,
+                HANDLE_SIZE_PX,
+                HANDLE_SIZE_PX
             );
         }
     }
@@ -245,13 +245,13 @@ export function mountImageCanvas(
         const height = rect.height * viewport.zoom;
         context.save();
         context.setLineDash([6, 4]);
-        context.strokeStyle = focusOutlineStyle;
+        context.strokeStyle = FOCUS_OUTLINE_STYLE;
         context.lineWidth = 3;
         context.strokeRect(
-            topLeft.x - focusOutlinePaddingPx,
-            topLeft.y - focusOutlinePaddingPx,
-            width + focusOutlinePaddingPx * 2,
-            height + focusOutlinePaddingPx * 2
+            topLeft.x - FOCUS_OUTLINE_PADDING_PX,
+            topLeft.y - FOCUS_OUTLINE_PADDING_PX,
+            width + FOCUS_OUTLINE_PADDING_PX * 2,
+            height + FOCUS_OUTLINE_PADDING_PX * 2
         );
         context.restore();
     }
@@ -261,7 +261,7 @@ export function mountImageCanvas(
             return;
         }
         event.preventDefault();
-        const zoomFactor = event.deltaY < 0 ? zoomStepPerWheelTick : 1 / zoomStepPerWheelTick;
+        const zoomFactor = event.deltaY < 0 ? ZOOM_STEP_PER_WHEEL_TICK : 1 / ZOOM_STEP_PER_WHEEL_TICK;
         viewport = zoomAtCanvasPoint(viewport, toCanvasPoint(event), zoomFactor);
         draw();
     }
@@ -270,11 +270,11 @@ export function mountImageCanvas(
         if (!image) {
             return;
         }
-        if (event.button === middleMouseButton) {
+        if (event.button === MIDDLE_MOUSE_BUTTON) {
             startPanning(event);
             return;
         }
-        if (event.button !== leftMouseButton) {
+        if (event.button !== LEFT_MOUSE_BUTTON) {
             return;
         }
         canvas.focus();
@@ -339,7 +339,7 @@ export function mountImageCanvas(
     function handleAtCanvasPoint(rect: Rect, canvasPoint: Point): ResizeHandle | null {
         for (const { handle, point } of handlePoints(rect)) {
             const screenPoint = imageToCanvas(viewport, point);
-            if (Math.hypot(screenPoint.x - canvasPoint.x, screenPoint.y - canvasPoint.y) <= handleHitRadiusPx) {
+            if (Math.hypot(screenPoint.x - canvasPoint.x, screenPoint.y - canvasPoint.y) <= HANDLE_HIT_RADIUS_PX) {
                 return handle;
             }
         }
@@ -427,7 +427,7 @@ export function mountImageCanvas(
 
         function onMouseMove(moveEvent: MouseEvent): void {
             const point = toCanvasPoint(moveEvent);
-            if (!didPan && Math.hypot(point.x - startPoint.x, point.y - startPoint.y) >= clickDragThresholdPx) {
+            if (!didPan && Math.hypot(point.x - startPoint.x, point.y - startPoint.y) >= CLICK_DRAG_THRESHOLD_PX) {
                 didPan = true;
             }
             viewport = panViewport(viewport, point.x - lastPoint.x, point.y - lastPoint.y);
@@ -489,7 +489,7 @@ export function mountImageCanvas(
             return;
         }
         const dragDistance = Math.hypot(rect.current.x - rect.start.x, rect.current.y - rect.start.y);
-        if (dragDistance < clickDragThresholdPx) {
+        if (dragDistance < CLICK_DRAG_THRESHOLD_PX) {
             callbacks.onSelectShape(null);
             draw();
             return;
