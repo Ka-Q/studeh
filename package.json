@@ -8,13 +8,14 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.server.json && tsc --noEmit -p tsconfig.scripts.json && node scripts/copyStatic.ts && tsc -p tsconfig.client.json && tsc -p tsconfig.client.classic.json",
+    "build": "node scripts/syncShared.ts && tsc -p tsconfig.server.json && tsc --noEmit -p tsconfig.scripts.json && node scripts/copyStatic.ts && tsc -p tsconfig.client.json && tsc -p tsconfig.client.classic.json",
     "start": "npm run build && node dist/server/index.js",
-    "dev": "concurrently -n client,client-classic,static,server,run -c blue,cyan,magenta,green,yellow \"npm:dev:client\" \"npm:dev:client-classic\" \"npm:dev:static\" \"npm:dev:server\" \"npm:dev:run\"",
+    "dev": "concurrently -n client,client-classic,static,shared,server,run -c blue,cyan,magenta,gray,green,yellow \"npm:dev:client\" \"npm:dev:client-classic\" \"npm:dev:static\" \"npm:dev:shared\" \"npm:dev:server\" \"npm:dev:run\"",
     "predev": "npm run build",
     "dev:client": "tsc -p tsconfig.client.json --watch --preserveWatchOutput",
     "dev:client-classic": "tsc -p tsconfig.client.classic.json --watch --preserveWatchOutput",
     "dev:static": "node --watch-path=src/client/index.html --watch-path=src/client/css --watch-path=src/client/icons scripts/copyStatic.ts",
+    "dev:shared": "node --watch-path=src/shared scripts/syncShared.ts",
     "dev:server": "tsc -p tsconfig.server.json --watch --preserveWatchOutput",
     "dev:run": "SKIP_OPEN_BROWSER=1 node --watch dist/server/index.js"
   },
