@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 const GENERATED_HEADER = '// AUTO-GENERATED from src/shared/types.ts - do not edit directly.\n\n';
@@ -12,6 +12,9 @@ const targets = [
 ];
 
 for (const target of targets) {
+    if (existsSync(target) && readFileSync(target, 'utf8') === generated) {
+        continue;
+    }
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, generated);
 }
