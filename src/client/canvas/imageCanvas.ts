@@ -361,7 +361,7 @@ export function mountImageCanvas(
         activeDrag = { kind: 'move', shapeId: shape.id, original, startCanvasPoint, current: original };
         draw();
 
-        function onMouseMove(moveEvent: MouseEvent): void {
+        startDragSession(function onMouseMove(moveEvent) {
             const drag = activeDrag;
             if (!drag || drag.kind !== 'move') {
                 return;
@@ -370,16 +370,7 @@ export function mountImageCanvas(
             const current = clampMoveToBounds(moveRect(drag.original, delta.x, delta.y), imageBounds());
             activeDrag = { ...drag, current };
             draw();
-        }
-
-        function onMouseUp(): void {
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUp);
-            finishDrag();
-        }
-
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
+        }, finishDrag);
     }
 
     function startResizing(shape: RectangleShape, handle: ResizeHandle, startCanvasPoint: Point): void {
@@ -387,7 +378,7 @@ export function mountImageCanvas(
         activeDrag = { kind: 'resize', shapeId: shape.id, handle, original, startCanvasPoint, current: original };
         draw();
 
-        function onMouseMove(moveEvent: MouseEvent): void {
+        startDragSession(function onMouseMove(moveEvent) {
             const drag = activeDrag;
             if (!drag || drag.kind !== 'resize') {
                 return;
@@ -396,16 +387,7 @@ export function mountImageCanvas(
             const current = clampRectToBounds(resizeRect(drag.original, drag.handle, delta.x, delta.y), imageBounds());
             activeDrag = { ...drag, current };
             draw();
-        }
-
-        function onMouseUp(): void {
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUp);
-            finishDrag();
-        }
-
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
+        }, finishDrag);
     }
 
     function finishDrag(): void {
@@ -425,7 +407,12 @@ export function mountImageCanvas(
         let lastPoint = startPoint;
         let didPan = false;
 
-        function onMouseMove(moveEvent: MouseEvent): void {
+        function finishPanning(): void {
+            stopPanning = null;
+            updateHoverCursor(lastPoint);
+        }
+
+        const stopListeners = startDragSession(function onMouseMove(moveEvent) {
             const point = toCanvasPoint(moveEvent);
             if (!didPan && Math.hypot(point.x - startPoint.x, point.y - startPoint.y) >= CLICK_DRAG_THRESHOLD_PX) {
                 didPan = true;
@@ -433,26 +420,18 @@ export function mountImageCanvas(
             viewport = panViewport(viewport, point.x - lastPoint.x, point.y - lastPoint.y);
             lastPoint = point;
             draw();
-        }
-
-        function stop(): void {
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUp);
-            stopPanning = null;
-            updateHoverCursor(lastPoint);
-        }
-
-        function onMouseUp(upEvent: MouseEvent): void {
-            stop();
+        }, function onMouseUp(upEvent) {
+            finishPanning();
             if (didPan) {
                 upEvent.preventDefault();
                 window.addEventListener('auxclick', suppressMiddleClickPaste, { capture: true, once: true });
             }
-        }
+        });
 
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
-        stopPanning = stop;
+        stopPanning = function stopExternally(): void {
+            stopListeners();
+            finishPanning();
+        };
     }
 
     function suppressMiddleClickPaste(event: MouseEvent): void {
@@ -463,22 +442,13 @@ export function mountImageCanvas(
         creatingRect = { start: startCanvasPoint, current: startCanvasPoint };
         draw();
 
-        function onMouseMove(moveEvent: MouseEvent): void {
+        startDragSession(function onMouseMove(moveEvent) {
             if (!creatingRect) {
                 return;
             }
             creatingRect = { start: creatingRect.start, current: toCanvasPoint(moveEvent) };
             draw();
-        }
-
-        function onMouseUp(): void {
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUp);
-            finishCreating();
-        }
-
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
+        }, finishCreating);
     }
 
     function finishCreating(): void {
@@ -577,6 +547,23 @@ export function mountImageCanvas(
             canvas.remove();
         }
     };
+}
+
+function startDragSession(onMove: (event: MouseEvent) => void, onUp: (event: MouseEvent) => void): () => void {
+    function handleMouseMove(event: MouseEvent): void {
+        onMove(event);
+    }
+    function handleMouseUp(event: MouseEvent): void {
+        stop();
+        onUp(event);
+    }
+    function stop(): void {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+    }
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return stop;
 }
 
 function cycleFocusedShapeIndex(current: number | null, direction: 1 | -1, length: number): number {
