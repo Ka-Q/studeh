@@ -69,6 +69,23 @@ export function showDialog(
     return opened;
 }
 
+export function startDragSession(onMove: (event: MouseEvent) => void, onUp: (event: MouseEvent) => void): () => void {
+    function handleMouseMove(event: MouseEvent): void {
+        onMove(event);
+    }
+    function handleMouseUp(event: MouseEvent): void {
+        stop();
+        onUp(event);
+    }
+    function stop(): void {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+    }
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return stop;
+}
+
 export function initScrollFade(scrollEl: HTMLElement, fadeEl: HTMLElement): () => void {
     function update(): void {
         const scrollable = scrollEl.scrollHeight > scrollEl.clientHeight;
