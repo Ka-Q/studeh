@@ -10,7 +10,7 @@ import {
     setPageImage,
     subscribe
 } from '../document/state.js';
-import type { Page } from '../shared/types.js';
+import type { Page } from '../document/types.js';
 import { confirmDialog } from '../dialogs/confirmDialog.js';
 import { getDroppedImageFiles, iconSpan, initScrollFade, isFileDrag, requireElement } from '../dom.js';
 import { reportError } from '../errors.js';

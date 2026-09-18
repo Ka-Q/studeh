@@ -11,7 +11,7 @@ import {
     type Rect,
     type ResizeHandle
 } from '../shapes/rectangle.js';
-import type { RectangleShape } from '../shared/types.js';
+import type { RectangleShape } from '../document/types.js';
 import type { Mode } from '../document/state.js';
 
 export interface ImageCanvasCallbacks {

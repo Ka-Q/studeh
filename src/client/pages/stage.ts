@@ -11,7 +11,7 @@ import {
     updateShapeRect
 } from '../document/state.js';
 import { pageImageUrl, uploadPageImage } from '../document/api.js';
-import type { Page } from '../shared/types.js';
+import type { Page } from '../document/types.js';
 import { getDroppedImageFiles, iconSpan, isFileDrag, requireElement } from '../dom.js';
 import { reportError } from '../errors.js';
 import { mountImageCanvas, type ImageCanvasHandle } from '../canvas/imageCanvas.js';

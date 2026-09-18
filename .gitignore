@@ -3,6 +3,8 @@ dist/
 CLAUDE.md
 docs/
 public/
+src/client/document/types.ts
+src/server/documents/types.ts
 data/documents/*
 !data/documents/.gitkeep
 *.log
