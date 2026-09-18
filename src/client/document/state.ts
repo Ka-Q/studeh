@@ -76,15 +76,11 @@ export function addPage(name: string): Page | null {
 }
 
 export function renamePage(pageId: string, name: string): void {
-    if (!state.document || !findPage(pageId)) {
+    if (!updatePage(pageId, function withName(page) {
+        return { ...page, name };
+    })) {
         return;
     }
-    replaceDocument({
-        ...state.document,
-        pages: state.document.pages.map(function renameIfTarget(page) {
-            return page.id === pageId ? { ...page, name } : page;
-        })
-    });
     markDirty();
 }
 
@@ -140,22 +136,15 @@ export function deletePages(pageIds: string[]): void {
 }
 
 export function setPageImage(pageId: string, image: PageImage): void {
-    if (!state.document || !findPage(pageId)) {
+    if (!updatePage(pageId, function withImage(page) {
+        return { ...page, image };
+    })) {
         return;
     }
-    replaceDocument({
-        ...state.document,
-        pages: state.document.pages.map(function setImageIfTarget(page) {
-            return page.id === pageId ? { ...page, image } : page;
-        })
-    });
     markDirty();
 }
 
 export function addShape(pageId: string, rect: Rect): void {
-    if (!state.document || !findPage(pageId)) {
-        return;
-    }
     const shape: RectangleShape = {
         id: generateId('shape'),
         type: 'rectangle',
@@ -165,34 +154,24 @@ export function addShape(pageId: string, rect: Rect): void {
         height: rect.height,
         visible: false
     };
-    replaceDocument({
-        ...state.document,
-        pages: state.document.pages.map(function addShapeIfTarget(page) {
-            return page.id === pageId ? { ...page, shapes: [...page.shapes, shape] } : page;
-        })
-    });
+    if (!updatePageShapes(pageId, function addShapeToPage(shapes) {
+        return [...shapes, shape];
+    })) {
+        return;
+    }
     state.selectedShapeId = shape.id;
     markDirty();
 }
 
 export function updateShapeRect(pageId: string, shapeId: string, rect: Rect): void {
-    if (!state.document || !findPage(pageId)) {
+    const updated = updatePageShapes(pageId, function applyRect(shapes) {
+        return shapes.map(function updateShapeIfTarget(shape) {
+            return shape.id === shapeId ? { ...shape, ...rect } : shape;
+        });
+    });
+    if (!updated) {
         return;
     }
-    replaceDocument({
-        ...state.document,
-        pages: state.document.pages.map(function updatePageIfTarget(page) {
-            if (page.id !== pageId) {
-                return page;
-            }
-            return {
-                ...page,
-                shapes: page.shapes.map(function updateShapeIfTarget(shape) {
-                    return shape.id === shapeId ? { ...shape, ...rect } : shape;
-                })
-            };
-        })
-    });
     markDirty();
 }
 
@@ -203,44 +182,26 @@ export function setMode(mode: Mode): void {
 }
 
 export function toggleShapeVisibility(pageId: string, shapeId: string): void {
-    if (!state.document || !findPage(pageId)) {
+    const updated = updatePageShapes(pageId, function toggleShapeIfTarget(shapes) {
+        return shapes.map(function toggle(shape) {
+            return shape.id === shapeId ? { ...shape, visible: !shape.visible } : shape;
+        });
+    });
+    if (!updated) {
         return;
     }
-    replaceDocument({
-        ...state.document,
-        pages: state.document.pages.map(function togglePageIfTarget(page) {
-            if (page.id !== pageId) {
-                return page;
-            }
-            return {
-                ...page,
-                shapes: page.shapes.map(function toggleShapeIfTarget(shape) {
-                    return shape.id === shapeId ? { ...shape, visible: !shape.visible } : shape;
-                })
-            };
-        })
-    });
     markDirty();
 }
 
 export function setPageShapesVisibility(pageId: string, visible: boolean): void {
-    if (!state.document || !findPage(pageId)) {
+    const updated = updatePageShapes(pageId, function setAllVisibility(shapes) {
+        return shapes.map(function setShapeVisibility(shape) {
+            return { ...shape, visible };
+        });
+    });
+    if (!updated) {
         return;
     }
-    replaceDocument({
-        ...state.document,
-        pages: state.document.pages.map(function setVisibilityIfTarget(page) {
-            if (page.id !== pageId) {
-                return page;
-            }
-            return {
-                ...page,
-                shapes: page.shapes.map(function setShapeVisibility(shape) {
-                    return { ...shape, visible };
-                })
-            };
-        })
-    });
     markDirty();
 }
 
@@ -250,24 +211,18 @@ export function selectShape(shapeId: string | null): void {
 }
 
 export function deleteSelectedShape(): void {
-    if (!state.document || !state.activePageId || !state.selectedShapeId) {
+    if (!state.activePageId || !state.selectedShapeId) {
         return;
     }
     const shapeId = state.selectedShapeId;
-    replaceDocument({
-        ...state.document,
-        pages: state.document.pages.map(function deleteShapeIfActivePage(page) {
-            if (page.id !== state.activePageId) {
-                return page;
-            }
-            return {
-                ...page,
-                shapes: page.shapes.filter(function isNotTarget(shape) {
-                    return shape.id !== shapeId;
-                })
-            };
-        })
+    const updated = updatePageShapes(state.activePageId, function removeShape(shapes) {
+        return shapes.filter(function isNotTarget(shape) {
+            return shape.id !== shapeId;
+        });
     });
+    if (!updated) {
+        return;
+    }
     state.selectedShapeId = null;
     markDirty();
 }
@@ -295,6 +250,25 @@ function findPage(pageId: string): Page | null {
     return state.document?.pages.find(function matchesId(page) {
         return page.id === pageId;
     }) ?? null;
+}
+
+function updatePage(pageId: string, updater: (page: Page) => Page): boolean {
+    if (!state.document || !findPage(pageId)) {
+        return false;
+    }
+    replaceDocument({
+        ...state.document,
+        pages: state.document.pages.map(function updateIfTarget(page) {
+            return page.id === pageId ? updater(page) : page;
+        })
+    });
+    return true;
+}
+
+function updatePageShapes(pageId: string, updater: (shapes: RectangleShape[]) => RectangleShape[]): boolean {
+    return updatePage(pageId, function applyToShapes(page) {
+        return { ...page, shapes: updater(page.shapes) };
+    });
 }
 
 function pickActivePageIdAfterDeletion(
