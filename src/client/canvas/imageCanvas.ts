@@ -361,8 +361,8 @@ export function mountImageCanvas(
         const original: Rect = { x: shape.x, y: shape.y, width: shape.width, height: shape.height };
         startRectDrag(
             { kind: 'move', shapeId: shape.id, original, startCanvasPoint, current: original },
-            function computeNext(rectOriginal, delta) {
-                return clampMoveToBounds(moveRect(rectOriginal, delta.x, delta.y), imageBounds());
+            function computeNext(delta) {
+                return clampMoveToBounds(moveRect(original, delta.x, delta.y), imageBounds());
             }
         );
     }
@@ -371,23 +371,23 @@ export function mountImageCanvas(
         const original: Rect = { x: shape.x, y: shape.y, width: shape.width, height: shape.height };
         startRectDrag(
             { kind: 'resize', shapeId: shape.id, handle, original, startCanvasPoint, current: original },
-            function computeNext(rectOriginal, delta) {
-                return clampRectToBounds(resizeRect(rectOriginal, handle, delta.x, delta.y), imageBounds());
+            function computeNext(delta) {
+                return clampRectToBounds(resizeRect(original, handle, delta.x, delta.y), imageBounds());
             }
         );
     }
 
-    function startRectDrag(drag: ActiveDrag, computeNext: (original: Rect, delta: Point) => Rect): void {
+    function startRectDrag(drag: ActiveDrag, computeNext: (delta: Point) => Rect): void {
         activeDrag = drag;
         draw();
 
         startDragSession(function onMouseMove(moveEvent) {
             const current = activeDrag;
-            if (!current || current.kind !== drag.kind) {
+            if (!current || current.kind !== drag.kind || current.shapeId !== drag.shapeId) {
                 return;
             }
             const delta = imagePointDelta(drag.startCanvasPoint, toCanvasPoint(moveEvent));
-            activeDrag = { ...current, current: computeNext(drag.original, delta) };
+            activeDrag = { ...drag, current: computeNext(delta) };
             draw();
         }, finishDrag);
     }
