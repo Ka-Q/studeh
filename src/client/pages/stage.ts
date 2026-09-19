@@ -12,7 +12,7 @@ import {
 } from '../document/state.js';
 import { pageImageUrl, uploadPageImage } from '../document/api.js';
 import type { Page } from '../document/types.js';
-import { getDroppedImageFiles, iconSpan, isFileDrag, requireElement } from '../dom.js';
+import { firstImageFile, getDroppedImageFiles, iconSpan, isFileDrag, requireElement } from '../dom.js';
 import { reportError } from '../errors.js';
 import { mountImageCanvas, type ImageCanvasHandle } from '../canvas/imageCanvas.js';
 import { initFullscreenControl, requestFullscreen } from '../canvas/fullscreen.js';
@@ -122,18 +122,6 @@ function initImagePaste(): void {
             void assignImageWithConfirm(documentId, page, file);
         }
     });
-}
-
-function firstImageFile(items: DataTransferItemList | undefined): File | null {
-    if (!items) {
-        return null;
-    }
-    for (const item of items) {
-        if (item.type.startsWith('image/')) {
-            return item.getAsFile();
-        }
-    }
-    return null;
 }
 
 function render(): void {
@@ -268,7 +256,7 @@ function buildAssignImagePrompt(documentId: string, pageId: string): HTMLElement
 
     const hint = document.createElement('span');
     hint.className = 'canvas-empty-state-hint';
-    hint.textContent = 'Drag & Drop or Paste supported!';
+    hint.textContent = 'Or drag & drop / paste an image';
 
     const container = document.createElement('div');
     container.className = 'canvas-empty-state-container';

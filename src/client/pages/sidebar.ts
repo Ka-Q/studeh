@@ -12,9 +12,10 @@ import {
 } from '../document/state.js';
 import type { Page } from '../document/types.js';
 import { confirmDialog } from '../dialogs/confirmDialog.js';
-import { getDroppedImageFiles, iconSpan, initScrollFade, isFileDrag, requireElement, startDragSession } from '../dom.js';
+import { firstImageFile, getDroppedImageFiles, iconSpan, initScrollFade, isFileDrag, requireElement, startDragSession } from '../dom.js';
 import { reportError } from '../errors.js';
 import { startInlineEdit } from '../inlineEdit.js';
+import { isBlockedByInputOrDialog } from '../keyboardNav.js';
 
 const MIN_SIDEBAR_WIDTH = 224;
 const MAX_SIDEBAR_WIDTH = 480;
@@ -23,6 +24,7 @@ const WIDTH_STORAGE_KEY = 'studeh:sidebarWidth';
 const COLLAPSED_STORAGE_KEY = 'studeh:sidebarCollapsed';
 
 let pendingAutoRename = false;
+let isHoveringSidebar = false;
 let listEl: HTMLElement;
 let selectAllCheckbox: HTMLInputElement;
 let deleteSelectedButton: HTMLButtonElement;
@@ -168,6 +170,25 @@ function initSidebarImageDrop(sidebar: HTMLElement): void {
     });
 }
 
+function initSidebarImagePaste(sidebar: HTMLElement): void {
+    sidebar.addEventListener('mouseenter', function onMouseEnter() {
+        isHoveringSidebar = true;
+    });
+    sidebar.addEventListener('mouseleave', function onMouseLeave() {
+        isHoveringSidebar = false;
+    });
+    document.addEventListener('paste', function onPaste(event) {
+        if (!isHoveringSidebar || isBlockedByInputOrDialog()) {
+            return;
+        }
+        const file = firstImageFile(event.clipboardData?.items);
+        const documentId = getState().document?.id;
+        if (file && documentId) {
+            void createPagesFromImages(documentId, [file]);
+        }
+    });
+}
+
 function initSidebarPanel(): void {
     const sidebar = requireElement('page-sidebar');
     const handle = requireElement('sidebar-resize-handle');
@@ -175,6 +196,7 @@ function initSidebarPanel(): void {
     const expandButton = requireElement('btn-expand-sidebar');
 
     initSidebarImageDrop(sidebar);
+    initSidebarImagePaste(sidebar);
 
     let width = loadSidebarWidth();
     let collapsed = localStorage.getItem(COLLAPSED_STORAGE_KEY) === 'true';
