@@ -8,5 +8,5 @@
         "rootDir": "src/client"
     },
     "include": ["src/client/**/*.ts"],
-    "exclude": ["src/client/themeInit.ts"]
+    "exclude": ["src/client/themeInit.ts", "src/client/**/*.test.ts"]
 }

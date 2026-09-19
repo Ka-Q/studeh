@@ -19,7 +19,10 @@
     "dev:shared": "node --watch-path=src/shared scripts/syncShared.ts",
     "predev:server": "node scripts/syncShared.ts",
     "dev:server": "tsc -p tsconfig.server.json --watch --preserveWatchOutput",
-    "dev:run": "SKIP_OPEN_BROWSER=1 node --watch dist/server/index.js"
+    "dev:run": "SKIP_OPEN_BROWSER=1 node --watch dist/server/index.js",
+    "test:unit": "tsx --test 'src/**/*.test.ts'",
+    "test:e2e": "playwright test",
+    "test": "npm run test:unit && npm run test:e2e"
   },
   "repository": {
     "type": "git",
@@ -33,9 +36,11 @@
     "express": "^5.2.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/express": "^5.0.6",
     "@types/node": "^24.13.4",
     "concurrently": "^9.2.4",
+    "tsx": "^4.23.13",
     "typescript": "^7.0.2"
   }
 }
