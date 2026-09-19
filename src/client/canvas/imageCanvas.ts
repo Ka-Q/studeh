@@ -314,10 +314,14 @@ export function mountImageCanvas(
 
     function onHoverMove(event: MouseEvent): void {
         lastHoverPoint = toCanvasPoint(event);
-        if (!image || activeDrag || creatingRect || stopPanning) {
+        if (isHoverCursorSuppressed()) {
             return;
         }
         updateHoverCursor(lastHoverPoint);
+    }
+
+    function isHoverCursorSuppressed(): boolean {
+        return !image || Boolean(activeDrag) || Boolean(creatingRect) || Boolean(stopPanning);
     }
 
     function onCtrlKeyDown(event: KeyboardEvent): void {
@@ -345,7 +349,7 @@ export function mountImageCanvas(
     }
 
     function refreshCursorForModifierChange(): void {
-        if (!image || activeDrag || creatingRect || stopPanning || !lastHoverPoint) {
+        if (isHoverCursorSuppressed() || !lastHoverPoint) {
             return;
         }
         updateHoverCursor(lastHoverPoint);
