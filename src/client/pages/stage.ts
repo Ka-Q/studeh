@@ -20,6 +20,7 @@ import { confirmDialog } from '../dialogs/confirmDialog.js';
 import { createModeToggle, type ModeToggleHandle } from '../modes/modeToggle.js';
 import { browseDialog } from '../document/browseDialog.js';
 import { onNew } from '../document/toolbar.js';
+import { shortcutHint } from '../shortcuts.js';
 
 interface MountedCanvas {
     pageId: string;
@@ -211,21 +212,22 @@ function buildStudyControls(page: Page): HTMLElement {
 
     const hideAllButton = document.createElement('button');
     hideAllButton.textContent = 'Hide all';
+    hideAllButton.title = `Hide all (${shortcutHint('hideAll')})`;
     hideAllButton.addEventListener('click', function onHideAll() {
         setPageShapesVisibility(page.id, false);
     });
 
     const revealAllButton = document.createElement('button');
     revealAllButton.textContent = 'Reveal all';
+    revealAllButton.title = `Reveal all (${shortcutHint('revealAll')})`;
     revealAllButton.addEventListener('click', function onRevealAll() {
         setPageShapesVisibility(page.id, true);
     });
 
     const fullscreenButton = document.createElement('button');
     fullscreenButton.append(iconSpan('icon-fullscreen'), document.createTextNode('Fullscreen'));
-    fullscreenButton.addEventListener('click', function onFullscreen() {
-        requestFullscreen(canvasMount);
-    });
+    fullscreenButton.title = `Fullscreen (${shortcutHint('toggleFullscreen')})`;
+    fullscreenButton.addEventListener('click', toggleFullscreen);
 
     rightGroup.append(revealAllButton, hideAllButton, fullscreenButton);
     return rightGroup;
@@ -310,11 +312,7 @@ function renderCanvas(documentId: string, page: Page): void {
                     toggleShapeVisibility(page.id, shapeId);
                 },
                 onToggleFullscreen() {
-                    if (isFullscreen) {
-                        void document.exitFullscreen();
-                    } else {
-                        requestFullscreen(canvasMount);
-                    }
+                    toggleFullscreen();
                 },
                 onHideAll() {
                     setPageShapesVisibility(page.id, false);
@@ -330,6 +328,14 @@ function renderCanvas(documentId: string, page: Page): void {
 function unmountCanvas(): void {
     mountedCanvas?.handle.destroy();
     mountedCanvas = null;
+}
+
+function toggleFullscreen(): void {
+    if (isFullscreen) {
+        void document.exitFullscreen();
+    } else {
+        requestFullscreen(canvasMount);
+    }
 }
 
 async function assignImage(documentId: string, pageId: string, file: File): Promise<void> {

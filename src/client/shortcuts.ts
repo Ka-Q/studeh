@@ -15,11 +15,14 @@ export type ShortcutId =
     | 'deleteSelectedPages'
     | 'renameDocument'
     | 'renameActivePage'
-    | 'toggleSidebar';
+    | 'toggleSidebar'
+    | 'toggleFullscreen'
+    | 'hideAll'
+    | 'revealAll';
 
 export interface ShortcutSpec {
     key: string;
-    modifier: 'primary' | 'primaryShift' | 'none';
+    modifier: 'primary' | 'primaryShift' | 'shift' | 'none';
     displayKey: string;
 }
 
@@ -38,7 +41,10 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutSpec> = {
     deleteSelectedPages: { key: 'x', modifier: 'primaryShift', displayKey: 'X' },
     renameDocument: { key: 'F2', modifier: 'none', displayKey: 'F2' },
     renameActivePage: { key: 'F2', modifier: 'primary', displayKey: 'F2' },
-    toggleSidebar: { key: 'h', modifier: 'primary', displayKey: 'H' }
+    toggleSidebar: { key: 'h', modifier: 'primary', displayKey: 'H' },
+    toggleFullscreen: { key: 'f', modifier: 'none', displayKey: 'F' },
+    hideAll: { key: '.', modifier: 'none', displayKey: '.' },
+    revealAll: { key: '.', modifier: 'shift', displayKey: '.' }
 };
 
 export function shortcutHint(id: ShortcutId): string {
@@ -48,6 +54,9 @@ export function shortcutHint(id: ShortcutId): string {
     }
     if (spec.modifier === 'primary') {
         return `${primaryModifierLabel()}+${spec.displayKey}`;
+    }
+    if (spec.modifier === 'shift') {
+        return `Shift+${spec.displayKey}`;
     }
     return spec.displayKey;
 }

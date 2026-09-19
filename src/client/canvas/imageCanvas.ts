@@ -527,7 +527,7 @@ export function mountImageCanvas(
     }
 
     function onKeyDown(event: KeyboardEvent): void {
-        if (isBlockedByInputOrDialog()) {
+        if (event.repeat || isBlockedByInputOrDialog()) {
             return;
         }
         if (mode === 'study') {
