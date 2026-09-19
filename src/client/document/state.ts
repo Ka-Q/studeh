@@ -47,6 +47,9 @@ export function markClean(): void {
 }
 
 export function setActivePage(pageId: string): void {
+    if (state.activePageId === pageId) {
+        return;
+    }
     state.activePageId = pageId;
     state.selectedShapeId = null;
     notify();

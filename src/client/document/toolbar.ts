@@ -21,6 +21,9 @@ export function initToolbar(): void {
     renameButton.addEventListener('click', function onRename() {
         onRenameDocument(titleEl);
     });
+    titleEl.addEventListener('dblclick', function onDblClick() {
+        onRenameDocument(titleEl);
+    });
 
     subscribe(function renderOnChange(state) {
         titleEl.textContent = state.document?.name ?? 'No document open';

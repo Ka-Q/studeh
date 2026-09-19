@@ -337,6 +337,10 @@ function renderPageName(page: Page): HTMLSpanElement {
     name.className = 'page-name';
     name.textContent = page.name;
     name.title = page.name;
+    name.addEventListener('dblclick', function onDblClick(event) {
+        event.stopPropagation();
+        startPageRename(page, name);
+    });
     return name;
 }
 
