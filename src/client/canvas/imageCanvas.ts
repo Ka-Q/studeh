@@ -315,6 +315,7 @@ export function mountImageCanvas(
 
     function onHoverMove(event: MouseEvent): void {
         lastHoverPoint = toCanvasPoint(event);
+        isPanModifierPressed = isPrimaryModifierPressed(event);
         if (isHoverCursorSuppressed()) {
             return;
         }
@@ -326,7 +327,7 @@ export function mountImageCanvas(
     }
 
     function onContextMenu(event: MouseEvent): void {
-        if (isPanModifierPressed) {
+        if (isPrimaryModifierPressed(event)) {
             event.preventDefault();
         }
     }
