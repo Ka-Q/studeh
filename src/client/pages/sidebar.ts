@@ -15,6 +15,7 @@ import { confirmDialog } from '../dialogs/confirmDialog.js';
 import { getDroppedImageFiles, iconSpan, initHoverScopedPaste, initScrollFade, isFileDrag, requireElement, startDragSession } from '../dom.js';
 import { reportError } from '../errors.js';
 import { startInlineEdit } from '../inlineEdit.js';
+import { shortcutHint } from '../shortcuts.js';
 
 const MIN_SIDEBAR_WIDTH = 224;
 const MAX_SIDEBAR_WIDTH = 480;
@@ -358,8 +359,8 @@ function renderActions(page: Page, isFirst: boolean, isLast: boolean, nameEl: HT
     const actions = document.createElement('div');
     actions.className = 'page-actions';
     actions.append(
-        renderMoveButton(page, -1, 'Move page up', 'icon-move-up', isFirst),
-        renderMoveButton(page, 1, 'Move page down', 'icon-move-down', isLast),
+        renderMoveButton(page, -1, `Move page up (${shortcutHint('reorderPageUp')} to move active page)`, 'icon-move-up', isFirst),
+        renderMoveButton(page, 1, `Move page down (${shortcutHint('reorderPageDown')} to move active page)`, 'icon-move-down', isLast),
         renderRenameButton(page, nameEl),
         renderDeleteButton(page)
     );

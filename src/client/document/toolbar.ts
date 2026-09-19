@@ -6,6 +6,7 @@ import { newDocumentDialog } from '../dialogs/newDocumentDialog.js';
 import { requireElement } from '../dom.js';
 import { reportError } from '../errors.js';
 import { startInlineEdit } from '../inlineEdit.js';
+import { shortcutHint } from '../shortcuts.js';
 
 const SAVED_STATUS_HOLD_MS = 2000;
 
@@ -19,6 +20,10 @@ export function initToolbar(): void {
     saveStatusEl = requireElement('save-status');
     const renameButton = requireElement('btn-rename-document');
     const titleEl = requireElement('doc-title');
+
+    newButton.title = `New (${shortcutHint('new')})`;
+    browseButton.title = `Browse (${shortcutHint('browse')})`;
+    saveButton.title = `Save (${shortcutHint('save')})`;
 
     newButton.addEventListener('click', onNew);
     browseButton.addEventListener('click', browseDialog);

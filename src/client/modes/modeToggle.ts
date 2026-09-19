@@ -1,6 +1,7 @@
 import { getState, setMode, subscribe } from '../document/state.js';
 import { iconSpan } from '../dom.js';
 import { isBlockedByInputOrDialog } from '../keyboardNav.js';
+import { SHORTCUTS, shortcutHint } from '../shortcuts.js';
 
 export interface ModeToggleHandle {
     button: HTMLButtonElement;
@@ -40,7 +41,7 @@ export function createModeToggle(): ModeToggleHandle {
     });
 
     document.addEventListener('keydown', function onKeyDown(event) {
-        if (event.key.toLowerCase() !== 'm' || isBlockedByInputOrDialog() || !isSwitchable()) {
+        if (event.key.toLowerCase() !== SHORTCUTS.toggleMode.key || isBlockedByInputOrDialog() || !isSwitchable()) {
             return;
         }
         toggleMode();
@@ -49,7 +50,7 @@ export function createModeToggle(): ModeToggleHandle {
     subscribe(function renderOnChange(state) {
         const toggleLabel = state.mode === 'edit' ? 'Switch to study mode' : 'Switch to edit mode';
         label.textContent = toggleLabel;
-        button.title = toggleLabel;
+        button.title = `${toggleLabel} (${shortcutHint('toggleMode')})`;
         button.toggleAttribute('disabled', !state.document);
         hasDocument = !!state.document;
         hasPages = (state.document?.pages.length ?? 0) > 0;
