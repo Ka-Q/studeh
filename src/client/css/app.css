@@ -407,6 +407,7 @@ dialog::backdrop {
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: var(--font-size-xl);
+    cursor: text;
 }
 
 #btn-rename-document,
@@ -683,6 +684,7 @@ dialog::backdrop {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    cursor: text;
 }
 
 .page-actions {
