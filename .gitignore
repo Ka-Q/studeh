@@ -9,3 +9,5 @@ data/documents/*
 !data/documents/.gitkeep
 *.log
 .DS_Store
+test-results/
+playwright-report/
