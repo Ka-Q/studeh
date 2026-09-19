@@ -8,6 +8,18 @@ export function getDroppedImageFiles(event: DragEvent): File[] {
     });
 }
 
+export function firstImageFile(items: DataTransferItemList | undefined): File | null {
+    if (!items) {
+        return null;
+    }
+    for (const item of items) {
+        if (item.type.startsWith('image/')) {
+            return item.getAsFile();
+        }
+    }
+    return null;
+}
+
 export function iconSpan(className: string): HTMLSpanElement {
     const icon = document.createElement('span');
     icon.className = `icon ${className}`;
