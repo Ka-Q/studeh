@@ -1,5 +1,6 @@
 import { getState, setMode, subscribe } from '../document/state.js';
 import { iconSpan } from '../dom.js';
+import { isBlockedByInputOrDialog } from '../keyboardNav.js';
 
 export interface ModeToggleHandle {
     button: HTMLButtonElement;
@@ -20,13 +21,29 @@ export function createModeToggle(): ModeToggleHandle {
 
     let isFullscreen = false;
     let hasDocument = false;
+    let hasPages = false;
+
+    function isSwitchable(): boolean {
+        return !isFullscreen && hasDocument && hasPages;
+    }
 
     function updateVisibility(): void {
-        button.hidden = isFullscreen || !hasDocument;
+        button.hidden = !isSwitchable();
+    }
+
+    function toggleMode(): void {
+        setMode(getState().mode === 'edit' ? 'study' : 'edit');
     }
 
     button.addEventListener('click', function onToggleClick() {
-        setMode(getState().mode === 'edit' ? 'study' : 'edit');
+        toggleMode();
+    });
+
+    document.addEventListener('keydown', function onKeyDown(event) {
+        if (event.key.toLowerCase() !== 'm' || isBlockedByInputOrDialog() || !isSwitchable()) {
+            return;
+        }
+        toggleMode();
     });
 
     subscribe(function renderOnChange(state) {
@@ -35,6 +52,7 @@ export function createModeToggle(): ModeToggleHandle {
         button.title = toggleLabel;
         button.toggleAttribute('disabled', !state.document);
         hasDocument = !!state.document;
+        hasPages = (state.document?.pages.length ?? 0) > 0;
         updateVisibility();
     });
 
