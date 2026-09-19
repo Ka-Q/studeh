@@ -410,14 +410,29 @@ dialog::backdrop {
     cursor: text;
 }
 
-#btn-rename-document,
-#dirty-indicator {
+#btn-rename-document {
     flex: none;
 }
 
-#dirty-indicator {
+#btn-save.dirty {
+    font-weight: 700;
+}
+
+#save-status {
+    flex: none;
     font-size: var(--font-size-sm);
     color: var(--color-text-muted);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+#save-status.visible {
+    opacity: 1;
+}
+
+#save-status.visible.fading {
+    transition: opacity 0.6s ease;
+    opacity: 0;
 }
 
 #app {

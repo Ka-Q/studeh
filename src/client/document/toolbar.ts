@@ -7,13 +7,18 @@ import { requireElement } from '../dom.js';
 import { reportError } from '../errors.js';
 import { startInlineEdit } from '../inlineEdit.js';
 
+const SAVED_STATUS_HOLD_MS = 2000;
+
+let saveStatusEl: HTMLElement;
+let saveStatusFadeTimer: ReturnType<typeof setTimeout> | undefined;
+
 export function initToolbar(): void {
     const newButton = requireElement('btn-new');
     const browseButton = requireElement('btn-browse');
     const saveButton = requireElement('btn-save');
+    saveStatusEl = requireElement('save-status');
     const renameButton = requireElement('btn-rename-document');
     const titleEl = requireElement('doc-title');
-    const dirtyEl = requireElement('dirty-indicator');
 
     newButton.addEventListener('click', onNew);
     browseButton.addEventListener('click', browseDialog);
@@ -28,10 +33,32 @@ export function initToolbar(): void {
     subscribe(function renderOnChange(state) {
         titleEl.textContent = state.document?.name ?? 'No document open';
         titleEl.title = state.document?.name ?? '';
-        dirtyEl.hidden = !state.dirty;
         saveButton.toggleAttribute('disabled', !state.document);
+        saveButton.classList.toggle('dirty', state.dirty);
         renameButton.hidden = !state.document;
+        updateSaveStatus(state.dirty);
     });
+}
+
+function updateSaveStatus(dirty: boolean): void {
+    clearTimeout(saveStatusFadeTimer);
+    saveStatusFadeTimer = undefined;
+    if (dirty) {
+        saveStatusEl.textContent = 'Unsaved changes';
+        saveStatusEl.classList.remove('fading');
+        saveStatusEl.classList.add('visible');
+    } else {
+        saveStatusEl.classList.remove('visible', 'fading');
+    }
+}
+
+function showSavedStatus(): void {
+    saveStatusEl.textContent = 'Saved';
+    saveStatusEl.classList.remove('fading');
+    saveStatusEl.classList.add('visible');
+    saveStatusFadeTimer = setTimeout(function fadeSavedStatus() {
+        saveStatusEl.classList.add('fading');
+    }, SAVED_STATUS_HOLD_MS);
 }
 
 export async function onNew(): Promise<void> {
@@ -57,6 +84,7 @@ export async function onSave(): Promise<void> {
     try {
         await saveDocument(doc);
         markClean();
+        showSavedStatus();
     } catch (error) {
         reportError('save document', error);
     }
