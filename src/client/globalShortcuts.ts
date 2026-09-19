@@ -37,7 +37,7 @@ export function initGlobalShortcuts(): void {
 }
 
 function onKeyDown(event: KeyboardEvent): void {
-    if (!isPrimaryModifierPressed(event) || isBlockedByInputOrDialog()) {
+    if (event.repeat || !isPrimaryModifierPressed(event) || isBlockedByInputOrDialog()) {
         return;
     }
     const key = `${event.shiftKey ? 'shift+' : ''}${event.key.toLowerCase()}`;
