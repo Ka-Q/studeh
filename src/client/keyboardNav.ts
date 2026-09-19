@@ -1,9 +1,10 @@
 import { getState, movePage, setActivePage } from './document/state.js';
 import { isPrimaryModifierPressed } from './dom.js';
+import { SHORTCUTS } from './shortcuts.js';
 
 const previousPageKeys = new Set(['ArrowUp', 'ArrowLeft']);
 const nextPageKeys = new Set(['ArrowDown', 'ArrowRight']);
-const reorderableKeys = new Set(['ArrowUp', 'ArrowDown']);
+const reorderableKeys = new Set([SHORTCUTS.reorderPageUp.key, SHORTCUTS.reorderPageDown.key]);
 
 export function initKeyboardNav(): void {
     document.addEventListener('keydown', onKeyDown);
