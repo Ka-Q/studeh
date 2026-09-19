@@ -4,16 +4,14 @@ export function isFileDrag(event: DragEvent): boolean {
     return event.dataTransfer !== null && Array.from(event.dataTransfer.types).includes('Files');
 }
 
-function isMacPlatform(): boolean {
-    return navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-}
+const IS_MAC_PLATFORM = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
 export function isPrimaryModifierPressed(event: MouseEvent | KeyboardEvent): boolean {
-    return isMacPlatform() ? event.metaKey : event.ctrlKey;
+    return IS_MAC_PLATFORM ? event.metaKey : event.ctrlKey;
 }
 
 export function isPrimaryModifierKey(event: KeyboardEvent): boolean {
-    return event.key === (isMacPlatform() ? 'Meta' : 'Control');
+    return event.key === (IS_MAC_PLATFORM ? 'Meta' : 'Control');
 }
 
 export function getDroppedImageFiles(event: DragEvent): File[] {
