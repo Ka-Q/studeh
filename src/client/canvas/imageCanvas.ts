@@ -13,7 +13,7 @@ import {
 } from '../shapes/rectangle.js';
 import type { RectangleShape } from '../document/types.js';
 import type { Mode } from '../document/state.js';
-import { startDragSession } from '../dom.js';
+import { isPrimaryModifierKey, isPrimaryModifierPressed, startDragSession } from '../dom.js';
 
 export interface ImageCanvasCallbacks {
     onCreateShape(rect: Rect): void;
@@ -96,7 +96,7 @@ export function mountImageCanvas(
     let stopPanning: (() => void) | null = null;
     let creatingRect: { start: Point; current: Point } | null = null;
     let activeDrag: ActiveDrag | null = null;
-    let isCtrlPressed = false;
+    let isPanModifierPressed = false;
     let lastHoverPoint: Point | null = null;
 
     const resizeObserver = new ResizeObserver(function onResize() {
@@ -132,9 +132,10 @@ export function mountImageCanvas(
     canvas.addEventListener('wheel', onWheel, { passive: false });
     canvas.addEventListener('mousedown', onMouseDown);
     canvas.addEventListener('mousemove', onHoverMove);
+    canvas.addEventListener('contextmenu', onContextMenu);
     window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keydown', onCtrlKeyDown);
-    window.addEventListener('keyup', onCtrlKeyUp);
+    window.addEventListener('keydown', onPanModifierKeyDown);
+    window.addEventListener('keyup', onPanModifierKeyUp);
     window.addEventListener('blur', onWindowBlur);
 
     function resizeCanvasToContainer(): void {
@@ -276,7 +277,7 @@ export function mountImageCanvas(
         if (!image) {
             return;
         }
-        if (event.button === MIDDLE_MOUSE_BUTTON || (event.button === LEFT_MOUSE_BUTTON && event.ctrlKey)) {
+        if (event.button === MIDDLE_MOUSE_BUTTON || (event.button === LEFT_MOUSE_BUTTON && isPrimaryModifierPressed(event))) {
             startPanning(event);
             return;
         }
@@ -324,27 +325,33 @@ export function mountImageCanvas(
         return !image || Boolean(activeDrag) || Boolean(creatingRect) || Boolean(stopPanning);
     }
 
-    function onCtrlKeyDown(event: KeyboardEvent): void {
-        if (event.key !== 'Control' || isCtrlPressed) {
+    function onContextMenu(event: MouseEvent): void {
+        if (isPanModifierPressed) {
+            event.preventDefault();
+        }
+    }
+
+    function onPanModifierKeyDown(event: KeyboardEvent): void {
+        if (!isPrimaryModifierKey(event) || isPanModifierPressed) {
             return;
         }
-        isCtrlPressed = true;
+        isPanModifierPressed = true;
         refreshCursorForModifierChange();
     }
 
-    function onCtrlKeyUp(event: KeyboardEvent): void {
-        if (event.key !== 'Control') {
+    function onPanModifierKeyUp(event: KeyboardEvent): void {
+        if (!isPrimaryModifierKey(event)) {
             return;
         }
-        isCtrlPressed = false;
+        isPanModifierPressed = false;
         refreshCursorForModifierChange();
     }
 
     function onWindowBlur(): void {
-        if (!isCtrlPressed) {
+        if (!isPanModifierPressed) {
             return;
         }
-        isCtrlPressed = false;
+        isPanModifierPressed = false;
         refreshCursorForModifierChange();
     }
 
@@ -356,7 +363,7 @@ export function mountImageCanvas(
     }
 
     function updateHoverCursor(canvasPoint: Point): void {
-        if (isCtrlPressed) {
+        if (isPanModifierPressed) {
             canvas.style.cursor = 'grab';
             return;
         }
@@ -583,9 +590,10 @@ export function mountImageCanvas(
             canvas.removeEventListener('wheel', onWheel);
             canvas.removeEventListener('mousedown', onMouseDown);
             canvas.removeEventListener('mousemove', onHoverMove);
+            canvas.removeEventListener('contextmenu', onContextMenu);
             window.removeEventListener('keydown', onKeyDown);
-            window.removeEventListener('keydown', onCtrlKeyDown);
-            window.removeEventListener('keyup', onCtrlKeyUp);
+            window.removeEventListener('keydown', onPanModifierKeyDown);
+            window.removeEventListener('keyup', onPanModifierKeyUp);
             window.removeEventListener('blur', onWindowBlur);
             canvas.remove();
         }
