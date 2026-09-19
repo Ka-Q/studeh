@@ -49,7 +49,7 @@ export async function onNew(): Promise<void> {
     }
 }
 
-async function onSave(): Promise<void> {
+export async function onSave(): Promise<void> {
     const doc = getState().document;
     if (!doc) {
         return;
