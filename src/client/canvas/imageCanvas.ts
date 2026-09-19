@@ -96,6 +96,8 @@ export function mountImageCanvas(
     let stopPanning: (() => void) | null = null;
     let creatingRect: { start: Point; current: Point } | null = null;
     let activeDrag: ActiveDrag | null = null;
+    let isCtrlPressed = false;
+    let lastHoverPoint: Point | null = null;
 
     const resizeObserver = new ResizeObserver(function onResize() {
         resizeCanvasToContainer();
@@ -131,6 +133,9 @@ export function mountImageCanvas(
     canvas.addEventListener('mousedown', onMouseDown);
     canvas.addEventListener('mousemove', onHoverMove);
     window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keydown', onCtrlKeyDown);
+    window.addEventListener('keyup', onCtrlKeyUp);
+    window.addEventListener('blur', onWindowBlur);
 
     function resizeCanvasToContainer(): void {
         const devicePixelRatio = window.devicePixelRatio || 1;
@@ -271,7 +276,7 @@ export function mountImageCanvas(
         if (!image) {
             return;
         }
-        if (event.button === MIDDLE_MOUSE_BUTTON) {
+        if (event.button === MIDDLE_MOUSE_BUTTON || (event.button === LEFT_MOUSE_BUTTON && event.ctrlKey)) {
             startPanning(event);
             return;
         }
@@ -308,13 +313,49 @@ export function mountImageCanvas(
     }
 
     function onHoverMove(event: MouseEvent): void {
+        lastHoverPoint = toCanvasPoint(event);
         if (!image || activeDrag || creatingRect || stopPanning) {
             return;
         }
-        updateHoverCursor(toCanvasPoint(event));
+        updateHoverCursor(lastHoverPoint);
+    }
+
+    function onCtrlKeyDown(event: KeyboardEvent): void {
+        if (event.key !== 'Control' || isCtrlPressed) {
+            return;
+        }
+        isCtrlPressed = true;
+        refreshCursorForModifierChange();
+    }
+
+    function onCtrlKeyUp(event: KeyboardEvent): void {
+        if (event.key !== 'Control') {
+            return;
+        }
+        isCtrlPressed = false;
+        refreshCursorForModifierChange();
+    }
+
+    function onWindowBlur(): void {
+        if (!isCtrlPressed) {
+            return;
+        }
+        isCtrlPressed = false;
+        refreshCursorForModifierChange();
+    }
+
+    function refreshCursorForModifierChange(): void {
+        if (!image || activeDrag || creatingRect || stopPanning || !lastHoverPoint) {
+            return;
+        }
+        updateHoverCursor(lastHoverPoint);
     }
 
     function updateHoverCursor(canvasPoint: Point): void {
+        if (isCtrlPressed) {
+            canvas.style.cursor = 'grab';
+            return;
+        }
         if (mode === 'study') {
             const hitShape = topmostShapeAt(canvasToImage(viewport, canvasPoint), shapes);
             canvas.style.cursor = hitShape ? 'pointer' : 'grab';
@@ -405,6 +446,7 @@ export function mountImageCanvas(
     function startPanning(event: MouseEvent): void {
         event.preventDefault();
         canvas.style.cursor = 'grabbing';
+        const isMiddleButtonPan = event.button === MIDDLE_MOUSE_BUTTON;
         const startPoint = toCanvasPoint(event);
         let lastPoint = startPoint;
         let didPan = false;
@@ -418,7 +460,7 @@ export function mountImageCanvas(
             lastPoint = point;
             draw();
         }, function onMouseUp(upEvent) {
-            if (didPan) {
+            if (didPan && isMiddleButtonPan) {
                 upEvent.preventDefault();
                 window.addEventListener('auxclick', suppressMiddleClickPaste, { capture: true, once: true });
             }
@@ -538,6 +580,9 @@ export function mountImageCanvas(
             canvas.removeEventListener('mousedown', onMouseDown);
             canvas.removeEventListener('mousemove', onHoverMove);
             window.removeEventListener('keydown', onKeyDown);
+            window.removeEventListener('keydown', onCtrlKeyDown);
+            window.removeEventListener('keyup', onCtrlKeyUp);
+            window.removeEventListener('blur', onWindowBlur);
             canvas.remove();
         }
     };
