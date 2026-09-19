@@ -308,6 +308,19 @@ function renderCanvas(documentId: string, page: Page): void {
                 },
                 onToggleVisibility(shapeId) {
                     toggleShapeVisibility(page.id, shapeId);
+                },
+                onToggleFullscreen() {
+                    if (isFullscreen) {
+                        void document.exitFullscreen();
+                    } else {
+                        requestFullscreen(canvasMount);
+                    }
+                },
+                onHideAll() {
+                    setPageShapesVisibility(page.id, false);
+                },
+                onRevealAll() {
+                    setPageShapesVisibility(page.id, true);
                 }
             }
         )
