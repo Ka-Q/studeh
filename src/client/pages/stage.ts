@@ -12,12 +12,11 @@ import {
 } from '../document/state.js';
 import { pageImageUrl, uploadPageImage } from '../document/api.js';
 import type { Page } from '../document/types.js';
-import { firstImageFile, getDroppedImageFiles, iconSpan, isFileDrag, requireElement } from '../dom.js';
+import { getDroppedImageFiles, iconSpan, initHoverScopedPaste, isFileDrag, requireElement } from '../dom.js';
 import { reportError } from '../errors.js';
 import { mountImageCanvas, type ImageCanvasHandle } from '../canvas/imageCanvas.js';
 import { initFullscreenControl, requestFullscreen } from '../canvas/fullscreen.js';
 import { confirmDialog } from '../dialogs/confirmDialog.js';
-import { isBlockedByInputOrDialog } from '../keyboardNav.js';
 import { createModeToggle, type ModeToggleHandle } from '../modes/modeToggle.js';
 import { browseDialog } from '../document/browseDialog.js';
 import { onNew } from '../document/toolbar.js';
@@ -35,7 +34,6 @@ let dragOverlay: HTMLDivElement;
 let modeToggleHandle: ModeToggleHandle;
 let mountedCanvas: MountedCanvas | null = null;
 let isFullscreen = false;
-let isHoveringCanvas = false;
 
 export function initStage(): void {
     const container = requireElement('canvas-area');
@@ -105,23 +103,13 @@ function initImageDrop(): void {
 }
 
 function initImagePaste(): void {
-    canvasMount.addEventListener('mouseenter', function onMouseEnter() {
-        isHoveringCanvas = true;
-    });
-    canvasMount.addEventListener('mouseleave', function onMouseLeave() {
-        isHoveringCanvas = false;
-    });
-    document.addEventListener('paste', function onPaste(event) {
-        if (!isEditMode() || !isHoveringCanvas || isBlockedByInputOrDialog()) {
-            return;
-        }
-        const file = firstImageFile(event.clipboardData?.items);
+    initHoverScopedPaste(canvasMount, function onFile(file) {
         const documentId = getState().document?.id;
         const page = getActivePage();
-        if (file && documentId && page) {
+        if (documentId && page) {
             void assignImageWithConfirm(documentId, page, file);
         }
-    });
+    }, isEditMode);
 }
 
 function render(): void {

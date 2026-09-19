@@ -1,3 +1,5 @@
+import { isBlockedByInputOrDialog } from './keyboardNav.js';
+
 export function isFileDrag(event: DragEvent): boolean {
     return event.dataTransfer !== null && Array.from(event.dataTransfer.types).includes('Files');
 }
@@ -18,6 +20,25 @@ export function firstImageFile(items: DataTransferItemList | undefined): File | 
         }
     }
     return null;
+}
+
+export function initHoverScopedPaste(element: HTMLElement, onFile: (file: File) => void, guard?: () => boolean): void {
+    let isHovering = false;
+    element.addEventListener('mouseenter', function onMouseEnter() {
+        isHovering = true;
+    });
+    element.addEventListener('mouseleave', function onMouseLeave() {
+        isHovering = false;
+    });
+    document.addEventListener('paste', function onPaste(event) {
+        if (!isHovering || isBlockedByInputOrDialog() || (guard && !guard())) {
+            return;
+        }
+        const file = firstImageFile(event.clipboardData?.items);
+        if (file) {
+            onFile(file);
+        }
+    });
 }
 
 export function iconSpan(className: string): HTMLSpanElement {
