@@ -1,7 +1,9 @@
-import { getState, setActivePage } from './document/state.js';
+import { getState, movePage, setActivePage } from './document/state.js';
+import { isPrimaryModifierPressed } from './dom.js';
 
 const previousPageKeys = new Set(['ArrowUp', 'ArrowLeft']);
 const nextPageKeys = new Set(['ArrowDown', 'ArrowRight']);
+const reorderableKeys = new Set(['ArrowUp', 'ArrowDown']);
 
 export function initKeyboardNav(): void {
     document.addEventListener('keydown', onKeyDown);
@@ -12,9 +14,25 @@ function onKeyDown(event: KeyboardEvent): void {
         return;
     }
     if (previousPageKeys.has(event.key)) {
-        selectAdjacentPage(-1);
+        handleArrowKey(event, -1);
     } else if (nextPageKeys.has(event.key)) {
-        selectAdjacentPage(1);
+        handleArrowKey(event, 1);
+    }
+}
+
+function handleArrowKey(event: KeyboardEvent, direction: -1 | 1): void {
+    if (reorderableKeys.has(event.key) && isPrimaryModifierPressed(event)) {
+        event.preventDefault();
+        reorderActivePage(direction);
+    } else {
+        selectAdjacentPage(direction);
+    }
+}
+
+function reorderActivePage(direction: -1 | 1): void {
+    const { activePageId } = getState();
+    if (activePageId) {
+        movePage(activePageId, direction);
     }
 }
 
