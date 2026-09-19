@@ -3,7 +3,9 @@ import { fileURLToPath } from 'node:url';
 import { InvalidDocumentIdError, InvalidPageIdError } from './errors.js';
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
-export const documentsRoot = path.resolve(currentDir, '../../../data/documents');
+export const documentsRoot = process.env.STUDEH_DOCUMENTS_DIR
+    ? path.resolve(process.env.STUDEH_DOCUMENTS_DIR)
+    : path.resolve(currentDir, '../../../data/documents');
 
 const documentIdPattern = /^doc-[a-z0-9]+$/;
 const pageIdPattern = /^page-[a-z0-9]+$/;
