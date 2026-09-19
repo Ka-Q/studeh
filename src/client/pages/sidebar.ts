@@ -3,6 +3,7 @@ import {
     addPage,
     deletePage,
     deletePages,
+    getActivePage,
     getState,
     movePage,
     renamePage,
@@ -27,7 +28,9 @@ let pendingAutoRename = false;
 let listEl: HTMLElement;
 let selectAllCheckbox: HTMLInputElement;
 let deleteSelectedButton: HTMLButtonElement;
+let imagesInput: HTMLInputElement;
 let updateListScrollFade: () => void;
+let toggleSidebarCollapseRef: (() => void) | null = null;
 const selectedPageIds = new Set<string>();
 
 export function initPageSidebar(): void {
@@ -35,55 +38,20 @@ export function initPageSidebar(): void {
     updateListScrollFade = initScrollFade(listEl, requireElement('page-list-fade'));
     const addButton = requireElement('btn-add-page');
     const addFromImagesButton = requireElement('btn-add-pages-from-images');
-    const imagesInput = createImagesFileInput();
+    imagesInput = createImagesFileInput();
     addFromImagesButton.after(imagesInput);
     selectAllCheckbox = requireElement('select-all-pages') as HTMLInputElement;
     deleteSelectedButton = requireElement('btn-delete-selected-pages') as HTMLButtonElement;
 
-    addButton.addEventListener('click', function onAddPage() {
-        const doc = getState().document;
-        if (!doc) {
-            return;
-        }
-        pendingAutoRename = true;
-        addPage(`Page ${doc.pages.length + 1}`);
-    });
+    addButton.title = `New empty page (${shortcutHint('newPage')})`;
+    addFromImagesButton.title = `New from image(s) (${shortcutHint('newPageFromImages')})`;
+    setLabelWithHint(selectAllCheckbox, 'Select all pages', shortcutHint('toggleSelectAllPages'));
+    setLabelWithHint(deleteSelectedButton, 'Delete selected pages', shortcutHint('deleteSelectedPages'));
 
-    addFromImagesButton.addEventListener('click', function onAddFromImages() {
-        imagesInput.click();
-    });
-
-    selectAllCheckbox.addEventListener('change', function onToggleSelectAll() {
-        const doc = getState().document;
-        if (!doc) {
-            return;
-        }
-        const allSelected = doc.pages.length > 0 && doc.pages.every(function isSelected(page) {
-            return selectedPageIds.has(page.id);
-        });
-        selectedPageIds.clear();
-        if (!allSelected) {
-            for (const page of doc.pages) {
-                selectedPageIds.add(page.id);
-            }
-        }
-        renderPageList(listEl);
-    });
-
-    deleteSelectedButton.addEventListener('click', async function onDeleteSelected() {
-        const count = selectedPageIds.size;
-        if (count === 0) {
-            return;
-        }
-        const confirmed = await confirmDialog({
-            title: 'Delete pages',
-            message: `Delete all ${count} pages?`
-        });
-        if (!confirmed) {
-            return;
-        }
-        deletePages(Array.from(selectedPageIds));
-    });
+    addButton.addEventListener('click', onAddPage);
+    addFromImagesButton.addEventListener('click', onAddFromImages);
+    selectAllCheckbox.addEventListener('change', toggleSelectAllPages);
+    deleteSelectedButton.addEventListener('click', deleteSelectedPagesWithConfirm);
 
     subscribe(function renderOnChange(state) {
         renderPageList(listEl);
@@ -93,6 +61,107 @@ export function initPageSidebar(): void {
     renderPageList(listEl);
 
     initSidebarPanel();
+}
+
+function setLabelWithHint(element: HTMLElement, label: string, hint: string): void {
+    const text = `${label} (${hint})`;
+    element.title = text;
+    element.setAttribute('aria-label', text);
+}
+
+export function onAddPage(): void {
+    const doc = getState().document;
+    if (!doc) {
+        return;
+    }
+    pendingAutoRename = true;
+    addPage(`Page ${doc.pages.length + 1}`);
+}
+
+export function onAddFromImages(): void {
+    imagesInput.click();
+}
+
+function togglePageSelection(pageId: string): void {
+    if (selectedPageIds.has(pageId)) {
+        selectedPageIds.delete(pageId);
+    } else {
+        selectedPageIds.add(pageId);
+    }
+    renderPageList(listEl);
+}
+
+export function toggleActivePageSelection(): void {
+    const { activePageId } = getState();
+    if (activePageId) {
+        togglePageSelection(activePageId);
+    }
+}
+
+export function toggleSelectAllPages(): void {
+    const doc = getState().document;
+    if (!doc) {
+        return;
+    }
+    const allSelected = doc.pages.length > 0 && doc.pages.every(function isSelected(page) {
+        return selectedPageIds.has(page.id);
+    });
+    selectedPageIds.clear();
+    if (!allSelected) {
+        for (const page of doc.pages) {
+            selectedPageIds.add(page.id);
+        }
+    }
+    renderPageList(listEl);
+}
+
+async function deletePageWithConfirm(page: Page): Promise<void> {
+    const hasContent = page.image !== null || page.shapes.length > 0;
+    if (hasContent) {
+        const confirmed = await confirmDialog({
+            title: 'Delete page',
+            message: `Delete page "${page.name}"? This page has content.`
+        });
+        if (!confirmed) {
+            return;
+        }
+    }
+    deletePage(page.id);
+}
+
+export async function deleteActivePage(): Promise<void> {
+    const page = getActivePage();
+    if (page) {
+        await deletePageWithConfirm(page);
+    }
+}
+
+export async function deleteSelectedPagesWithConfirm(): Promise<void> {
+    const count = selectedPageIds.size;
+    if (count === 0) {
+        return;
+    }
+    const confirmed = await confirmDialog({
+        title: 'Delete pages',
+        message: `Delete all ${count} pages?`
+    });
+    if (!confirmed) {
+        return;
+    }
+    deletePages(Array.from(selectedPageIds));
+}
+
+export function renameActivePage(): void {
+    const { activePageId } = getState();
+    const page = getActivePage();
+    const nameEl = listEl.querySelector(`[data-page-id="${activePageId}"] .page-name`);
+    if (page && nameEl instanceof HTMLElement) {
+        startPageRename(page, nameEl);
+    }
+}
+
+export function toggleSidebarCollapse(): void {
+    toggleSidebarCollapseRef?.();
 }
 
 function createImagesFileInput(): HTMLInputElement {
@@ -184,6 +253,9 @@ function initSidebarPanel(): void {
     const collapseButton = requireElement('btn-collapse-sidebar');
     const expandButton = requireElement('btn-expand-sidebar');
 
+    setLabelWithHint(collapseButton, 'Collapse sidebar', shortcutHint('toggleSidebar'));
+    setLabelWithHint(expandButton, 'Show sidebar', shortcutHint('toggleSidebar'));
+
     initSidebarImageDrop(sidebar);
     initSidebarImagePaste(sidebar);
 
@@ -191,16 +263,15 @@ function initSidebarPanel(): void {
     let collapsed = localStorage.getItem(COLLAPSED_STORAGE_KEY) === 'true';
     applySidebarState();
 
-    collapseButton.addEventListener('click', function onCollapse() {
-        collapsed = true;
+    function toggleCollapsed(): void {
+        collapsed = !collapsed;
         localStorage.setItem(COLLAPSED_STORAGE_KEY, String(collapsed));
         applySidebarState();
-    });
-    expandButton.addEventListener('click', function onExpand() {
-        collapsed = false;
-        localStorage.setItem(COLLAPSED_STORAGE_KEY, String(collapsed));
-        applySidebarState();
-    });
+    }
+    toggleSidebarCollapseRef = toggleCollapsed;
+
+    collapseButton.addEventListener('click', toggleCollapsed);
+    expandButton.addEventListener('click', toggleCollapsed);
 
     handle.addEventListener('mousedown', function onDragStart(event) {
         event.preventDefault();
@@ -311,8 +382,7 @@ function renderSelectCheckbox(page: Page): HTMLInputElement {
     checkbox.type = 'checkbox';
     checkbox.className = 'page-select-checkbox';
     checkbox.checked = selectedPageIds.has(page.id);
-    checkbox.title = 'Select page';
-    checkbox.setAttribute('aria-label', 'Select page');
+    setLabelWithHint(checkbox, 'Select page', `${shortcutHint('toggleActivePageSelection')} to toggle active page's selection`);
     checkbox.addEventListener('click', function onCheckboxClick(event) {
         event.stopPropagation();
     });
@@ -390,8 +460,7 @@ function renderMoveButton(
 function renderRenameButton(page: Page, nameEl: HTMLElement): HTMLButtonElement {
     const button = document.createElement('button');
     button.className = 'icon-button';
-    button.title = 'Rename page';
-    button.setAttribute('aria-label', 'Rename page');
+    setLabelWithHint(button, 'Rename page', `${shortcutHint('renameActivePage')} to rename active page`);
     button.appendChild(iconSpan('icon-rename'));
     button.addEventListener('click', function onRename(event) {
         event.stopPropagation();
@@ -409,22 +478,11 @@ function startPageRename(page: Page, nameEl: HTMLElement): void {
 function renderDeleteButton(page: Page): HTMLButtonElement {
     const button = document.createElement('button');
     button.className = 'icon-button';
-    button.title = 'Delete page';
-    button.setAttribute('aria-label', 'Delete page');
+    setLabelWithHint(button, 'Delete page', `${shortcutHint('deleteActivePage')} to delete active page`);
     button.appendChild(iconSpan('icon-trash'));
     button.addEventListener('click', async function onDelete(event) {
         event.stopPropagation();
-        const hasContent = page.image !== null || page.shapes.length > 0;
-        if (hasContent) {
-            const confirmed = await confirmDialog({
-                title: 'Delete page',
-                message: `Delete page "${page.name}"? This page has content.`
-            });
-            if (!confirmed) {
-                return;
-            }
-        }
-        deletePage(page.id);
+        await deletePageWithConfirm(page);
     });
     return button;
 }
