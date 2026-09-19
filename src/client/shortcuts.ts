@@ -1,10 +1,25 @@
 import { primaryModifierLabel } from './dom.js';
 
-export type ShortcutId = 'new' | 'browse' | 'save' | 'reorderPageUp' | 'reorderPageDown' | 'toggleMode';
+export type ShortcutId =
+    | 'new'
+    | 'browse'
+    | 'save'
+    | 'reorderPageUp'
+    | 'reorderPageDown'
+    | 'toggleMode'
+    | 'newPage'
+    | 'newPageFromImages'
+    | 'toggleActivePageSelection'
+    | 'toggleSelectAllPages'
+    | 'deleteActivePage'
+    | 'deleteSelectedPages'
+    | 'renameDocument'
+    | 'renameActivePage'
+    | 'toggleSidebar';
 
-interface ShortcutSpec {
+export interface ShortcutSpec {
     key: string;
-    modifier: 'primary' | 'none';
+    modifier: 'primary' | 'primaryShift' | 'none';
     displayKey: string;
 }
 
@@ -14,10 +29,25 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutSpec> = {
     save: { key: 's', modifier: 'primary', displayKey: 'S' },
     reorderPageUp: { key: 'ArrowUp', modifier: 'primary', displayKey: 'Up arrow' },
     reorderPageDown: { key: 'ArrowDown', modifier: 'primary', displayKey: 'Down arrow' },
-    toggleMode: { key: 'm', modifier: 'none', displayKey: 'M' }
+    toggleMode: { key: 'm', modifier: 'none', displayKey: 'M' },
+    newPage: { key: 'a', modifier: 'primary', displayKey: 'A' },
+    newPageFromImages: { key: 'a', modifier: 'primaryShift', displayKey: 'A' },
+    toggleActivePageSelection: { key: 'Enter', modifier: 'primary', displayKey: 'Enter' },
+    toggleSelectAllPages: { key: 'Enter', modifier: 'primaryShift', displayKey: 'Enter' },
+    deleteActivePage: { key: 'x', modifier: 'primary', displayKey: 'X' },
+    deleteSelectedPages: { key: 'x', modifier: 'primaryShift', displayKey: 'X' },
+    renameDocument: { key: 'F2', modifier: 'none', displayKey: 'F2' },
+    renameActivePage: { key: 'F2', modifier: 'primary', displayKey: 'F2' },
+    toggleSidebar: { key: 'h', modifier: 'primary', displayKey: 'H' }
 };
 
 export function shortcutHint(id: ShortcutId): string {
     const spec = SHORTCUTS[id];
-    return spec.modifier === 'primary' ? `${primaryModifierLabel()}+${spec.displayKey}` : spec.displayKey;
+    if (spec.modifier === 'primaryShift') {
+        return `${primaryModifierLabel()}+Shift+${spec.displayKey}`;
+    }
+    if (spec.modifier === 'primary') {
+        return `${primaryModifierLabel()}+${spec.displayKey}`;
+    }
+    return spec.displayKey;
 }

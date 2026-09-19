@@ -3,15 +3,17 @@ import { getState, markClean, renameDocument, setDocument, subscribe } from './s
 import { confirmDiscardIfDirty } from './discardGuard.js';
 import { browseDialog } from './browseDialog.js';
 import { newDocumentDialog } from '../dialogs/newDocumentDialog.js';
-import { requireElement } from '../dom.js';
+import { isPrimaryModifierPressed, requireElement } from '../dom.js';
 import { reportError } from '../errors.js';
 import { startInlineEdit } from '../inlineEdit.js';
-import { shortcutHint } from '../shortcuts.js';
+import { isBlockedByInputOrDialog } from '../keyboardNav.js';
+import { SHORTCUTS, shortcutHint } from '../shortcuts.js';
 
 const SAVED_STATUS_HOLD_MS = 2000;
 
 let saveStatusEl: HTMLElement;
 let saveStatusFadeTimer: ReturnType<typeof setTimeout> | undefined;
+let titleEl: HTMLElement;
 
 export function initToolbar(): void {
     const newButton = requireElement('btn-new');
@@ -19,20 +21,30 @@ export function initToolbar(): void {
     const saveButton = requireElement('btn-save');
     saveStatusEl = requireElement('save-status');
     const renameButton = requireElement('btn-rename-document');
-    const titleEl = requireElement('doc-title');
+    titleEl = requireElement('doc-title');
 
     newButton.title = `New (${shortcutHint('new')})`;
     browseButton.title = `Browse (${shortcutHint('browse')})`;
     saveButton.title = `Save (${shortcutHint('save')})`;
+    const renameHint = `Rename document (${shortcutHint('renameDocument')})`;
+    renameButton.title = renameHint;
+    renameButton.setAttribute('aria-label', renameHint);
 
     newButton.addEventListener('click', onNew);
     browseButton.addEventListener('click', browseDialog);
     saveButton.addEventListener('click', onSave);
-    renameButton.addEventListener('click', function onRename() {
-        onRenameDocument(titleEl);
-    });
-    titleEl.addEventListener('dblclick', function onDblClick() {
-        onRenameDocument(titleEl);
+    renameButton.addEventListener('click', onRenameDocument);
+    titleEl.addEventListener('dblclick', onRenameDocument);
+    document.addEventListener('keydown', function onKeyDown(event) {
+        if (
+            event.key.toLowerCase() !== SHORTCUTS.renameDocument.key.toLowerCase() ||
+            isPrimaryModifierPressed(event) ||
+            isBlockedByInputOrDialog()
+        ) {
+            return;
+        }
+        event.preventDefault();
+        onRenameDocument();
     });
 
     subscribe(function renderOnChange(state) {
@@ -95,7 +107,7 @@ export async function onSave(): Promise<void> {
     }
 }
 
-function onRenameDocument(titleEl: HTMLElement): void {
+export function onRenameDocument(): void {
     const doc = getState().document;
     if (!doc) {
         return;
