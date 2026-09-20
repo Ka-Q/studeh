@@ -1,12 +1,11 @@
 {
     "extends": "./tsconfig.base.json",
     "compilerOptions": {
-        "module": "NodeNext",
-        "moduleResolution": "NodeNext",
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
         "lib": ["ES2022", "DOM"],
-        "outDir": "public/js",
-        "rootDir": "src/client"
+        "noEmit": true
     },
     "include": ["src/client/**/*.ts"],
-    "exclude": ["src/client/themeInit.ts", "src/client/**/*.test.ts"]
+    "exclude": ["src/client/**/*.test.ts"]
 }
