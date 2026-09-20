@@ -1,9 +1,9 @@
 import fs from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { documentsRoot, documentDir, manifestPath, imagesDir, assertValidDocumentId } from './paths.js';
-import { DocumentNotFoundError, InvalidManifestError } from './errors.js';
-import { pruneUnreferencedImages } from './images.js';
-import { MANIFEST_FORMAT, MANIFEST_VERSION, type DocumentManifest, type DocumentSummary } from '../../shared/types.js';
+import { documentsRoot, documentDir, manifestPath, imagesDir, assertValidDocumentId } from './paths.ts';
+import { DocumentNotFoundError, InvalidManifestError } from './errors.ts';
+import { pruneUnreferencedImages } from './images.ts';
+import { MANIFEST_FORMAT, MANIFEST_VERSION, type DocumentManifest, type DocumentSummary } from '../../shared/types.ts';
 
 export async function listDocuments(): Promise<DocumentSummary[]> {
     await fs.mkdir(documentsRoot, { recursive: true });

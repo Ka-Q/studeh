@@ -1,9 +1,9 @@
 import express, { Router } from 'express';
 import type { NextFunction, Request, Response } from 'express';
-import { HttpError, InvalidImageUploadError } from '../documents/errors.js';
-import { createDocument, deleteDocument, listDocuments, readManifest, writeManifest } from '../documents/store.js';
-import { serveDocumentImage, writePageImage } from '../documents/images.js';
-import type { DocumentManifest } from '../../shared/types.js';
+import { HttpError, InvalidImageUploadError } from '../documents/errors.ts';
+import { createDocument, deleteDocument, listDocuments, readManifest, writeManifest } from '../documents/store.ts';
+import { serveDocumentImage, writePageImage } from '../documents/images.ts';
+import type { DocumentManifest } from '../../shared/types.ts';
 
 export const documentsRouter = Router();
 
