@@ -8,12 +8,12 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.server.json && tsc --noEmit -p tsconfig.client.json && vite build",
+    "build": "tsc -p src/server/tsconfig.json && tsc --noEmit -p src/client/tsconfig.json && vite build",
     "start": "npm run build && node dist/server/index.js",
     "dev": "concurrently -n client,server,run -c blue,green,yellow \"npm:dev:client\" \"npm:dev:server\" \"npm:dev:run\"",
     "predev": "npm run build",
     "dev:client": "vite dev",
-    "dev:server": "tsc -p tsconfig.server.json --watch --preserveWatchOutput",
+    "dev:server": "tsc -p src/server/tsconfig.json --watch --preserveWatchOutput",
     "dev:run": "SKIP_OPEN_BROWSER=1 node --watch dist/server/index.js",
     "test:unit": "tsx --test 'src/**/*.test.ts'",
     "test:e2e": "playwright test",

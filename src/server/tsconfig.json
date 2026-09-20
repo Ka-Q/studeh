@@ -1,14 +1,14 @@
 {
-    "extends": "./tsconfig.base.json",
+    "extends": "../../tsconfig.base.json",
     "compilerOptions": {
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
         "lib": ["ES2022"],
         "types": ["node"],
-        "outDir": "dist",
-        "rootDir": "src",
+        "outDir": "../../dist",
+        "rootDir": "..",
         "rewriteRelativeImportExtensions": true
     },
-    "include": ["src/server/**/*.ts", "src/shared/**/*.ts"],
-    "exclude": ["src/server/**/*.test.ts"]
+    "include": ["./**/*.ts", "../shared/**/*.ts"],
+    "exclude": ["./**/*.test.ts"]
 }
