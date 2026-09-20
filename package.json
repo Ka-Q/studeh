@@ -8,14 +8,12 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "node scripts/syncShared.ts && tsc -p tsconfig.server.json && tsc --noEmit -p tsconfig.scripts.json && node scripts/copyStatic.ts && tsc -p tsconfig.client.json && tsc -p tsconfig.client.classic.json",
+    "build": "node scripts/syncShared.ts && tsc -p tsconfig.server.json && tsc --noEmit -p tsconfig.scripts.json && tsc --noEmit -p tsconfig.client.json && vite build",
     "start": "npm run build && node dist/server/index.js",
-    "dev": "concurrently -n client,client-classic,static,shared,server,run -c blue,cyan,magenta,gray,green,yellow \"npm:dev:client\" \"npm:dev:client-classic\" \"npm:dev:static\" \"npm:dev:shared\" \"npm:dev:server\" \"npm:dev:run\"",
+    "dev": "concurrently -n client,shared,server,run -c blue,gray,green,yellow \"npm:dev:client\" \"npm:dev:shared\" \"npm:dev:server\" \"npm:dev:run\"",
     "predev": "npm run build",
     "predev:client": "node scripts/syncShared.ts",
-    "dev:client": "tsc -p tsconfig.client.json --watch --preserveWatchOutput",
-    "dev:client-classic": "tsc -p tsconfig.client.classic.json --watch --preserveWatchOutput",
-    "dev:static": "node --watch-path=src/client/index.html --watch-path=src/client/css --watch-path=src/client/icons scripts/copyStatic.ts",
+    "dev:client": "vite dev",
     "dev:shared": "node --watch-path=src/shared scripts/syncShared.ts",
     "predev:server": "node scripts/syncShared.ts",
     "dev:server": "tsc -p tsconfig.server.json --watch --preserveWatchOutput",
@@ -41,6 +39,7 @@
     "@types/node": "^24.13.4",
     "concurrently": "^9.2.4",
     "tsx": "^4.23.13",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
   }
 }

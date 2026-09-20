@@ -34,4 +34,4 @@ For active development, run:
 npm run dev
 ```
 
-This watches and rebuilds the client, static assets, and server on change, restarting the server as needed.
+This runs a Vite dev server for the client and watches and rebuilds the server on change, restarting it as needed.

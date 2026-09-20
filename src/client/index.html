@@ -4,8 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Studeh</title>
-    <script src="/js/themeInit.js"></script>
-    <link rel="stylesheet" href="/css/app.css">
+    <script>
+        (function applyStoredTheme() {
+            var STORAGE_KEY = 'studeh:theme';
+            var stored = localStorage.getItem(STORAGE_KEY);
+            var theme = stored === 'light' || stored === 'dark'
+                ? stored
+                : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <link rel="stylesheet" href="./css/app.css">
 </head>
 <body>
     <header id="toolbar">
@@ -129,6 +138,6 @@
             </div>
         </form>
     </dialog>
-    <script type="module" src="/js/app.js"></script>
+    <script type="module" src="./app.ts"></script>
 </body>
 </html>
