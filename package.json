@@ -17,7 +17,8 @@
     "dev:run": "SKIP_OPEN_BROWSER=1 node --watch dist/server/index.js",
     "test:unit": "tsx --test 'src/**/*.test.ts'",
     "test:e2e": "playwright test",
-    "test": "npm run test:unit && npm run test:e2e"
+    "typecheck:tests": "tsc --noEmit -p tsconfig.json",
+    "test": "npm run typecheck:tests && npm run test:unit && npm run test:e2e"
   },
   "repository": {
     "type": "git",

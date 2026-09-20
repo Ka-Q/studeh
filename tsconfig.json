@@ -5,7 +5,8 @@
         "moduleResolution": "Bundler",
         "lib": ["ES2022", "dom"],
         "types": ["node"],
-        "noEmit": true
+        "noEmit": true,
+        "allowImportingTsExtensions": true
     },
-    "include": ["tests/**/*.ts", "vite.config.ts", "playwright.config.ts"]
+    "include": ["tests/**/*.ts", "src/**/*.test.ts", "vite.config.ts", "playwright.config.ts"]
 }
