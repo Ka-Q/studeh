@@ -1,4 +1,4 @@
-import type { DocumentManifest, DocumentSummary, PageImage } from './types.js';
+import type { DocumentManifest, DocumentSummary, PageImage } from '../../shared/types.js';
 
 const baseUrl = '/api/documents';
 

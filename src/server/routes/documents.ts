@@ -3,7 +3,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { HttpError, InvalidImageUploadError } from '../documents/errors.js';
 import { createDocument, deleteDocument, listDocuments, readManifest, writeManifest } from '../documents/store.js';
 import { serveDocumentImage, writePageImage } from '../documents/images.js';
-import type { DocumentManifest } from '../documents/types.js';
+import type { DocumentManifest } from '../../shared/types.js';
 
 export const documentsRouter = Router();
 

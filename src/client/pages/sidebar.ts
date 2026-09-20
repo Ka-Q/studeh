@@ -11,7 +11,7 @@ import {
     setPageImage,
     subscribe
 } from '../document/state.js';
-import type { Page } from '../document/types.js';
+import type { Page } from '../../shared/types.js';
 import { confirmDialog } from '../dialogs/confirmDialog.js';
 import { getDroppedImageFiles, iconSpan, initHoverScopedPaste, initScrollFade, isFileDrag, requireElement, startDragSession } from '../dom.js';
 import { reportError } from '../errors.js';

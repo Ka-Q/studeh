@@ -1,5 +1,5 @@
 import type { Point, Size } from '../canvas/viewport.js';
-import type { RectangleShape } from '../document/types.js';
+import type { RectangleShape } from '../../shared/types.js';
 
 export interface Rect {
     x: number;

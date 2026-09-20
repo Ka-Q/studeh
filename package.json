@@ -8,14 +8,11 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "node scripts/syncShared.ts && tsc -p tsconfig.server.json && tsc --noEmit -p tsconfig.scripts.json && tsc --noEmit -p tsconfig.client.json && vite build",
+    "build": "tsc -p tsconfig.server.json && tsc --noEmit -p tsconfig.client.json && vite build",
     "start": "npm run build && node dist/server/index.js",
-    "dev": "concurrently -n client,shared,server,run -c blue,gray,green,yellow \"npm:dev:client\" \"npm:dev:shared\" \"npm:dev:server\" \"npm:dev:run\"",
+    "dev": "concurrently -n client,server,run -c blue,green,yellow \"npm:dev:client\" \"npm:dev:server\" \"npm:dev:run\"",
     "predev": "npm run build",
-    "predev:client": "node scripts/syncShared.ts",
     "dev:client": "vite dev",
-    "dev:shared": "node --watch-path=src/shared scripts/syncShared.ts",
-    "predev:server": "node scripts/syncShared.ts",
     "dev:server": "tsc -p tsconfig.server.json --watch --preserveWatchOutput",
     "dev:run": "SKIP_OPEN_BROWSER=1 node --watch dist/server/index.js",
     "test:unit": "tsx --test 'src/**/*.test.ts'",
