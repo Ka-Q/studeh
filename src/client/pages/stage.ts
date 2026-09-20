@@ -16,6 +16,7 @@ import { getDroppedImageFiles, iconSpan, initHoverScopedPaste, isFileDrag, requi
 import { reportError } from '../errors';
 import { mountImageCanvas, type ImageCanvasHandle } from '../canvas/imageCanvas';
 import { initFullscreenControl, requestFullscreen } from '../canvas/fullscreen';
+import { initCanvasHints, type CanvasHintsHandle } from '../canvas/canvasHints';
 import { confirmDialog } from '../dialogs/confirmDialog';
 import { createModeToggle, type ModeToggleHandle } from '../modes/modeToggle';
 import { browseDialog } from '../document/browseDialog';
@@ -33,6 +34,7 @@ let canvasMount: HTMLDivElement;
 let canvasBody: HTMLDivElement;
 let dragOverlay: HTMLDivElement;
 let modeToggleHandle: ModeToggleHandle;
+let canvasHintsHandle: CanvasHintsHandle;
 let mountedCanvas: MountedCanvas | null = null;
 let isFullscreen = false;
 
@@ -51,6 +53,7 @@ export function initStage(): void {
     modeToggleHandle = createModeToggle();
     canvasMount.append(canvasBody, dragOverlay, modeToggleHandle.button);
     container.append(controlsEl, canvasMount);
+    canvasHintsHandle = initCanvasHints(canvasMount, getState().mode);
 
     initFullscreenControl(canvasMount, function onFullscreenChange(nextIsFullscreen) {
         isFullscreen = nextIsFullscreen;
@@ -269,14 +272,15 @@ function createImageFileInput(documentId: string, pageId: string): HTMLInputElem
 }
 
 function renderCanvas(documentId: string, page: Page): void {
+    const { selectedShapeId, mode } = getState();
+    canvasHintsHandle.setMode(mode);
+
     if (!page.image) {
         unmountCanvas();
         canvasBody.textContent = '';
         canvasBody.append(buildAssignImagePrompt(documentId, page.id));
         return;
     }
-
-    const { selectedShapeId, mode } = getState();
 
     if (mountedCanvas?.pageId === page.id && mountedCanvas.imageFile === page.image.file) {
         mountedCanvas.handle.update(page.shapes, selectedShapeId, mode);

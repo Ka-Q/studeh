@@ -851,3 +851,70 @@ dialog::backdrop {
     background: var(--color-surface);
     color: var(--color-accent);
 }
+
+.canvas-hints {
+    position: absolute;
+    bottom: var(--space-2);
+    left: var(--space-2);
+    right: var(--space-2);
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    opacity: 0.85;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.canvas-hints-rows {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+}
+
+.canvas-hints-row {
+    padding: 0 var(--space-3);
+    border-left: 1px solid var(--color-border);
+}
+
+.canvas-hints-row:first-child {
+    padding-left: 0;
+    border-left: none;
+}
+
+.canvas-hints-toggle-label {
+    display: none;
+}
+
+.canvas-hints-toggle {
+    flex: 0 0 auto;
+    padding: var(--space-1);
+    border: none;
+    background: none;
+}
+
+.canvas-hints-toggle .icon {
+    transition: transform 0.15s ease;
+    transform: rotate(90deg);
+}
+
+.canvas-hints.collapsed {
+    left: auto;
+    gap: var(--space-2);
+}
+
+.canvas-hints.collapsed .canvas-hints-rows {
+    display: none;
+}
+
+.canvas-hints.collapsed .canvas-hints-toggle-label {
+    display: inline;
+}
+
+.canvas-hints.collapsed .canvas-hints-toggle .icon {
+    transform: rotate(-90deg);
+}
