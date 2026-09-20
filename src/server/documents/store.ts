@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { documentsRoot, documentDir, manifestPath, imagesDir, assertValidDocumentId } from './paths.js';
 import { DocumentNotFoundError, InvalidManifestError } from './errors.js';
 import { pruneUnreferencedImages } from './images.js';
-import { MANIFEST_FORMAT, MANIFEST_VERSION, type DocumentManifest, type DocumentSummary } from './types.js';
+import { MANIFEST_FORMAT, MANIFEST_VERSION, type DocumentManifest, type DocumentSummary } from '../../shared/types.js';
 
 export async function listDocuments(): Promise<DocumentSummary[]> {
     await fs.mkdir(documentsRoot, { recursive: true });
