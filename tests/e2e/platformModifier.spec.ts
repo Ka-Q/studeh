@@ -9,7 +9,7 @@ test('Ctrl+D opens the New-document dialog on a non-Mac platform', async ({ page
     await expect(page.locator('#new-document-dialog')).toBeVisible();
 });
 
-test('Cmd (Meta), not Ctrl, opens the New-document dialog on a Mac platform', async ({ page, browser }) => {
+test('Cmd (Meta), not Ctrl, opens the New-document dialog on a Mac platform', async ({ browser }) => {
     const macContext = await browser.newContext();
     await macContext.addInitScript(function spoofMac() {
         Object.defineProperty(navigator, 'platform', { get: function get() { return 'MacIntel'; } });
