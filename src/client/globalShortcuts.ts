@@ -1,5 +1,5 @@
-import { onNew, onSave } from './document/toolbar.js';
-import { browseDialog } from './document/browseDialog.js';
+import { onNew, onSave } from './document/toolbar';
+import { browseDialog } from './document/browseDialog';
 import {
     deleteActivePage,
     deleteSelectedPagesWithConfirm,
@@ -9,10 +9,10 @@ import {
     toggleActivePageSelection,
     toggleSelectAllPages,
     toggleSidebarCollapse
-} from './pages/sidebar.js';
-import { isPrimaryModifierPressed } from './dom.js';
-import { isBlockedByInputOrDialog } from './keyboardNav.js';
-import { SHORTCUTS, type ShortcutSpec } from './shortcuts.js';
+} from './pages/sidebar';
+import { isPrimaryModifierPressed } from './dom';
+import { isBlockedByInputOrDialog } from './keyboardNav';
+import { SHORTCUTS, type ShortcutSpec } from './shortcuts';
 
 function lookupKey(spec: ShortcutSpec): string {
     return `${spec.modifier === 'primaryShift' ? 'shift+' : ''}${spec.key.toLowerCase()}`;

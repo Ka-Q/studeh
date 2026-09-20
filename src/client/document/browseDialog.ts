@@ -1,10 +1,10 @@
-import { deleteDocument, getDocument, listDocuments, pageImageUrl } from './api.js';
-import { getState, setDocument } from './state.js';
-import { confirmDiscardIfDirty } from './discardGuard.js';
-import type { DocumentSummary } from '../../shared/types.js';
-import { confirmDialog } from '../dialogs/confirmDialog.js';
-import { iconSpan, initScrollFade, requireElement, showDialog, wireDialogClose } from '../dom.js';
-import { reportError } from '../errors.js';
+import { deleteDocument, getDocument, listDocuments, pageImageUrl } from './api';
+import { getState, setDocument } from './state';
+import { confirmDiscardIfDirty } from './discardGuard';
+import type { DocumentSummary } from '../../shared/types';
+import { confirmDialog } from '../dialogs/confirmDialog';
+import { iconSpan, initScrollFade, requireElement, showDialog, wireDialogClose } from '../dom';
+import { reportError } from '../errors';
 
 type SortMode = 'updatedAt' | 'name';
 

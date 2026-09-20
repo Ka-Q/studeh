@@ -1,7 +1,7 @@
-import { getState, setMode, subscribe } from '../document/state.js';
-import { iconSpan } from '../dom.js';
-import { isBlockedByInputOrDialog } from '../keyboardNav.js';
-import { SHORTCUTS, shortcutHint } from '../shortcuts.js';
+import { getState, setMode, subscribe } from '../document/state';
+import { iconSpan } from '../dom';
+import { isBlockedByInputOrDialog } from '../keyboardNav';
+import { SHORTCUTS, shortcutHint } from '../shortcuts';
 
 export interface ModeToggleHandle {
     button: HTMLButtonElement;

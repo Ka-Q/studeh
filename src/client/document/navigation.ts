@@ -1,7 +1,7 @@
-import { getDocument } from './api.js';
-import { documentUrlPath, getState, setDocument } from './state.js';
-import { confirmDiscardIfDirty } from './discardGuard.js';
-import { reportError } from '../errors.js';
+import { getDocument } from './api';
+import { documentUrlPath, getState, setDocument } from './state';
+import { confirmDiscardIfDirty } from './discardGuard';
+import { reportError } from '../errors';
 
 export function initNavigationGuard(): void {
     window.addEventListener('popstate', async function onPopState() {

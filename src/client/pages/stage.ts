@@ -9,18 +9,18 @@ import {
     subscribe,
     toggleShapeVisibility,
     updateShapeRect
-} from '../document/state.js';
-import { pageImageUrl, uploadPageImage } from '../document/api.js';
-import type { Page } from '../../shared/types.js';
-import { getDroppedImageFiles, iconSpan, initHoverScopedPaste, isFileDrag, requireElement } from '../dom.js';
-import { reportError } from '../errors.js';
-import { mountImageCanvas, type ImageCanvasHandle } from '../canvas/imageCanvas.js';
-import { initFullscreenControl, requestFullscreen } from '../canvas/fullscreen.js';
-import { confirmDialog } from '../dialogs/confirmDialog.js';
-import { createModeToggle, type ModeToggleHandle } from '../modes/modeToggle.js';
-import { browseDialog } from '../document/browseDialog.js';
-import { onNew } from '../document/toolbar.js';
-import { shortcutHint } from '../shortcuts.js';
+} from '../document/state';
+import { pageImageUrl, uploadPageImage } from '../document/api';
+import type { Page } from '../../shared/types';
+import { getDroppedImageFiles, iconSpan, initHoverScopedPaste, isFileDrag, requireElement } from '../dom';
+import { reportError } from '../errors';
+import { mountImageCanvas, type ImageCanvasHandle } from '../canvas/imageCanvas';
+import { initFullscreenControl, requestFullscreen } from '../canvas/fullscreen';
+import { confirmDialog } from '../dialogs/confirmDialog';
+import { createModeToggle, type ModeToggleHandle } from '../modes/modeToggle';
+import { browseDialog } from '../document/browseDialog';
+import { onNew } from '../document/toolbar';
+import { shortcutHint } from '../shortcuts';
 
 interface MountedCanvas {
     pageId: string;

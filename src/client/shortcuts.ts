@@ -1,4 +1,4 @@
-import { primaryModifierLabel } from './dom.js';
+import { primaryModifierLabel } from './dom';
 
 export type ShortcutId =
     | 'new'
