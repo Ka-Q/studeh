@@ -18,7 +18,8 @@ export type ShortcutId =
     | 'toggleSidebar'
     | 'toggleFullscreen'
     | 'hideAll'
-    | 'revealAll';
+    | 'revealAll'
+    | 'toggleCanvasHints';
 
 export interface ShortcutSpec {
     key: string;
@@ -44,7 +45,8 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutSpec> = {
     toggleSidebar: { key: 'h', modifier: 'primary', displayKey: 'H' },
     toggleFullscreen: { key: 'f', modifier: 'none', displayKey: 'F' },
     hideAll: { key: '.', modifier: 'none', displayKey: '.' },
-    revealAll: { key: '.', modifier: 'shift', displayKey: '.' }
+    revealAll: { key: '.', modifier: 'shift', displayKey: '.' },
+    toggleCanvasHints: { key: 'h', modifier: 'none', displayKey: 'H' }
 };
 
 export function shortcutHint(id: ShortcutId): string {
