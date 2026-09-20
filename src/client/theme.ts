@@ -1,4 +1,4 @@
-import { requireElement } from './dom.js';
+import { requireElement } from './dom';
 
 type Theme = 'light' | 'dark';
 

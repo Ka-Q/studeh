@@ -1,4 +1,4 @@
-import { iconSpan } from '../dom.js';
+import { iconSpan } from '../dom';
 
 export interface FullscreenControl {
     destroy(): void;

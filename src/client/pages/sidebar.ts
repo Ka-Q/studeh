@@ -1,4 +1,4 @@
-import { pageImageUrl, uploadPageImage } from '../document/api.js';
+import { pageImageUrl, uploadPageImage } from '../document/api';
 import {
     addPage,
     deletePage,
@@ -10,13 +10,13 @@ import {
     setActivePage,
     setPageImage,
     subscribe
-} from '../document/state.js';
-import type { Page } from '../../shared/types.js';
-import { confirmDialog } from '../dialogs/confirmDialog.js';
-import { getDroppedImageFiles, iconSpan, initHoverScopedPaste, initScrollFade, isFileDrag, requireElement, startDragSession } from '../dom.js';
-import { reportError } from '../errors.js';
-import { startInlineEdit } from '../inlineEdit.js';
-import { shortcutHint } from '../shortcuts.js';
+} from '../document/state';
+import type { Page } from '../../shared/types';
+import { confirmDialog } from '../dialogs/confirmDialog';
+import { getDroppedImageFiles, iconSpan, initHoverScopedPaste, initScrollFade, isFileDrag, requireElement, startDragSession } from '../dom';
+import { reportError } from '../errors';
+import { startInlineEdit } from '../inlineEdit';
+import { shortcutHint } from '../shortcuts';
 
 const MIN_SIDEBAR_WIDTH = 224;
 const MAX_SIDEBAR_WIDTH = 480;

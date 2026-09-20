@@ -1,5 +1,5 @@
-import { getState } from './state.js';
-import { confirmDialog } from '../dialogs/confirmDialog.js';
+import { getState } from './state';
+import { confirmDialog } from '../dialogs/confirmDialog';
 
 export function confirmDiscardIfDirty(): Promise<boolean> {
     if (!getState().dirty) {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { fitViewport } from './viewport.js';
+import { fitViewport } from './viewport';
 
 test('fitViewport centers and scales a smaller canvas down to fit', function () {
     const viewport = fitViewport({ width: 200, height: 100 }, { width: 100, height: 100 });

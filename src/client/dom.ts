@@ -1,4 +1,4 @@
-import { isBlockedByInputOrDialog } from './keyboardNav.js';
+import { isBlockedByInputOrDialog } from './keyboardNav';
 
 export function isFileDrag(event: DragEvent): boolean {
     return event.dataTransfer !== null && Array.from(event.dataTransfer.types).includes('Files');

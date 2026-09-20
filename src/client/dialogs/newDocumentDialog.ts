@@ -1,5 +1,5 @@
-import { requireElement, showDialog, wireDialogClose } from '../dom.js';
-import { MAX_NAME_LENGTH, sanitizeName } from '../inlineEdit.js';
+import { requireElement, showDialog, wireDialogClose } from '../dom';
+import { MAX_NAME_LENGTH, sanitizeName } from '../inlineEdit';
 
 const DEFAULT_NAME = 'Untitled document';
 

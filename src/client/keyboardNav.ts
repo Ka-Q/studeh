@@ -1,6 +1,6 @@
-import { getState, movePage, setActivePage } from './document/state.js';
-import { isPrimaryModifierPressed } from './dom.js';
-import { SHORTCUTS } from './shortcuts.js';
+import { getState, movePage, setActivePage } from './document/state';
+import { isPrimaryModifierPressed } from './dom';
+import { SHORTCUTS } from './shortcuts';
 
 const previousPageKeys = new Set(['ArrowUp', 'ArrowLeft']);
 const nextPageKeys = new Set(['ArrowDown', 'ArrowRight']);

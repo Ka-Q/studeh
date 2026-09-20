@@ -1,13 +1,13 @@
-import { createDocument, saveDocument } from './api.js';
-import { getState, markClean, renameDocument, setDocument, subscribe } from './state.js';
-import { confirmDiscardIfDirty } from './discardGuard.js';
-import { browseDialog } from './browseDialog.js';
-import { newDocumentDialog } from '../dialogs/newDocumentDialog.js';
-import { isPrimaryModifierPressed, requireElement } from '../dom.js';
-import { reportError } from '../errors.js';
-import { startInlineEdit } from '../inlineEdit.js';
-import { isBlockedByInputOrDialog } from '../keyboardNav.js';
-import { SHORTCUTS, shortcutHint } from '../shortcuts.js';
+import { createDocument, saveDocument } from './api';
+import { getState, markClean, renameDocument, setDocument, subscribe } from './state';
+import { confirmDiscardIfDirty } from './discardGuard';
+import { browseDialog } from './browseDialog';
+import { newDocumentDialog } from '../dialogs/newDocumentDialog';
+import { isPrimaryModifierPressed, requireElement } from '../dom';
+import { reportError } from '../errors';
+import { startInlineEdit } from '../inlineEdit';
+import { isBlockedByInputOrDialog } from '../keyboardNav';
+import { SHORTCUTS, shortcutHint } from '../shortcuts';
 
 const SAVED_STATUS_HOLD_MS = 2000;
 

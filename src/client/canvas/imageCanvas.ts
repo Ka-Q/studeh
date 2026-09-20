@@ -1,4 +1,4 @@
-import { canvasToImage, fitViewport, imageToCanvas, panViewport, zoomAtCanvasPoint, type Point, type Size, type Viewport } from './viewport.js';
+import { canvasToImage, fitViewport, imageToCanvas, panViewport, zoomAtCanvasPoint, type Point, type Size, type Viewport } from './viewport';
 import {
     clampMoveToBounds,
     clampRectToBounds,
@@ -10,11 +10,11 @@ import {
     topmostShapeAt,
     type Rect,
     type ResizeHandle
-} from '../shapes/rectangle.js';
-import type { RectangleShape } from '../../shared/types.js';
-import type { Mode } from '../document/state.js';
-import { isPrimaryModifierKey, isPrimaryModifierPressed, startDragSession } from '../dom.js';
-import { isBlockedByInputOrDialog } from '../keyboardNav.js';
+} from '../shapes/rectangle';
+import type { RectangleShape } from '../../shared/types';
+import type { Mode } from '../document/state';
+import { isPrimaryModifierKey, isPrimaryModifierPressed, startDragSession } from '../dom';
+import { isBlockedByInputOrDialog } from '../keyboardNav';
 
 export interface ImageCanvasCallbacks {
     onCreateShape(rect: Rect): void;

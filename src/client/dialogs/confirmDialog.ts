@@ -1,4 +1,4 @@
-import { requireElement, showDialog, wireDialogClose } from '../dom.js';
+import { requireElement, showDialog, wireDialogClose } from '../dom';
 
 interface ConfirmOptions {
     title: string;

@@ -1,17 +1,17 @@
-import { getDocument } from './document/api.js';
-import { initToolbar } from './document/toolbar.js';
-import { initBrowseDialog } from './document/browseDialog.js';
-import { getState, setDocument } from './document/state.js';
-import { initNavigationGuard } from './document/navigation.js';
-import { initConfirmDialog } from './dialogs/confirmDialog.js';
-import { initNewDocumentDialog } from './dialogs/newDocumentDialog.js';
-import { initNoticeDialog } from './dialogs/noticeDialog.js';
-import { initPageSidebar } from './pages/sidebar.js';
-import { initStage } from './pages/stage.js';
-import { initTheme } from './theme.js';
-import { initKeyboardNav } from './keyboardNav.js';
-import { initGlobalShortcuts } from './globalShortcuts.js';
-import { reportError } from './errors.js';
+import { getDocument } from './document/api';
+import { initToolbar } from './document/toolbar';
+import { initBrowseDialog } from './document/browseDialog';
+import { getState, setDocument } from './document/state';
+import { initNavigationGuard } from './document/navigation';
+import { initConfirmDialog } from './dialogs/confirmDialog';
+import { initNewDocumentDialog } from './dialogs/newDocumentDialog';
+import { initNoticeDialog } from './dialogs/noticeDialog';
+import { initPageSidebar } from './pages/sidebar';
+import { initStage } from './pages/stage';
+import { initTheme } from './theme';
+import { initKeyboardNav } from './keyboardNav';
+import { initGlobalShortcuts } from './globalShortcuts';
+import { reportError } from './errors';
 
 function main(): void {
     initTheme();

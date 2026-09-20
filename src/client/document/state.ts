@@ -1,5 +1,5 @@
-import type { DocumentManifest, Page, PageImage, RectangleShape } from '../../shared/types.js';
-import type { Rect } from '../shapes/rectangle.js';
+import type { DocumentManifest, Page, PageImage, RectangleShape } from '../../shared/types';
+import type { Rect } from '../shapes/rectangle';
 
 export type Mode = 'edit' | 'study';
 
