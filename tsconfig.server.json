@@ -6,7 +6,8 @@
         "lib": ["ES2022"],
         "types": ["node"],
         "outDir": "dist",
-        "rootDir": "src"
+        "rootDir": "src",
+        "rewriteRelativeImportExtensions": true
     },
     "include": ["src/server/**/*.ts", "src/shared/**/*.ts"],
     "exclude": ["src/server/**/*.test.ts"]

@@ -2,9 +2,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { Request, Response } from 'express';
-import { assertValidPageId, imagesDir } from './paths.js';
-import { InvalidDocumentIdError, InvalidImageUploadError } from './errors.js';
-import type { DocumentManifest, PageImage } from '../../shared/types.js';
+import { assertValidPageId, imagesDir } from './paths.ts';
+import { InvalidDocumentIdError, InvalidImageUploadError } from './errors.ts';
+import type { DocumentManifest, PageImage } from '../../shared/types.ts';
 
 const extensionByMimeType: Record<string, string> = {
     'image/png': 'png',

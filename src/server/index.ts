@@ -2,7 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { exec } from 'node:child_process';
 import express from 'express';
-import { documentsRouter } from './routes/documents.js';
+import { documentsRouter } from './routes/documents.ts';
 
 const port = Number(process.env.PORT) || 3000;
 const currentDir = path.dirname(fileURLToPath(import.meta.url));

@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { InvalidDocumentIdError, InvalidPageIdError } from './errors.js';
+import { InvalidDocumentIdError, InvalidPageIdError } from './errors.ts';
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 export const documentsRoot = process.env.STUDEH_DOCUMENTS_DIR
