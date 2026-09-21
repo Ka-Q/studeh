@@ -2,22 +2,10 @@ import { isPrimaryModifierPressed } from './dom';
 import { isBlockedByInputOrDialog } from './keyboardNav';
 import { SHORTCUTS, type ShortcutId, type ShortcutSpec } from './shortcuts';
 
-type RawKeydownHandler = (event: KeyboardEvent) => void;
-
-interface RawKeydownEntry {
-    handler: RawKeydownHandler;
-    allowInFullscreen: boolean;
-}
-
 const handlersById: Partial<Record<ShortcutId, () => void>> = {};
-const rawHandlers: RawKeydownEntry[] = [];
 
 export function registerShortcut(id: ShortcutId, handler: () => void): void {
     handlersById[id] = handler;
-}
-
-export function registerRawKeydown(handler: RawKeydownHandler, options: { allowInFullscreen: boolean }): void {
-    rawHandlers.push({ handler, allowInFullscreen: options.allowInFullscreen });
 }
 
 export function initShortcutDispatch(): void {
@@ -29,11 +17,6 @@ function onKeyDown(event: KeyboardEvent): void {
         return;
     }
     const isFullscreen = document.fullscreenElement !== null;
-    for (const rawHandler of rawHandlers) {
-        if (!isFullscreen || rawHandler.allowInFullscreen) {
-            rawHandler.handler(event);
-        }
-    }
     const id = matchShortcutId(event.key, modifierCombo(event));
     if (!id || (isFullscreen && !SHORTCUTS[id].allowInFullscreen)) {
         return;
