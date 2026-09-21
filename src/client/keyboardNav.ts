@@ -2,16 +2,10 @@ import { getState, movePage, setActivePage } from './document/state';
 import { registerShortcut } from './shortcutDispatch';
 
 export function initKeyboardNav(): void {
-    registerShortcut('selectPreviousPageUp', function onSelectPreviousUp() {
+    registerShortcut('selectPreviousPage', function onSelectPreviousPage() {
         selectAdjacentPage(-1);
     });
-    registerShortcut('selectPreviousPageLeft', function onSelectPreviousLeft() {
-        selectAdjacentPage(-1);
-    });
-    registerShortcut('selectNextPageDown', function onSelectNextDown() {
-        selectAdjacentPage(1);
-    });
-    registerShortcut('selectNextPageRight', function onSelectNextRight() {
+    registerShortcut('selectNextPage', function onSelectNextPage() {
         selectAdjacentPage(1);
     });
     registerShortcut('reorderPageUp', function onReorderUp() {
@@ -44,16 +38,4 @@ function selectAdjacentPage(direction: -1 | 1): void {
     if (nextIndex !== currentIndex) {
         setActivePage(doc.pages[nextIndex].id);
     }
-}
-
-export function isBlockedByInputOrDialog(): boolean {
-    return isTypingTarget() || document.querySelector('dialog[open]') !== null;
-}
-
-function isTypingTarget(): boolean {
-    const active = document.activeElement;
-    if (!active) {
-        return false;
-    }
-    return active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || (active as HTMLElement).isContentEditable;
 }

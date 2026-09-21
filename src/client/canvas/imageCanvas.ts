@@ -13,8 +13,7 @@ import {
 } from '../shapes/rectangle';
 import type { RectangleShape } from '../../shared/types';
 import type { Mode } from '../document/state';
-import { isPrimaryModifierKey, isPrimaryModifierPressed, startDragSession } from '../dom';
-import { isBlockedByInputOrDialog } from '../keyboardNav';
+import { isBlockedByInputOrDialog, isPrimaryModifierKey, isPrimaryModifierPressed, startDragSession } from '../dom';
 
 export interface ImageCanvasCallbacks {
     onCreateShape(rect: Rect): void;
