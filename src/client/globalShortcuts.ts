@@ -10,40 +10,18 @@ import {
     toggleSelectAllPages,
     toggleSidebarCollapse
 } from './pages/sidebar';
-import { isPrimaryModifierPressed } from './dom';
-import { isBlockedByInputOrDialog } from './keyboardNav';
-import { SHORTCUTS, type ShortcutSpec } from './shortcuts';
-
-function lookupKey(spec: ShortcutSpec): string {
-    return `${spec.modifier === 'primaryShift' ? 'shift+' : ''}${spec.key.toLowerCase()}`;
-}
-
-const ACTIONS_BY_KEY: Record<string, () => void> = {
-    [lookupKey(SHORTCUTS.new)]: onNew,
-    [lookupKey(SHORTCUTS.browse)]: browseDialog,
-    [lookupKey(SHORTCUTS.save)]: onSave,
-    [lookupKey(SHORTCUTS.newPage)]: onAddPage,
-    [lookupKey(SHORTCUTS.newPageFromImages)]: onAddFromImages,
-    [lookupKey(SHORTCUTS.toggleActivePageSelection)]: toggleActivePageSelection,
-    [lookupKey(SHORTCUTS.toggleSelectAllPages)]: toggleSelectAllPages,
-    [lookupKey(SHORTCUTS.deleteActivePage)]: deleteActivePage,
-    [lookupKey(SHORTCUTS.deleteSelectedPages)]: deleteSelectedPagesWithConfirm,
-    [lookupKey(SHORTCUTS.renameActivePage)]: renameActivePage,
-    [lookupKey(SHORTCUTS.toggleSidebar)]: toggleSidebarCollapse
-};
+import { registerShortcut } from './shortcutDispatch';
 
 export function initGlobalShortcuts(): void {
-    document.addEventListener('keydown', onKeyDown);
-}
-
-function onKeyDown(event: KeyboardEvent): void {
-    if (event.repeat || !isPrimaryModifierPressed(event) || isBlockedByInputOrDialog()) {
-        return;
-    }
-    const key = `${event.shiftKey ? 'shift+' : ''}${event.key.toLowerCase()}`;
-    const action = ACTIONS_BY_KEY[key];
-    if (action) {
-        event.preventDefault();
-        action();
-    }
+    registerShortcut('new', onNew);
+    registerShortcut('browse', browseDialog);
+    registerShortcut('save', onSave);
+    registerShortcut('newPage', onAddPage);
+    registerShortcut('newPageFromImages', onAddFromImages);
+    registerShortcut('toggleActivePageSelection', toggleActivePageSelection);
+    registerShortcut('toggleSelectAllPages', toggleSelectAllPages);
+    registerShortcut('deleteActivePage', deleteActivePage);
+    registerShortcut('deleteSelectedPages', deleteSelectedPagesWithConfirm);
+    registerShortcut('renameActivePage', renameActivePage);
+    registerShortcut('toggleSidebar', toggleSidebarCollapse);
 }

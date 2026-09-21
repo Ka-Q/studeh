@@ -1,32 +1,28 @@
 import { getState, movePage, setActivePage } from './document/state';
 import { isPrimaryModifierPressed } from './dom';
-import { SHORTCUTS } from './shortcuts';
+import { registerRawKeydown, registerShortcut } from './shortcutDispatch';
 
 const previousPageKeys = new Set(['ArrowUp', 'ArrowLeft']);
 const nextPageKeys = new Set(['ArrowDown', 'ArrowRight']);
-const reorderableKeys = new Set([SHORTCUTS.reorderPageUp.key, SHORTCUTS.reorderPageDown.key]);
 
 export function initKeyboardNav(): void {
-    document.addEventListener('keydown', onKeyDown);
+    registerRawKeydown(onKeyDown, { allowInFullscreen: true });
+    registerShortcut('reorderPageUp', function onReorderUp() {
+        reorderActivePage(-1);
+    });
+    registerShortcut('reorderPageDown', function onReorderDown() {
+        reorderActivePage(1);
+    });
 }
 
 function onKeyDown(event: KeyboardEvent): void {
-    if (isBlockedByInputOrDialog()) {
+    if (isPrimaryModifierPressed(event)) {
         return;
     }
     if (previousPageKeys.has(event.key)) {
-        handleArrowKey(event, -1);
+        selectAdjacentPage(-1);
     } else if (nextPageKeys.has(event.key)) {
-        handleArrowKey(event, 1);
-    }
-}
-
-function handleArrowKey(event: KeyboardEvent, direction: -1 | 1): void {
-    if (reorderableKeys.has(event.key) && isPrimaryModifierPressed(event)) {
-        event.preventDefault();
-        reorderActivePage(direction);
-    } else {
-        selectAdjacentPage(direction);
+        selectAdjacentPage(1);
     }
 }
 

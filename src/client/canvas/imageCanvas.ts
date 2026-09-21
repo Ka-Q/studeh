@@ -22,9 +22,6 @@ export interface ImageCanvasCallbacks {
     onUpdateShapeRect(shapeId: string, rect: Rect): void;
     onDeleteSelected(): void;
     onToggleVisibility(shapeId: string): void;
-    onToggleFullscreen(): void;
-    onHideAll(): void;
-    onRevealAll(): void;
 }
 
 type ActiveDrag =
@@ -337,7 +334,7 @@ export function mountImageCanvas(
     }
 
     function onPanModifierKeyDown(event: KeyboardEvent): void {
-        if (!isPrimaryModifierKey(event) || isPanModifierPressed) {
+        if (!isPrimaryModifierKey(event) || isPanModifierPressed || isBlockedByInputOrDialog()) {
             return;
         }
         isPanModifierPressed = true;
@@ -545,20 +542,6 @@ export function mountImageCanvas(
     }
 
     function onStudyKeyDown(event: KeyboardEvent): void {
-        if (event.key.toLowerCase() === 'f') {
-            event.preventDefault();
-            callbacks.onToggleFullscreen();
-            return;
-        }
-        if (event.code === 'Period') {
-            event.preventDefault();
-            if (event.shiftKey) {
-                callbacks.onRevealAll();
-            } else {
-                callbacks.onHideAll();
-            }
-            return;
-        }
         if (!isFullscreen || shapes.length === 0) {
             return;
         }
