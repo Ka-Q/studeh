@@ -22,6 +22,7 @@ import { createModeToggle, type ModeToggleHandle } from '../modes/modeToggle';
 import { browseDialog } from '../document/browseDialog';
 import { onNew } from '../document/toolbar';
 import { shortcutHint } from '../shortcuts';
+import { registerShortcut } from '../shortcutDispatch';
 
 interface MountedCanvas {
     pageId: string;
@@ -62,9 +63,30 @@ export function initStage(): void {
     });
     initImageDrop();
     initImagePaste();
+    registerShortcut('toggleFullscreen', function onToggleFullscreenShortcut() {
+        if (isStudyModeWithImage()) {
+            toggleFullscreen();
+        }
+    });
+    registerShortcut('hideAll', function onHideAllShortcut() {
+        const page = getActivePage();
+        if (isStudyModeWithImage() && page) {
+            setPageShapesVisibility(page.id, false);
+        }
+    });
+    registerShortcut('revealAll', function onRevealAllShortcut() {
+        const page = getActivePage();
+        if (isStudyModeWithImage() && page) {
+            setPageShapesVisibility(page.id, true);
+        }
+    });
 
     subscribe(render);
     render();
+}
+
+function isStudyModeWithImage(): boolean {
+    return getState().mode === 'study' && !!getActivePage()?.image;
 }
 
 function isEditMode(): boolean {
@@ -314,15 +336,6 @@ function renderCanvas(documentId: string, page: Page): void {
                 },
                 onToggleVisibility(shapeId) {
                     toggleShapeVisibility(page.id, shapeId);
-                },
-                onToggleFullscreen() {
-                    toggleFullscreen();
-                },
-                onHideAll() {
-                    setPageShapesVisibility(page.id, false);
-                },
-                onRevealAll() {
-                    setPageShapesVisibility(page.id, true);
                 }
             }
         )

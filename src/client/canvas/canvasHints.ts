@@ -1,7 +1,7 @@
 import type { Mode } from '../document/state';
 import { iconSpan } from '../dom';
-import { isBlockedByInputOrDialog } from '../keyboardNav';
-import { SHORTCUTS, shortcutHint } from '../shortcuts';
+import { registerShortcut } from '../shortcutDispatch';
+import { shortcutHint } from '../shortcuts';
 
 export interface CanvasHintsHandle {
     setMode(mode: Mode): void;
@@ -50,6 +50,7 @@ export function initCanvasHints(canvasMount: HTMLDivElement, mode: Mode): Canvas
     canvasMount.append(bar);
 
     let collapsed = localStorage.getItem(COLLAPSED_STORAGE_KEY) === 'true';
+    let renderedMode = mode;
 
     function renderRows(currentMode: Mode): void {
         rowsEl.innerHTML = '';
@@ -75,18 +76,17 @@ export function initCanvasHints(canvasMount: HTMLDivElement, mode: Mode): Canvas
 
     toggleButton.addEventListener('click', toggleCollapsed);
 
-    document.addEventListener('keydown', function onKeyDown(event) {
-        if (event.repeat || event.key.toLowerCase() !== SHORTCUTS.toggleCanvasHints.key || isBlockedByInputOrDialog()) {
-            return;
-        }
-        toggleCollapsed();
-    });
+    registerShortcut('toggleCanvasHints', toggleCollapsed);
 
     renderRows(mode);
     applyCollapsedState();
 
     return {
         setMode(nextMode: Mode): void {
+            if (nextMode === renderedMode) {
+                return;
+            }
+            renderedMode = nextMode;
             renderRows(nextMode);
         }
     };

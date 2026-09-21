@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { addPage, createDocument, uniqueName } from './helpers';
+import { addPage, assignActivePageImage, createDocument, uniqueName } from './helpers';
 
 test('Ctrl+Up/Down reorders the active page; plain arrows only navigate', async ({ page }) => {
     await page.goto('/');
@@ -77,4 +77,46 @@ test('holding Ctrl+X only deletes one page; holding Ctrl+A only creates one page
         document.dispatchEvent(new KeyboardEvent('keydown', { ...options, repeat: true }));
     });
     await expect(page.locator('.page-item')).toHaveCount(3);
+});
+
+test('sidebar/toolbar shortcuts do not fire in fullscreen; canvas-scoped shortcuts still do', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('Fullscreen Gating Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+
+    await page.locator('.canvas-mode-toggle').click();
+    await page.getByRole('button', { name: 'Fullscreen' }).click();
+    await page.locator('.fullscreen-close').waitFor({ state: 'visible' });
+
+    await page.keyboard.press('Control+d');
+    await expect(page.locator('#new-document-dialog[open]')).toHaveCount(0);
+
+    await page.keyboard.press('h');
+    await expect(page.locator('.canvas-hints')).toHaveClass(/collapsed/);
+
+    await page.keyboard.press('f');
+    await expect(page.locator('.fullscreen-close')).toBeHidden();
+});
+
+test('plain arrow-key page navigation still works in fullscreen', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('Fullscreen Nav Doc'));
+    await addPage(page);
+    await addPage(page);
+    await assignActivePageImage(page);
+    const ids = await page.locator('.page-item').evaluateAll(function toIds(items) {
+        return items.map(function id(item) { return item.getAttribute('data-page-id'); });
+    });
+    await expect(page.locator('.page-item.active')).toHaveAttribute('data-page-id', ids[1]!);
+
+    await page.locator('.canvas-mode-toggle').click();
+    await page.getByRole('button', { name: 'Fullscreen' }).click();
+    await page.locator('.fullscreen-close').waitFor({ state: 'visible' });
+
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.locator('.page-item.active')).toHaveAttribute('data-page-id', ids[0]!);
+
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('.page-item.active')).toHaveAttribute('data-page-id', ids[1]!);
 });

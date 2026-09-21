@@ -3,11 +3,11 @@ import { getState, markClean, renameDocument, setDocument, subscribe } from './s
 import { confirmDiscardIfDirty } from './discardGuard';
 import { browseDialog } from './browseDialog';
 import { newDocumentDialog } from '../dialogs/newDocumentDialog';
-import { isPrimaryModifierPressed, requireElement } from '../dom';
+import { requireElement } from '../dom';
 import { reportError } from '../errors';
 import { startInlineEdit } from '../inlineEdit';
-import { isBlockedByInputOrDialog } from '../keyboardNav';
-import { SHORTCUTS, shortcutHint } from '../shortcuts';
+import { registerShortcut } from '../shortcutDispatch';
+import { shortcutHint } from '../shortcuts';
 
 const SAVED_STATUS_HOLD_MS = 2000;
 
@@ -35,17 +35,7 @@ export function initToolbar(): void {
     saveButton.addEventListener('click', onSave);
     renameButton.addEventListener('click', onRenameDocument);
     titleEl.addEventListener('dblclick', onRenameDocument);
-    document.addEventListener('keydown', function onKeyDown(event) {
-        if (
-            event.key.toLowerCase() !== SHORTCUTS.renameDocument.key.toLowerCase() ||
-            isPrimaryModifierPressed(event) ||
-            isBlockedByInputOrDialog()
-        ) {
-            return;
-        }
-        event.preventDefault();
-        onRenameDocument();
-    });
+    registerShortcut('renameDocument', onRenameDocument);
 
     subscribe(function renderOnChange(state) {
         titleEl.textContent = state.document?.name ?? 'No document open';

@@ -11,10 +11,12 @@ import { initStage } from './pages/stage';
 import { initTheme } from './theme';
 import { initKeyboardNav } from './keyboardNav';
 import { initGlobalShortcuts } from './globalShortcuts';
+import { initShortcutDispatch } from './shortcutDispatch';
 import { reportError } from './errors';
 
 function main(): void {
     initTheme();
+    initShortcutDispatch();
     initNoticeDialog();
     initConfirmDialog();
     initNewDocumentDialog();

@@ -1,7 +1,7 @@
 import { getState, setMode, subscribe } from '../document/state';
 import { iconSpan } from '../dom';
-import { isBlockedByInputOrDialog } from '../keyboardNav';
-import { SHORTCUTS, shortcutHint } from '../shortcuts';
+import { registerShortcut } from '../shortcutDispatch';
+import { shortcutHint } from '../shortcuts';
 
 export interface ModeToggleHandle {
     button: HTMLButtonElement;
@@ -40,11 +40,10 @@ export function createModeToggle(): ModeToggleHandle {
         toggleMode();
     });
 
-    document.addEventListener('keydown', function onKeyDown(event) {
-        if (event.key.toLowerCase() !== SHORTCUTS.toggleMode.key || isBlockedByInputOrDialog() || !isSwitchable()) {
-            return;
+    registerShortcut('toggleMode', function onToggleModeShortcut() {
+        if (isSwitchable()) {
+            toggleMode();
         }
-        toggleMode();
     });
 
     subscribe(function renderOnChange(state) {
