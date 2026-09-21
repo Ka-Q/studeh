@@ -73,11 +73,11 @@ export function startInlineEdit(
         finish();
     }
 
-    input.addEventListener('click', function onClick(event) {
+    input.addEventListener('click', (event) => {
         event.stopPropagation();
     });
 
-    input.addEventListener('keydown', function onKeyDown(event) {
+    input.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
             event.preventDefault();
             commit();

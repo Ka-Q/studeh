@@ -63,18 +63,18 @@ export function initStage(): void {
     });
     initImageDrop();
     initImagePaste();
-    registerShortcut('toggleFullscreen', function onToggleFullscreenShortcut() {
+    registerShortcut('toggleFullscreen', () => {
         if (isStudyModeWithImage()) {
             toggleFullscreen();
         }
     });
-    registerShortcut('hideAll', function onHideAllShortcut() {
+    registerShortcut('hideAll', () => {
         const page = getActivePage();
         if (isStudyModeWithImage() && page) {
             setPageShapesVisibility(page.id, false);
         }
     });
-    registerShortcut('revealAll', function onRevealAllShortcut() {
+    registerShortcut('revealAll', () => {
         const page = getActivePage();
         if (isStudyModeWithImage() && page) {
             setPageShapesVisibility(page.id, true);
@@ -94,26 +94,26 @@ function isEditMode(): boolean {
 }
 
 function initImageDrop(): void {
-    canvasMount.addEventListener('dragenter', function onDragEnter(event) {
+    canvasMount.addEventListener('dragenter', (event) => {
         if (!isEditMode() || !isFileDrag(event)) {
             return;
         }
         event.preventDefault();
         canvasMount.classList.add('drag-over');
     });
-    canvasMount.addEventListener('dragover', function onDragOver(event) {
+    canvasMount.addEventListener('dragover', (event) => {
         if (!isEditMode() || !isFileDrag(event)) {
             return;
         }
         event.preventDefault();
     });
-    canvasMount.addEventListener('dragleave', function onDragLeave(event) {
+    canvasMount.addEventListener('dragleave', (event) => {
         const relatedTarget = event.relatedTarget as Node | null;
         if (!relatedTarget || !canvasMount.contains(relatedTarget)) {
             canvasMount.classList.remove('drag-over');
         }
     });
-    canvasMount.addEventListener('drop', function onDrop(event) {
+    canvasMount.addEventListener('drop', (event) => {
         if (!isEditMode() || !isFileDrag(event)) {
             return;
         }
@@ -217,9 +217,7 @@ function renderControls(documentId: string, page: Page): void {
             iconSpan('icon-image-placeholder'),
             document.createTextNode(page.image ? 'Replace image' : 'Assign image')
         );
-        replaceButton.addEventListener('click', function onReplaceClick() {
-            input.click();
-        });
+        replaceButton.addEventListener('click', () => input.click());
 
         leftGroup.append(replaceButton, input);
     }
@@ -238,16 +236,12 @@ function buildStudyControls(page: Page): HTMLElement {
     const hideAllButton = document.createElement('button');
     hideAllButton.textContent = 'Hide all';
     hideAllButton.title = `Hide all (${shortcutHint('hideAll')})`;
-    hideAllButton.addEventListener('click', function onHideAll() {
-        setPageShapesVisibility(page.id, false);
-    });
+    hideAllButton.addEventListener('click', () => setPageShapesVisibility(page.id, false));
 
     const revealAllButton = document.createElement('button');
     revealAllButton.textContent = 'Reveal all';
     revealAllButton.title = `Reveal all (${shortcutHint('revealAll')})`;
-    revealAllButton.addEventListener('click', function onRevealAll() {
-        setPageShapesVisibility(page.id, true);
-    });
+    revealAllButton.addEventListener('click', () => setPageShapesVisibility(page.id, true));
 
     const fullscreenButton = document.createElement('button');
     fullscreenButton.append(iconSpan('icon-fullscreen'), document.createTextNode('Fullscreen'));
@@ -265,9 +259,7 @@ function buildAssignImagePrompt(documentId: string, pageId: string): HTMLElement
     assignButton.type = 'button';
     assignButton.className = 'canvas-empty-state';
     assignButton.append(iconSpan('icon-image-placeholder'), document.createTextNode('Assign image'));
-    assignButton.addEventListener('click', function onAssignClick() {
-        input.click();
-    });
+    assignButton.addEventListener('click', () => input.click());
 
     const hint = document.createElement('span');
     hint.className = 'canvas-empty-state-hint';
@@ -284,7 +276,7 @@ function createImageFileInput(documentId: string, pageId: string): HTMLInputElem
     input.type = 'file';
     input.accept = 'image/png,image/jpeg,image/webp,image/gif';
     input.hidden = true;
-    input.addEventListener('change', function onFileSelected() {
+    input.addEventListener('change', () => {
         const file = input.files?.[0];
         if (file) {
             void assignImage(documentId, pageId, file);

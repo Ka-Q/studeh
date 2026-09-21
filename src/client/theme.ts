@@ -10,7 +10,7 @@ export function initTheme(): void {
     let theme = resolveInitialTheme();
     applyTheme(theme, button, icon);
 
-    button.addEventListener('click', function onToggleTheme() {
+    button.addEventListener('click', () => {
         theme = theme === 'dark' ? 'light' : 'dark';
         applyTheme(theme, button, icon);
         localStorage.setItem(STORAGE_KEY, theme);

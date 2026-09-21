@@ -170,7 +170,7 @@ function createImagesFileInput(): HTMLInputElement {
     input.multiple = true;
     input.accept = 'image/png,image/jpeg,image/webp,image/gif';
     input.hidden = true;
-    input.addEventListener('change', function onFilesSelected() {
+    input.addEventListener('change', () => {
         const files = input.files ? Array.from(input.files) : [];
         input.value = '';
         const documentId = getState().document?.id;
@@ -205,26 +205,26 @@ async function createPagesFromImages(documentId: string, files: File[]): Promise
 }
 
 function initSidebarImageDrop(sidebar: HTMLElement): void {
-    sidebar.addEventListener('dragenter', function onDragEnter(event) {
+    sidebar.addEventListener('dragenter', (event) => {
         if (!isFileDrag(event)) {
             return;
         }
         event.preventDefault();
         sidebar.classList.add('drag-over');
     });
-    sidebar.addEventListener('dragover', function onDragOver(event) {
+    sidebar.addEventListener('dragover', (event) => {
         if (!isFileDrag(event)) {
             return;
         }
         event.preventDefault();
     });
-    sidebar.addEventListener('dragleave', function onDragLeave(event) {
+    sidebar.addEventListener('dragleave', (event) => {
         const relatedTarget = event.relatedTarget as Node | null;
         if (!relatedTarget || !sidebar.contains(relatedTarget)) {
             sidebar.classList.remove('drag-over');
         }
     });
-    sidebar.addEventListener('drop', function onDrop(event) {
+    sidebar.addEventListener('drop', (event) => {
         if (!isFileDrag(event)) {
             return;
         }
@@ -364,9 +364,7 @@ function renderPageItem(
     const item = document.createElement('li');
     item.className = isActive ? 'page-item active' : 'page-item';
     item.dataset.pageId = page.id;
-    item.addEventListener('click', function onSelect() {
-        setActivePage(page.id);
-    });
+    item.addEventListener('click', () => setActivePage(page.id));
 
     const nameEl = renderPageName(page);
     const body = document.createElement('div');
@@ -383,10 +381,10 @@ function renderSelectCheckbox(page: Page): HTMLInputElement {
     checkbox.className = 'page-select-checkbox';
     checkbox.checked = selectedPageIds.has(page.id);
     setLabelWithHint(checkbox, 'Select page', `${shortcutHint('toggleActivePageSelection')} to toggle active page's selection`);
-    checkbox.addEventListener('click', function onCheckboxClick(event) {
+    checkbox.addEventListener('click', (event) => {
         event.stopPropagation();
     });
-    checkbox.addEventListener('change', function onToggle() {
+    checkbox.addEventListener('change', () => {
         if (checkbox.checked) {
             selectedPageIds.add(page.id);
         } else {
@@ -418,7 +416,7 @@ function renderPageName(page: Page): HTMLSpanElement {
     name.className = 'page-name';
     name.textContent = page.name;
     name.title = page.name;
-    name.addEventListener('dblclick', function onDblClick(event) {
+    name.addEventListener('dblclick', (event) => {
         event.stopPropagation();
         startPageRename(page, name);
     });
@@ -450,7 +448,7 @@ function renderMoveButton(
     button.setAttribute('aria-label', label);
     button.disabled = disabled;
     button.appendChild(iconSpan(iconClass));
-    button.addEventListener('click', function onMove(event) {
+    button.addEventListener('click', (event) => {
         event.stopPropagation();
         movePage(page.id, direction);
     });
@@ -462,7 +460,7 @@ function renderRenameButton(page: Page, nameEl: HTMLElement): HTMLButtonElement 
     button.className = 'icon-button';
     setLabelWithHint(button, 'Rename page', `${shortcutHint('renameActivePage')} to rename active page`);
     button.appendChild(iconSpan('icon-rename'));
-    button.addEventListener('click', function onRename(event) {
+    button.addEventListener('click', (event) => {
         event.stopPropagation();
         startPageRename(page, nameEl);
     });
@@ -480,7 +478,7 @@ function renderDeleteButton(page: Page): HTMLButtonElement {
     button.className = 'icon-button';
     setLabelWithHint(button, 'Delete page', `${shortcutHint('deleteActivePage')} to delete active page`);
     button.appendChild(iconSpan('icon-trash'));
-    button.addEventListener('click', async function onDelete(event) {
+    button.addEventListener('click', async (event) => {
         event.stopPropagation();
         await deletePageWithConfirm(page);
     });

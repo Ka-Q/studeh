@@ -29,7 +29,7 @@ export function initBrowseDialog(): void {
 
     wireDialogClose(dialog, closeButton);
 
-    sortButton.addEventListener('click', function onToggleSort() {
+    sortButton.addEventListener('click', () => {
         sortMode = sortMode === 'updatedAt' ? 'name' : 'updatedAt';
         renderDocumentList();
     });
@@ -129,7 +129,7 @@ function renderOpenButton(summary: DocumentSummary): HTMLButtonElement {
     text.append(name, meta);
 
     button.append(renderThumbnail(summary), text);
-    button.addEventListener('click', async function onOpenDocument() {
+    button.addEventListener('click', async () => {
         if (!(await confirmDiscardIfDirty())) {
             return;
         }
@@ -149,7 +149,7 @@ function renderDeleteButton(summary: DocumentSummary): HTMLButtonElement {
     button.title = 'Delete document';
     button.setAttribute('aria-label', 'Delete document');
     button.appendChild(iconSpan('icon-trash'));
-    button.addEventListener('click', async function onDelete() {
+    button.addEventListener('click', async () => {
         const confirmed = await confirmDialog({
             title: 'Delete document',
             message: `Delete "${summary.name}"? This cannot be undone.`

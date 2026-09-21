@@ -16,9 +16,7 @@ export function initFullscreenControl(
 
     closeButton.appendChild(iconSpan('icon-close'));
 
-    closeButton.addEventListener('click', function onClose() {
-        void document.exitFullscreen();
-    });
+    closeButton.addEventListener('click', () => void document.exitFullscreen());
     container.appendChild(closeButton);
 
     function onFullscreenChangeEvent(): void {
