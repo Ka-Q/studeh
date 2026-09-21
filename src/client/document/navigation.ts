@@ -4,7 +4,7 @@ import { confirmDiscardIfDirty } from './discardGuard';
 import { reportError } from '../errors';
 
 export function initNavigationGuard(): void {
-    window.addEventListener('popstate', async function onPopState() {
+    window.addEventListener('popstate', async () => {
         const id = location.pathname.slice(1);
         const openDocument = getState().document;
         if (id === openDocument?.id || (!id && !openDocument)) {

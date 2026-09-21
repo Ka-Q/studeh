@@ -28,9 +28,7 @@ export function initConfirmDialog(): void {
     const cancelButton = requireElement('btn-cancel-confirm');
 
     wireDialogClose(dialog, cancelButton);
-    confirmButton.addEventListener('click', function onConfirm() {
-        dialog.close('confirmed');
-    });
+    confirmButton.addEventListener('click', () => dialog.close('confirmed'));
 }
 
 export function confirmDialog(options: ConfirmOptions): Promise<boolean> {

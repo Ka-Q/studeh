@@ -14,10 +14,10 @@ export function initNewDocumentDialog(): void {
     const cancelButton = requireElement('btn-cancel-new-document');
 
     wireDialogClose(dialog, cancelButton);
-    nameInput.addEventListener('input', function onInput() {
+    nameInput.addEventListener('input', () => {
         nameInput.setCustomValidity('');
     });
-    form.addEventListener('submit', function onSubmit(event) {
+    form.addEventListener('submit', (event) => {
         event.preventDefault();
         const sanitized = sanitizeName(nameInput.value);
         if (sanitized) {

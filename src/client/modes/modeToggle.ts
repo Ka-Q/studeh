@@ -36,11 +36,9 @@ export function createModeToggle(): ModeToggleHandle {
         setMode(getState().mode === 'edit' ? 'study' : 'edit');
     }
 
-    button.addEventListener('click', function onToggleClick() {
-        toggleMode();
-    });
+    button.addEventListener('click', () => toggleMode());
 
-    registerShortcut('toggleMode', function onToggleModeShortcut() {
+    registerShortcut('toggleMode', () => {
         if (isSwitchable()) {
             toggleMode();
         }

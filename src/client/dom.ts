@@ -48,13 +48,13 @@ export function firstImageFile(items: DataTransferItemList | undefined): File | 
 
 export function initHoverScopedPaste(element: HTMLElement, onFile: (file: File) => void, guard?: () => boolean): void {
     let isHovering = false;
-    element.addEventListener('mouseenter', function onMouseEnter() {
+    element.addEventListener('mouseenter', () => {
         isHovering = true;
     });
-    element.addEventListener('mouseleave', function onMouseLeave() {
+    element.addEventListener('mouseleave', () => {
         isHovering = false;
     });
-    document.addEventListener('paste', function onPaste(event) {
+    document.addEventListener('paste', (event) => {
         if (!isHovering || isBlockedByInputOrDialog() || (guard && !guard())) {
             return;
         }
@@ -81,7 +81,7 @@ export function requireElement(id: string): HTMLElement {
 }
 
 export function closeOnBackdropClick(dialog: HTMLDialogElement): void {
-    dialog.addEventListener('click', function onBackdropClick(event) {
+    dialog.addEventListener('click', (event) => {
         if (event.target === dialog) {
             dialog.close();
         }
@@ -89,17 +89,13 @@ export function closeOnBackdropClick(dialog: HTMLDialogElement): void {
 }
 
 export function wireDialogClose(dialog: HTMLDialogElement, cancelButton: HTMLElement): void {
-    cancelButton.addEventListener('click', function onCancel() {
-        dialog.close();
-    });
+    cancelButton.addEventListener('click', () => dialog.close());
     closeOnBackdropClick(dialog);
 }
 
 export function awaitDialogClose(dialog: HTMLDialogElement): Promise<string> {
     return new Promise(function executor(resolve) {
-        dialog.addEventListener('close', function onClose() {
-            resolve(dialog.returnValue);
-        }, { once: true });
+        dialog.addEventListener('close', () => resolve(dialog.returnValue), { once: true });
     });
 }
 

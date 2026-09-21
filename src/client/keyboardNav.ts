@@ -2,18 +2,10 @@ import { getState, movePage, setActivePage } from './document/state';
 import { registerShortcut } from './shortcutDispatch';
 
 export function initKeyboardNav(): void {
-    registerShortcut('selectPreviousPage', function onSelectPreviousPage() {
-        selectAdjacentPage(-1);
-    });
-    registerShortcut('selectNextPage', function onSelectNextPage() {
-        selectAdjacentPage(1);
-    });
-    registerShortcut('reorderPageUp', function onReorderUp() {
-        reorderActivePage(-1);
-    });
-    registerShortcut('reorderPageDown', function onReorderDown() {
-        reorderActivePage(1);
-    });
+    registerShortcut('selectPreviousPage', () => selectAdjacentPage(-1));
+    registerShortcut('selectNextPage', () => selectAdjacentPage(1));
+    registerShortcut('reorderPageUp', () => reorderActivePage(-1));
+    registerShortcut('reorderPageDown', () => reorderActivePage(1));
 }
 
 function reorderActivePage(direction: -1 | 1): void {
