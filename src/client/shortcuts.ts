@@ -6,6 +6,10 @@ export type ShortcutId =
     | 'save'
     | 'reorderPageUp'
     | 'reorderPageDown'
+    | 'selectPreviousPageUp'
+    | 'selectPreviousPageLeft'
+    | 'selectNextPageDown'
+    | 'selectNextPageRight'
     | 'toggleMode'
     | 'newPage'
     | 'newPageFromImages'
@@ -34,6 +38,10 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutSpec> = {
     save: { key: 's', modifier: 'primary', displayKey: 'S', allowInFullscreen: false },
     reorderPageUp: { key: 'ArrowUp', modifier: 'primary', displayKey: 'Up arrow', allowInFullscreen: false },
     reorderPageDown: { key: 'ArrowDown', modifier: 'primary', displayKey: 'Down arrow', allowInFullscreen: false },
+    selectPreviousPageUp: { key: 'ArrowUp', modifier: 'none', displayKey: 'Up arrow', allowInFullscreen: true },
+    selectPreviousPageLeft: { key: 'ArrowLeft', modifier: 'none', displayKey: 'Left arrow', allowInFullscreen: true },
+    selectNextPageDown: { key: 'ArrowDown', modifier: 'none', displayKey: 'Down arrow', allowInFullscreen: true },
+    selectNextPageRight: { key: 'ArrowRight', modifier: 'none', displayKey: 'Right arrow', allowInFullscreen: true },
     toggleMode: { key: 'm', modifier: 'none', displayKey: 'M', allowInFullscreen: false },
     newPage: { key: 'a', modifier: 'primary', displayKey: 'A', allowInFullscreen: false },
     newPageFromImages: { key: 'a', modifier: 'primaryShift', displayKey: 'A', allowInFullscreen: false },
