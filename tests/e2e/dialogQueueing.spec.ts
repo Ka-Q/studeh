@@ -92,38 +92,75 @@ test('rapid browser Back/Forward on a dirty document does not crash the discard 
         pageErrors.push(error.message);
     });
     await page.goto('/');
-    await createDocument(page, uniqueName('Rapid Popstate A'));
+    const docAId = await createDocument(page, uniqueName('Rapid Popstate A'));
     await createDocument(page, uniqueName('Rapid Popstate B'));
     await addPage(page);
     await expect(page.locator('#save-status')).toHaveText('Unsaved changes');
 
-    await Promise.all([page.goBack(), page.goBack()]);
+    // Dispatched synchronously (rather than via two page.goBack() calls, which the
+    // browser can coalesce into a single navigation) so both popstate handlers are
+    // genuinely invoked before either's confirmDiscardIfDirty() resolves.
+    await page.evaluate(function dispatchRapidPopstates(aId) {
+        history.pushState(null, '', `/${aId}`);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+        history.pushState(null, '', '/');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+    }, docAId);
 
     await expect(page.locator('#confirm-dialog')).toBeVisible();
     await page.locator('#btn-cancel-confirm').click();
+    await expect(page.locator('#confirm-dialog')).toBeVisible();
+    await page.locator('#btn-cancel-confirm').click();
+    await expect(page.locator('#confirm-dialog')).toBeHidden();
 
     expect(pageErrors).toEqual([]);
 });
 
 test('popstate cancel restores the URL of the document that is actually open, not a stale snapshot', async ({ page }) => {
     await page.goto('/');
-    const nameA = uniqueName('Popstate Live A');
+    const nameA = uniqueName('Popstate Stale A');
     const docAId = await createDocument(page, nameA);
     await page.locator('#btn-save').click();
     await expect(page.locator('#save-status')).toHaveText('Saved');
 
-    const nameB = uniqueName('Popstate Live B');
-    await createDocument(page, nameB);
-    await addPage(page);
+    const nameB = uniqueName('Popstate Stale B');
+    const docBId = await createDocument(page, nameB);
+    await page.locator('#btn-save').click();
+    await expect(page.locator('#save-status')).toHaveText('Saved');
 
-    await page.goBack();
+    const nameC = uniqueName('Popstate Stale C');
+    await createDocument(page, nameC);
+    await addPage(page);
+    await expect(page.locator('#save-status')).toHaveText('Unsaved changes');
+
+    // Two popstate handlers are invoked back to back, before either's
+    // confirmDiscardIfDirty() resolves, so both capture the same "open document"
+    // snapshot (docC, dirty). Confirming the first actually switches the open
+    // document; the second's snapshot is then stale.
+    await page.evaluate(function dispatchRapidPopstates([aId, bId]) {
+        history.pushState(null, '', `/${aId}`);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+        history.pushState(null, '', `/${bId}`);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+    }, [docAId, docBId]);
+
+    await expect(page.locator('#confirm-dialog')).toBeVisible();
+    await page.locator('#btn-confirm-delete').click();
+    await expect(page.locator('#doc-title')).toHaveText(nameA);
+
     await expect(page.locator('#confirm-dialog')).toBeVisible();
     await page.locator('#btn-cancel-confirm').click();
+    await expect(page.locator('#confirm-dialog')).toBeHidden();
 
-    await expect(page.locator('#doc-title')).toHaveText(nameB);
-    await expect(page).toHaveURL(function urlMatches(url) {
-        return !url.pathname.endsWith(docAId);
-    });
+    // The URL push from the cancelled handler happens a few microtask hops after
+    // the dialog closes (through the confirm/discard-guard promise chain), so a
+    // toHaveURL() started right away can observe the still-correct pre-push URL
+    // and pass before the (possibly stale) push actually lands. Give it a moment
+    // to settle before asserting the final, stable URL.
+    await page.waitForTimeout(300);
+
+    await expect(page.locator('#doc-title')).toHaveText(nameA);
+    await expect(page).toHaveURL(new RegExp(`/${docAId}$`));
 });
 
 test('double-clicking the Browse button does not throw or break the dialog', async ({ page }) => {

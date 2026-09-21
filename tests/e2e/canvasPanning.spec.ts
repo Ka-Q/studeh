@@ -16,9 +16,14 @@ test('releasing the pan modifier away from the window does not leave the cursor 
     await page.evaluate(function blurWindow() {
         window.dispatchEvent(new Event('blur'));
     });
+
+    // The blur handler alone must reset the cursor: check before releasing the key,
+    // since a trailing keyboard.up('Control') would independently reset it too and
+    // mask a broken blur handler.
+    await expect(canvas).not.toHaveCSS('cursor', 'grab');
+
+    // Release the (already-blurred) key for realism; the cursor must stay put.
     await page.keyboard.up('Control');
-
     await page.mouse.move(imageRect.left + 110, imageRect.top + 90, { steps: 3 });
-
     await expect(canvas).not.toHaveCSS('cursor', 'grab');
 });
