@@ -1,5 +1,3 @@
-import { isBlockedByInputOrDialog } from './keyboardNav';
-
 export function isFileDrag(event: DragEvent): boolean {
     return event.dataTransfer !== null && Array.from(event.dataTransfer.types).includes('Files');
 }
@@ -16,6 +14,18 @@ export function isPrimaryModifierKey(event: KeyboardEvent): boolean {
 
 export function primaryModifierLabel(): 'Ctrl' | 'Cmd' {
     return IS_MAC_PLATFORM ? 'Cmd' : 'Ctrl';
+}
+
+export function isBlockedByInputOrDialog(): boolean {
+    return isTypingTarget() || document.querySelector('dialog[open]') !== null;
+}
+
+function isTypingTarget(): boolean {
+    const active = document.activeElement;
+    if (!active) {
+        return false;
+    }
+    return active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || (active as HTMLElement).isContentEditable;
 }
 
 export function getDroppedImageFiles(event: DragEvent): File[] {

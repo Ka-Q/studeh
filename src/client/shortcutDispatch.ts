@@ -1,6 +1,5 @@
-import { isPrimaryModifierPressed } from './dom';
-import { isBlockedByInputOrDialog } from './keyboardNav';
-import { SHORTCUTS, type ShortcutId, type ShortcutSpec } from './shortcuts';
+import { isBlockedByInputOrDialog, isPrimaryModifierPressed } from './dom';
+import { SHORTCUTS, type ShortcutId, type ShortcutModifier } from './shortcuts';
 
 const handlersById: Partial<Record<ShortcutId, () => void>> = {};
 
@@ -30,21 +29,22 @@ const SHORTCUT_LOOKUP = buildShortcutLookup();
 function buildShortcutLookup(): Partial<Record<string, ShortcutId>> {
     const lookup: Partial<Record<string, ShortcutId>> = {};
     for (const id of Object.keys(SHORTCUTS) as ShortcutId[]) {
-        const spec = SHORTCUTS[id];
-        lookup[shortcutLookupKey(spec.key, spec.modifier)] = id;
+        for (const binding of SHORTCUTS[id].bindings) {
+            lookup[shortcutLookupKey(binding.key, binding.modifier)] = id;
+        }
     }
     return lookup;
 }
 
-function shortcutLookupKey(key: string, modifier: ShortcutSpec['modifier']): string {
+function shortcutLookupKey(key: string, modifier: ShortcutModifier): string {
     return `${key.toLowerCase()}:${modifier}`;
 }
 
-export function matchShortcutId(key: string, modifier: ShortcutSpec['modifier']): ShortcutId | null {
+export function matchShortcutId(key: string, modifier: ShortcutModifier): ShortcutId | null {
     return SHORTCUT_LOOKUP[shortcutLookupKey(key, modifier)] ?? null;
 }
 
-function modifierCombo(event: KeyboardEvent): ShortcutSpec['modifier'] {
+function modifierCombo(event: KeyboardEvent): ShortcutModifier {
     if (isPrimaryModifierPressed(event)) {
         return event.shiftKey ? 'primaryShift' : 'primary';
     }

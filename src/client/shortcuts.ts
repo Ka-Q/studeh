@@ -6,10 +6,8 @@ export type ShortcutId =
     | 'save'
     | 'reorderPageUp'
     | 'reorderPageDown'
-    | 'selectPreviousPageUp'
-    | 'selectPreviousPageLeft'
-    | 'selectNextPageDown'
-    | 'selectNextPageRight'
+    | 'selectPreviousPage'
+    | 'selectNextPage'
     | 'toggleMode'
     | 'newPage'
     | 'newPageFromImages'
@@ -25,49 +23,68 @@ export type ShortcutId =
     | 'revealAll'
     | 'toggleCanvasHints';
 
-export interface ShortcutSpec {
+export type ShortcutModifier = 'primary' | 'primaryShift' | 'shift' | 'none';
+
+export interface KeyBinding {
     key: string;
-    modifier: 'primary' | 'primaryShift' | 'shift' | 'none';
+    modifier: ShortcutModifier;
     displayKey: string;
+}
+
+export interface ShortcutSpec {
+    bindings: KeyBinding[];
     allowInFullscreen: boolean;
 }
 
 export const SHORTCUTS: Record<ShortcutId, ShortcutSpec> = {
-    new: { key: 'd', modifier: 'primary', displayKey: 'D', allowInFullscreen: false },
-    browse: { key: 'b', modifier: 'primary', displayKey: 'B', allowInFullscreen: false },
-    save: { key: 's', modifier: 'primary', displayKey: 'S', allowInFullscreen: false },
-    reorderPageUp: { key: 'ArrowUp', modifier: 'primary', displayKey: 'Up arrow', allowInFullscreen: false },
-    reorderPageDown: { key: 'ArrowDown', modifier: 'primary', displayKey: 'Down arrow', allowInFullscreen: false },
-    selectPreviousPageUp: { key: 'ArrowUp', modifier: 'none', displayKey: 'Up arrow', allowInFullscreen: true },
-    selectPreviousPageLeft: { key: 'ArrowLeft', modifier: 'none', displayKey: 'Left arrow', allowInFullscreen: true },
-    selectNextPageDown: { key: 'ArrowDown', modifier: 'none', displayKey: 'Down arrow', allowInFullscreen: true },
-    selectNextPageRight: { key: 'ArrowRight', modifier: 'none', displayKey: 'Right arrow', allowInFullscreen: true },
-    toggleMode: { key: 'm', modifier: 'none', displayKey: 'M', allowInFullscreen: false },
-    newPage: { key: 'a', modifier: 'primary', displayKey: 'A', allowInFullscreen: false },
-    newPageFromImages: { key: 'a', modifier: 'primaryShift', displayKey: 'A', allowInFullscreen: false },
-    toggleActivePageSelection: { key: 'Enter', modifier: 'primary', displayKey: 'Enter', allowInFullscreen: false },
-    toggleSelectAllPages: { key: 'Enter', modifier: 'primaryShift', displayKey: 'Enter', allowInFullscreen: false },
-    deleteActivePage: { key: 'x', modifier: 'primary', displayKey: 'X', allowInFullscreen: false },
-    deleteSelectedPages: { key: 'x', modifier: 'primaryShift', displayKey: 'X', allowInFullscreen: false },
-    renameDocument: { key: 'F2', modifier: 'none', displayKey: 'F2', allowInFullscreen: false },
-    renameActivePage: { key: 'F2', modifier: 'primary', displayKey: 'F2', allowInFullscreen: false },
-    toggleSidebar: { key: 'h', modifier: 'primary', displayKey: 'H', allowInFullscreen: false },
-    toggleFullscreen: { key: 'f', modifier: 'none', displayKey: 'F', allowInFullscreen: true },
-    hideAll: { key: '.', modifier: 'none', displayKey: '.', allowInFullscreen: true },
-    revealAll: { key: '.', modifier: 'shift', displayKey: '.', allowInFullscreen: true },
-    toggleCanvasHints: { key: 'h', modifier: 'none', displayKey: 'H', allowInFullscreen: true }
+    new: { bindings: [{ key: 'd', modifier: 'primary', displayKey: 'D' }], allowInFullscreen: false },
+    browse: { bindings: [{ key: 'b', modifier: 'primary', displayKey: 'B' }], allowInFullscreen: false },
+    save: { bindings: [{ key: 's', modifier: 'primary', displayKey: 'S' }], allowInFullscreen: false },
+    reorderPageUp: { bindings: [{ key: 'ArrowUp', modifier: 'primary', displayKey: 'Up arrow' }], allowInFullscreen: false },
+    reorderPageDown: { bindings: [{ key: 'ArrowDown', modifier: 'primary', displayKey: 'Down arrow' }], allowInFullscreen: false },
+    selectPreviousPage: {
+        bindings: [
+            { key: 'ArrowUp', modifier: 'none', displayKey: 'Up arrow' },
+            { key: 'ArrowLeft', modifier: 'none', displayKey: 'Left arrow' }
+        ],
+        allowInFullscreen: true
+    },
+    selectNextPage: {
+        bindings: [
+            { key: 'ArrowDown', modifier: 'none', displayKey: 'Down arrow' },
+            { key: 'ArrowRight', modifier: 'none', displayKey: 'Right arrow' }
+        ],
+        allowInFullscreen: true
+    },
+    toggleMode: { bindings: [{ key: 'm', modifier: 'none', displayKey: 'M' }], allowInFullscreen: false },
+    newPage: { bindings: [{ key: 'a', modifier: 'primary', displayKey: 'A' }], allowInFullscreen: false },
+    newPageFromImages: { bindings: [{ key: 'a', modifier: 'primaryShift', displayKey: 'A' }], allowInFullscreen: false },
+    toggleActivePageSelection: { bindings: [{ key: 'Enter', modifier: 'primary', displayKey: 'Enter' }], allowInFullscreen: false },
+    toggleSelectAllPages: { bindings: [{ key: 'Enter', modifier: 'primaryShift', displayKey: 'Enter' }], allowInFullscreen: false },
+    deleteActivePage: { bindings: [{ key: 'x', modifier: 'primary', displayKey: 'X' }], allowInFullscreen: false },
+    deleteSelectedPages: { bindings: [{ key: 'x', modifier: 'primaryShift', displayKey: 'X' }], allowInFullscreen: false },
+    renameDocument: { bindings: [{ key: 'F2', modifier: 'none', displayKey: 'F2' }], allowInFullscreen: false },
+    renameActivePage: { bindings: [{ key: 'F2', modifier: 'primary', displayKey: 'F2' }], allowInFullscreen: false },
+    toggleSidebar: { bindings: [{ key: 'h', modifier: 'primary', displayKey: 'H' }], allowInFullscreen: false },
+    toggleFullscreen: { bindings: [{ key: 'f', modifier: 'none', displayKey: 'F' }], allowInFullscreen: true },
+    hideAll: { bindings: [{ key: '.', modifier: 'none', displayKey: '.' }], allowInFullscreen: true },
+    revealAll: { bindings: [{ key: '.', modifier: 'shift', displayKey: '.' }], allowInFullscreen: true },
+    toggleCanvasHints: { bindings: [{ key: 'h', modifier: 'none', displayKey: 'H' }], allowInFullscreen: true }
 };
 
 export function shortcutHint(id: ShortcutId): string {
-    const spec = SHORTCUTS[id];
-    if (spec.modifier === 'primaryShift') {
-        return `${primaryModifierLabel()}+Shift+${spec.displayKey}`;
+    return SHORTCUTS[id].bindings.map(formatBinding).join(' / ');
+}
+
+function formatBinding(binding: KeyBinding): string {
+    if (binding.modifier === 'primaryShift') {
+        return `${primaryModifierLabel()}+Shift+${binding.displayKey}`;
     }
-    if (spec.modifier === 'primary') {
-        return `${primaryModifierLabel()}+${spec.displayKey}`;
+    if (binding.modifier === 'primary') {
+        return `${primaryModifierLabel()}+${binding.displayKey}`;
     }
-    if (spec.modifier === 'shift') {
-        return `Shift+${spec.displayKey}`;
+    if (binding.modifier === 'shift') {
+        return `Shift+${binding.displayKey}`;
     }
-    return spec.displayKey;
+    return binding.displayKey;
 }
