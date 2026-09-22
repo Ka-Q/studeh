@@ -18,6 +18,10 @@ export function registerShortcut(id: ShortcutId, handler: () => void, guard?: ()
     handlersById[id] = { handler, guard };
 }
 
+export function unregisterShortcut(id: ShortcutId): void {
+    delete handlersById[id];
+}
+
 export function initShortcutDispatch(): void {
     document.addEventListener('keydown', onKeyDown);
 }
@@ -31,11 +35,12 @@ function onKeyDown(event: KeyboardEvent): void {
     if (!id || (isFullscreen && !SHORTCUTS[id].allowInFullscreen)) {
         return;
     }
-    event.preventDefault();
     const registration = handlersById[id];
-    if (registration && (!registration.guard || registration.guard())) {
-        registration.handler();
+    if (!registration || (registration.guard && !registration.guard())) {
+        return;
     }
+    event.preventDefault();
+    registration.handler();
 }
 
 const SHORTCUT_LOOKUP = buildShortcutLookup();
