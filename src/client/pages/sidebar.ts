@@ -395,7 +395,7 @@ function renderSelectCheckbox(page: Page): HTMLInputElement {
     return checkbox;
 }
 
-function renderThumbnail(documentId: string, page: Page): HTMLSpanElement {
+export function renderThumbnail(documentId: string, page: Page): HTMLSpanElement {
     const thumb = document.createElement('span');
     thumb.className = 'page-thumb';
 

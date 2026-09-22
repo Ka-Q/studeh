@@ -876,7 +876,7 @@ dialog::backdrop {
 
 .canvas-overlay-stack {
     position: absolute;
-    left: var(--space-2);
+    left: calc(var(--page-nav-width, 0px) + var(--space-2));
     right: var(--space-2);
     bottom: var(--space-2);
     z-index: 1;
@@ -999,4 +999,98 @@ dialog::backdrop {
 
 .canvas-hints.collapsed .canvas-hints-toggle .icon {
     transform: rotate(-90deg);
+}
+
+.page-navigator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    width: 60px;
+    padding: var(--space-2) var(--space-1);
+    background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+    backdrop-filter: blur(8px);
+    color: var(--color-text);
+    font-size: var(--font-size-sm);
+}
+
+.page-navigator[hidden] {
+    display: none;
+}
+
+.page-navigator-counter {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+}
+
+.page-navigator .scroll-fade {
+    background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--color-surface) 60%, transparent));
+}
+
+.page-navigator-list {
+    height: 100%;
+    overflow-y: auto;
+    list-style: none;
+    margin: 0;
+    padding: 0 var(--space-1) 0 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.page-navigator-item {
+    flex: 0 0 auto;
+    padding: var(--space-1);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.page-navigator-item:hover {
+    background: var(--color-surface-hover);
+}
+
+.page-navigator-item.active {
+    background: var(--color-surface);
+}
+
+.page-navigator-item.active:hover {
+    background: var(--color-surface-hover);
+}
+
+.page-navigator-item.active .page-thumb {
+    outline: 2px solid var(--color-text);
+    outline-offset: 1px;
+}
+
+.page-navigator-item .page-thumb {
+    width: 40px;
+    height: 40px;
+}
+
+.page-navigator-actions {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-border);
+}
+
+.page-navigator-step {
+    border: none;
+    background: none;
+}
+
+.page-navigator-icon-prev {
+    transform: rotate(-90deg);
+}
+
+.page-navigator-icon-next {
+    transform: rotate(90deg);
 }
