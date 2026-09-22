@@ -17,6 +17,7 @@ import { reportError } from '../errors';
 import { mountImageCanvas, type ImageCanvasHandle } from '../canvas/imageCanvas';
 import { initFullscreenControl, requestFullscreen } from '../canvas/fullscreen';
 import { initCanvasHints, type CanvasHintsHandle } from '../canvas/canvasHints';
+import { initCanvasZoom, type CanvasZoomHandle } from '../canvas/canvasZoom';
 import { confirmDialog } from '../dialogs/confirmDialog';
 import { createModeToggle, type ModeToggleHandle } from '../modes/modeToggle';
 import { browseDialog } from '../document/browseDialog';
@@ -36,6 +37,7 @@ let canvasBody: HTMLDivElement;
 let dragOverlay: HTMLDivElement;
 let modeToggleHandle: ModeToggleHandle;
 let canvasHintsHandle: CanvasHintsHandle;
+let canvasZoomHandle: CanvasZoomHandle;
 let mountedCanvas: MountedCanvas | null = null;
 let isFullscreen = false;
 
@@ -52,9 +54,12 @@ export function initStage(): void {
     dragOverlay.className = 'drag-overlay';
     dragOverlay.append(iconSpan('icon-image-placeholder'));
     modeToggleHandle = createModeToggle();
-    canvasMount.append(canvasBody, dragOverlay, modeToggleHandle.button);
+    const overlayStack = document.createElement('div');
+    overlayStack.className = 'canvas-overlay-stack';
+    canvasMount.append(canvasBody, dragOverlay, modeToggleHandle.button, overlayStack);
     container.append(controlsEl, canvasMount);
-    canvasHintsHandle = initCanvasHints(canvasMount, getState().mode);
+    canvasHintsHandle = initCanvasHints(overlayStack, getState().mode);
+    canvasZoomHandle = initCanvasZoom(canvasMount);
 
     initFullscreenControl(canvasMount, function onFullscreenChange(nextIsFullscreen) {
         isFullscreen = nextIsFullscreen;
@@ -332,11 +337,13 @@ function renderCanvas(documentId: string, page: Page): void {
             }
         )
     };
+    canvasZoomHandle.setSource(mountedCanvas.handle);
 }
 
 function unmountCanvas(): void {
     mountedCanvas?.handle.destroy();
     mountedCanvas = null;
+    canvasZoomHandle.setSource(null);
 }
 
 function toggleFullscreen(): void {

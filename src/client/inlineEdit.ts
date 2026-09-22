@@ -28,7 +28,10 @@ function measureTextWidth(text: string, font: string): number {
 export function startInlineEdit(
     display: HTMLElement,
     currentValue: string,
-    onCommit: (value: string) => void
+    onCommit: (value: string) => void,
+    sanitize: (value: string) => string | null = sanitizeName,
+    maxLength: number = MAX_NAME_LENGTH,
+    alwaysCommit: boolean = false
 ): void {
     const displayStyle = getComputedStyle(display);
     const font = `${displayStyle.fontWeight} ${displayStyle.fontSize} ${displayStyle.fontFamily}`;
@@ -38,7 +41,7 @@ export function startInlineEdit(
     input.id = display.id;
     input.className = display.className ? `${display.className} inline-edit` : 'inline-edit';
     input.value = currentValue;
-    input.maxLength = MAX_NAME_LENGTH;
+    input.maxLength = maxLength;
 
     function resizeToContent(): void {
         input.style.width = `${Math.max(MIN_INPUT_WIDTH, measureTextWidth(input.value, font))}px`;
@@ -59,8 +62,8 @@ export function startInlineEdit(
         }
         settled = true;
         finish();
-        const sanitized = sanitizeName(input.value);
-        if (sanitized && sanitized !== currentValue) {
+        const sanitized = sanitize(input.value);
+        if (sanitized && (alwaysCommit || sanitized !== currentValue)) {
             onCommit(sanitized);
         }
     }
