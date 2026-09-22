@@ -211,6 +211,26 @@ button:hover:not(:disabled) {
     mask-image: url('/icons/warning.svg');
 }
 
+.icon-reset {
+    -webkit-mask-image: url('/icons/reset.svg');
+    mask-image: url('/icons/reset.svg');
+}
+
+.icon-plus {
+    -webkit-mask-image: url('/icons/plus.svg');
+    mask-image: url('/icons/plus.svg');
+}
+
+.icon-minus {
+    -webkit-mask-image: url('/icons/minus.svg');
+    mask-image: url('/icons/minus.svg');
+}
+
+.icon-fit {
+    -webkit-mask-image: url('/icons/fit.svg');
+    mask-image: url('/icons/fit.svg');
+}
+
 .icon-button {
     padding: var(--space-1);
 }
@@ -840,7 +860,9 @@ dialog::backdrop {
     top: var(--space-2);
     right: var(--space-2);
     z-index: 1;
-    background: var(--color-surface);
+    border: none;
+    background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+    backdrop-filter: blur(8px);
 }
 
 .canvas-mode-toggle {
@@ -852,22 +874,88 @@ dialog::backdrop {
     color: var(--color-accent);
 }
 
-.canvas-hints {
+.canvas-overlay-stack {
     position: absolute;
-    bottom: var(--space-2);
     left: var(--space-2);
     right: var(--space-2);
+    bottom: var(--space-2);
     z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-2);
+    pointer-events: none;
+}
+
+.canvas-overlay-stack > * {
+    pointer-events: auto;
+}
+
+.canvas-zoom {
+    position: absolute;
+    top: 50%;
+    right: var(--space-2);
+    transform: translateY(-50%);
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-1);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+    backdrop-filter: blur(8px);
+    color: var(--color-text);
+    font-size: var(--font-size-sm);
+}
+
+.canvas-zoom[hidden] {
+    display: none;
+}
+
+.canvas-zoom-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.canvas-zoom-actions {
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-border);
+}
+
+.canvas-zoom-button {
+    padding: var(--space-1);
+    border: none;
+    background: none;
+}
+
+.canvas-zoom-percent {
+    /* Matches "800"'s own rendered width (measured, tabular-nums) so the readout's
+       own width stays fixed across the 10-800 digit-count range. */
+    min-width: 23px;
+    text-align: center;
+    cursor: text;
+    font-variant-numeric: tabular-nums;
+}
+
+.canvas-hints {
+    order: 2;
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: var(--space-3);
-    padding: var(--space-2) var(--space-3);
+    padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
     border-radius: var(--radius-md);
-    background: var(--color-surface);
-    opacity: 0.85;
+    background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+    backdrop-filter: blur(8px);
     color: var(--color-text-muted);
     font-size: var(--font-size-sm);
+}
+
+.canvas-hints:not(.collapsed) {
+    align-self: stretch;
 }
 
 .canvas-hints-rows {
@@ -886,10 +974,6 @@ dialog::backdrop {
     border-left: none;
 }
 
-.canvas-hints-toggle-label {
-    display: none;
-}
-
 .canvas-hints-toggle {
     flex: 0 0 auto;
     padding: var(--space-1);
@@ -903,16 +987,14 @@ dialog::backdrop {
 }
 
 .canvas-hints.collapsed {
-    left: auto;
-    gap: var(--space-2);
+    /* Matches the zoom pane's own rendered width so the two independent overlays still line up. */
+    width: 32px;
+    padding: var(--space-1);
+    justify-content: center;
 }
 
 .canvas-hints.collapsed .canvas-hints-rows {
     display: none;
-}
-
-.canvas-hints.collapsed .canvas-hints-toggle-label {
-    display: inline;
 }
 
 .canvas-hints.collapsed .canvas-hints-toggle .icon {

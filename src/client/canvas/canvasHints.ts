@@ -30,7 +30,7 @@ const HINTS: Record<Mode, HintRow[]> = {
     ]
 };
 
-export function initCanvasHints(canvasMount: HTMLDivElement, mode: Mode): CanvasHintsHandle {
+export function initCanvasHints(container: HTMLElement, mode: Mode): CanvasHintsHandle {
     const bar = document.createElement('div');
     bar.className = 'canvas-hints';
 
@@ -42,12 +42,8 @@ export function initCanvasHints(canvasMount: HTMLDivElement, mode: Mode): Canvas
     toggleButton.className = 'icon-button canvas-hints-toggle';
     toggleButton.append(iconSpan('icon-chevron-right'));
 
-    const toggleLabel = document.createElement('span');
-    toggleLabel.className = 'canvas-hints-toggle-label';
-    toggleLabel.textContent = 'Shortcuts';
-
-    bar.append(rowsEl, toggleLabel, toggleButton);
-    canvasMount.append(bar);
+    bar.append(rowsEl, toggleButton);
+    container.append(bar);
 
     let collapsed = localStorage.getItem(COLLAPSED_STORAGE_KEY) === 'true';
     let renderedMode = mode;

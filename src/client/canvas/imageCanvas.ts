@@ -1,4 +1,4 @@
-import { canvasToImage, fitViewport, imageToCanvas, panViewport, zoomAtCanvasPoint, type Point, type Size, type Viewport } from './viewport';
+import { canvasToImage, fitViewport, imageToCanvas, panViewport, zoomAtCanvasPoint, zoomToLevelAtCanvasPoint, type Point, type Size, type Viewport } from './viewport';
 import {
     clampMoveToBounds,
     clampRectToBounds,
@@ -31,6 +31,11 @@ export interface ImageCanvasHandle {
     update(shapes: RectangleShape[], selectedShapeId: string | null, mode: Mode): void;
     setFullscreen(isFullscreen: boolean): void;
     destroy(): void;
+    isReady(): boolean;
+    getZoom(): number;
+    setZoom(zoom: number): void;
+    fitToView(): void;
+    onViewportChange(callback: () => void): () => void;
 }
 
 const MIDDLE_MOUSE_BUTTON = 1;
@@ -98,6 +103,7 @@ export function mountImageCanvas(
     let activeDrag: ActiveDrag | null = null;
     let isPanModifierPressed = false;
     let lastHoverPoint: Point | null = null;
+    const viewportChangeListeners = new Set<() => void>();
 
     const resizeObserver = new ResizeObserver(function onResize() {
         resizeCanvasToContainer();
@@ -121,6 +127,23 @@ export function mountImageCanvas(
             { width: image.naturalWidth, height: image.naturalHeight },
             { width: canvas.clientWidth, height: canvas.clientHeight }
         );
+        notifyViewportChange();
+    }
+
+    function notifyViewportChange(): void {
+        for (const listener of viewportChangeListeners) {
+            listener();
+        }
+    }
+
+    function applyZoom(targetZoom: number): void {
+        if (!image) {
+            return;
+        }
+        const center = { x: canvas.clientWidth / 2, y: canvas.clientHeight / 2 };
+        viewport = zoomToLevelAtCanvasPoint(viewport, center, targetZoom);
+        draw();
+        notifyViewportChange();
     }
     function onImageError(): void {
         container.textContent = 'Failed to load image.';
@@ -271,6 +294,7 @@ export function mountImageCanvas(
         const zoomFactor = event.deltaY < 0 ? ZOOM_STEP_PER_WHEEL_TICK : 1 / ZOOM_STEP_PER_WHEEL_TICK;
         viewport = zoomAtCanvasPoint(viewport, toCanvasPoint(event), zoomFactor);
         draw();
+        notifyViewportChange();
     }
 
     function onMouseDown(event: MouseEvent): void {
@@ -471,6 +495,7 @@ export function mountImageCanvas(
             viewport = panViewport(viewport, point.x - lastPoint.x, point.y - lastPoint.y);
             lastPoint = point;
             draw();
+            notifyViewportChange();
         }, function onMouseUp(upEvent) {
             if (didPan && isMiddleButtonPan) {
                 upEvent.preventDefault();
@@ -585,6 +610,25 @@ export function mountImageCanvas(
             focusedShapeId = null;
             refitViewport();
             draw();
+        },
+        isReady(): boolean {
+            return image !== null;
+        },
+        getZoom(): number {
+            return viewport.zoom;
+        },
+        setZoom(zoom: number): void {
+            applyZoom(zoom);
+        },
+        fitToView(): void {
+            refitViewport();
+            draw();
+        },
+        onViewportChange(callback: () => void): () => void {
+            viewportChangeListeners.add(callback);
+            return function unsubscribe() {
+                viewportChangeListeners.delete(callback);
+            };
         },
         destroy(): void {
             stopPanning?.();

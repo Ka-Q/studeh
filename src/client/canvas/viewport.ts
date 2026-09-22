@@ -14,8 +14,8 @@ export interface Size {
     height: number;
 }
 
-const MIN_ZOOM = 0.1;
-const MAX_ZOOM = 8;
+export const MIN_ZOOM = 0.1;
+export const MAX_ZOOM = 8;
 
 export function fitViewport(imageSize: Size, canvasSize: Size): Viewport {
     const zoom = Math.min(canvasSize.width / imageSize.width, canvasSize.height / imageSize.height, 1);
@@ -41,17 +41,21 @@ export function canvasToImage(viewport: Viewport, point: Point): Point {
 }
 
 export function zoomAtCanvasPoint(viewport: Viewport, canvasPoint: Point, zoomFactor: number): Viewport {
-    const zoom = clamp(viewport.zoom * zoomFactor, MIN_ZOOM, MAX_ZOOM);
+    return zoomToLevelAtCanvasPoint(viewport, canvasPoint, viewport.zoom * zoomFactor);
+}
+
+export function panViewport(viewport: Viewport, dx: number, dy: number): Viewport {
+    return { ...viewport, panX: viewport.panX + dx, panY: viewport.panY + dy };
+}
+
+export function zoomToLevelAtCanvasPoint(viewport: Viewport, canvasPoint: Point, targetZoom: number): Viewport {
+    const zoom = clamp(targetZoom, MIN_ZOOM, MAX_ZOOM);
     const imagePoint = canvasToImage(viewport, canvasPoint);
     return {
         zoom,
         panX: canvasPoint.x - imagePoint.x * zoom,
         panY: canvasPoint.y - imagePoint.y * zoom
     };
-}
-
-export function panViewport(viewport: Viewport, dx: number, dy: number): Viewport {
-    return { ...viewport, panX: viewport.panX + dx, panY: viewport.panY + dy };
 }
 
 function clamp(value: number, min: number, max: number): number {

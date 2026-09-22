@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { canvasToImage, fitViewport, imageToCanvas, zoomAtCanvasPoint } from './viewport';
+import { canvasToImage, fitViewport, imageToCanvas, zoomAtCanvasPoint, zoomToLevelAtCanvasPoint } from './viewport';
 
 test('fitViewport centers and scales a smaller canvas down to fit', function () {
     const viewport = fitViewport({ width: 200, height: 100 }, { width: 100, height: 100 });
@@ -40,4 +40,25 @@ test('zoomAtCanvasPoint keeps the image point under the cursor fixed', function 
     assert.notEqual(zoomed.zoom, viewport.zoom);
     assert.ok(Math.abs(imagePointAfter.x - imagePointBefore.x) < 1e-9);
     assert.ok(Math.abs(imagePointAfter.y - imagePointBefore.y) < 1e-9);
+});
+
+test('zoomToLevelAtCanvasPoint sets an exact zoom and keeps the given point fixed', function () {
+    const viewport = { zoom: 1.75, panX: 10, panY: 20 };
+    const canvasPoint = { x: 150, y: 80 };
+    const imagePointBefore = canvasToImage(viewport, canvasPoint);
+
+    const zoomed = zoomToLevelAtCanvasPoint(viewport, canvasPoint, 4);
+    const imagePointAfter = canvasToImage(zoomed, canvasPoint);
+
+    assert.equal(zoomed.zoom, 4);
+    assert.ok(Math.abs(imagePointAfter.x - imagePointBefore.x) < 1e-9);
+    assert.ok(Math.abs(imagePointAfter.y - imagePointBefore.y) < 1e-9);
+});
+
+test('zoomToLevelAtCanvasPoint clamps the target zoom to the min/max range', function () {
+    const viewport = { zoom: 1, panX: 0, panY: 0 };
+    const canvasPoint = { x: 0, y: 0 };
+
+    assert.equal(zoomToLevelAtCanvasPoint(viewport, canvasPoint, 100).zoom, 8);
+    assert.equal(zoomToLevelAtCanvasPoint(viewport, canvasPoint, 0.001).zoom, 0.1);
 });
