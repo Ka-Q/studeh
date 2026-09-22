@@ -1,5 +1,5 @@
 import type { Mode } from '../document/state';
-import { iconSpan } from '../dom';
+import { iconSpan, primaryModifierLabel } from '../dom';
 import { registerShortcut } from '../shortcutDispatch';
 import { shortcutHint } from '../shortcuts';
 
@@ -14,14 +14,18 @@ interface HintRow {
 
 const COLLAPSED_STORAGE_KEY = 'studeh:canvasHintsCollapsed';
 
+function panHint(): string {
+    return `Middle drag / ${primaryModifierLabel()}+drag`;
+}
+
 const HINTS: Record<Mode, HintRow[]> = {
     edit: [
-        { label: 'Pan', keys: 'Middle drag / Ctrl+drag' },
+        { label: 'Pan', keys: panHint() },
         { label: 'Zoom', keys: 'Scroll' },
         { label: 'Draw', keys: 'Left drag' }
     ],
     study: [
-        { label: 'Pan', keys: 'Middle drag / Ctrl+drag' },
+        { label: 'Pan', keys: panHint() },
         { label: 'Zoom', keys: 'Scroll' },
         { label: 'Toggle', keys: 'Click' },
         { label: 'Reveal all', keys: shortcutHint('revealAll') },
