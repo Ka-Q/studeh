@@ -1,6 +1,12 @@
 import { isBlockedByInputOrDialog, isPrimaryModifierPressed } from './dom';
 import { SHORTCUTS, type ShortcutId, type ShortcutModifier } from './shortcuts';
 
+// Some physical keys produce a different `event.key` symbol when Shift is held
+// (e.g. Period -> '.'/'>'), which would otherwise vary by keyboard layout.
+const CODE_TO_KEY: Partial<Record<string, string>> = {
+    Period: '.'
+};
+
 const handlersById: Partial<Record<ShortcutId, () => void>> = {};
 
 export function registerShortcut(id: ShortcutId, handler: () => void): void {
@@ -16,7 +22,7 @@ function onKeyDown(event: KeyboardEvent): void {
         return;
     }
     const isFullscreen = document.fullscreenElement !== null;
-    const id = matchShortcutId(event.key, modifierCombo(event));
+    const id = matchShortcutId(resolveKey(event), modifierCombo(event));
     if (!id || (isFullscreen && !SHORTCUTS[id].allowInFullscreen)) {
         return;
     }
@@ -42,6 +48,10 @@ function shortcutLookupKey(key: string, modifier: ShortcutModifier): string {
 
 export function matchShortcutId(key: string, modifier: ShortcutModifier): ShortcutId | null {
     return SHORTCUT_LOOKUP[shortcutLookupKey(key, modifier)] ?? null;
+}
+
+export function resolveKey(event: Pick<KeyboardEvent, 'key' | 'code'>): string {
+    return CODE_TO_KEY[event.code] ?? event.key;
 }
 
 function modifierCombo(event: KeyboardEvent): ShortcutModifier {
