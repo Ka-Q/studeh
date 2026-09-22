@@ -14,6 +14,7 @@ import {
 import type { RectangleShape } from '../../shared/types';
 import type { Mode } from '../document/state';
 import { isBlockedByInputOrDialog, isPrimaryModifierKey, isPrimaryModifierPressed, startDragSession } from '../dom';
+import { registerShortcut, unregisterShortcut } from '../shortcutDispatch';
 
 export interface ImageCanvasCallbacks {
     onCreateShape(rect: Rect): void;
@@ -156,10 +157,13 @@ export function mountImageCanvas(
     canvas.addEventListener('mousedown', onMouseDown);
     canvas.addEventListener('mousemove', onHoverMove);
     canvas.addEventListener('contextmenu', onContextMenu);
-    window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keydown', onPanModifierKeyDown);
     window.addEventListener('keyup', onPanModifierKeyUp);
     window.addEventListener('blur', onWindowBlur);
+    registerShortcut('deleteSelectedShape', deleteSelectedShape, canDeleteSelectedShape);
+    registerShortcut('cycleFocusedShapeNext', () => cycleFocusedShape(1), canCycleFocusedShape);
+    registerShortcut('cycleFocusedShapePrev', () => cycleFocusedShape(-1), canCycleFocusedShape);
+    registerShortcut('toggleFocusedShapeVisibility', toggleFocusedShapeVisibility, canToggleFocusedShapeVisibility);
 
     function resizeCanvasToContainer(): void {
         const devicePixelRatio = window.devicePixelRatio || 1;
@@ -547,47 +551,34 @@ export function mountImageCanvas(
         }
     }
 
-    function onKeyDown(event: KeyboardEvent): void {
-        if (event.repeat || isBlockedByInputOrDialog()) {
-            return;
-        }
-        if (mode === 'study') {
-            onStudyKeyDown(event);
-            return;
-        }
-        if (document.activeElement !== canvas || !selectedShapeId) {
-            return;
-        }
-        if (event.key !== 'Delete' && event.key !== 'Backspace') {
-            return;
-        }
-        event.preventDefault();
+    function canDeleteSelectedShape(): boolean {
+        return mode === 'edit' && document.activeElement === canvas && selectedShapeId !== null;
+    }
+
+    function deleteSelectedShape(): void {
         callbacks.onDeleteSelected();
     }
 
-    function onStudyKeyDown(event: KeyboardEvent): void {
-        if (!isFullscreen || shapes.length === 0) {
-            return;
-        }
-        if (event.key === 'Tab') {
-            event.preventDefault();
-            const ordered = shapesInReadingOrder(shapes);
-            const currentIndex = ordered.findIndex(function isFocused(shape) {
-                return shape.id === focusedShapeId;
-            });
-            const nextIndex = cycleFocusedShapeIndex(
-                currentIndex === -1 ? null : currentIndex,
-                event.shiftKey ? -1 : 1,
-                ordered.length
-            );
-            focusedShapeId = ordered[nextIndex].id;
-            draw();
-            return;
-        }
-        if ((event.key === ' ' || event.key === 'Enter') && focusedShapeId !== null) {
-            event.preventDefault();
-            callbacks.onToggleVisibility(focusedShapeId);
-        }
+    function canCycleFocusedShape(): boolean {
+        return mode === 'study' && isFullscreen && shapes.length > 0;
+    }
+
+    function cycleFocusedShape(direction: 1 | -1): void {
+        const ordered = shapesInReadingOrder(shapes);
+        const currentIndex = ordered.findIndex(function isFocused(shape) {
+            return shape.id === focusedShapeId;
+        });
+        const nextIndex = cycleFocusedShapeIndex(currentIndex === -1 ? null : currentIndex, direction, ordered.length);
+        focusedShapeId = ordered[nextIndex].id;
+        draw();
+    }
+
+    function canToggleFocusedShapeVisibility(): boolean {
+        return mode === 'study' && isFullscreen && shapes.length > 0 && focusedShapeId !== null;
+    }
+
+    function toggleFocusedShapeVisibility(): void {
+        callbacks.onToggleVisibility(focusedShapeId!);
     }
 
     function toCanvasPoint(event: MouseEvent): Point {
@@ -639,10 +630,13 @@ export function mountImageCanvas(
             canvas.removeEventListener('mousedown', onMouseDown);
             canvas.removeEventListener('mousemove', onHoverMove);
             canvas.removeEventListener('contextmenu', onContextMenu);
-            window.removeEventListener('keydown', onKeyDown);
             window.removeEventListener('keydown', onPanModifierKeyDown);
             window.removeEventListener('keyup', onPanModifierKeyUp);
             window.removeEventListener('blur', onWindowBlur);
+            unregisterShortcut('deleteSelectedShape');
+            unregisterShortcut('cycleFocusedShapeNext');
+            unregisterShortcut('cycleFocusedShapePrev');
+            unregisterShortcut('toggleFocusedShapeVisibility');
             canvas.remove();
         }
     };

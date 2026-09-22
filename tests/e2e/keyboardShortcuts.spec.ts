@@ -125,6 +125,58 @@ test('Shift+Period triggers Reveal all on a US layout, and only in study mode', 
     expect(manifest.pages[0].shapes[0].visible).toBe(true);
 });
 
+test('Tab cycles shape focus in fullscreen study mode; Enter toggles the focused shape, Shift+Tab cycles backward', async ({ page }) => {
+    await page.goto('/');
+    const docId = await createDocument(page, uniqueName('Focus Cycle Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+    const imageRect = await imageOnScreenRect(page);
+
+    await dragOnCanvas(page, { x: imageRect.left + 20, y: imageRect.top + 20 }, { x: imageRect.left + 60, y: imageRect.top + 50 });
+    await dragOnCanvas(page, { x: imageRect.left + 20, y: imageRect.top + 120 }, { x: imageRect.left + 60, y: imageRect.top + 150 });
+
+    await page.locator('.canvas-mode-toggle').click();
+    await page.getByRole('button', { name: 'Fullscreen' }).click();
+    await page.locator('.fullscreen-close').waitFor({ state: 'visible' });
+
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Enter');
+
+    await page.locator('.fullscreen-close').click();
+    await saveDocument(page);
+    const manifest = await fetchManifest(page, docId);
+    const visibilities = (manifest.pages[0].shapes as unknown as { visible: boolean }[]).map(function v(s) { return s.visible; });
+    expect(visibilities).toEqual([false, true]);
+});
+
+test('navigating to an imageless page in fullscreen leaves no stale shape-focus shortcut behind', async ({ page }) => {
+    await page.goto('/');
+    const docId = await createDocument(page, uniqueName('Stale Focus Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+    const imageRect = await imageOnScreenRect(page);
+    await dragOnCanvas(page, { x: imageRect.left + 20, y: imageRect.top + 20 }, { x: imageRect.left + 60, y: imageRect.top + 50 });
+    await addPage(page);
+    await page.locator('.page-item').first().locator('.page-thumb').click();
+
+    await page.locator('.canvas-mode-toggle').click();
+    await page.getByRole('button', { name: 'Fullscreen' }).click();
+    await page.locator('.fullscreen-close').waitFor({ state: 'visible' });
+
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Enter');
+
+    await page.locator('.fullscreen-close').click();
+    await saveDocument(page);
+    const manifest = await fetchManifest(page, docId);
+    expect(manifest.pages[0].shapes[0].visible).toBe(false);
+});
+
 test('plain arrow-key page navigation still works in fullscreen', async ({ page }) => {
     await page.goto('/');
     await createDocument(page, uniqueName('Fullscreen Nav Doc'));

@@ -21,7 +21,11 @@ export type ShortcutId =
     | 'toggleFullscreen'
     | 'hideAll'
     | 'revealAll'
-    | 'toggleCanvasHints';
+    | 'toggleCanvasHints'
+    | 'deleteSelectedShape'
+    | 'cycleFocusedShapeNext'
+    | 'cycleFocusedShapePrev'
+    | 'toggleFocusedShapeVisibility';
 
 export type ShortcutModifier = 'primary' | 'primaryShift' | 'shift' | 'none';
 
@@ -69,7 +73,23 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutSpec> = {
     toggleFullscreen: { bindings: [{ key: 'f', modifier: 'none', displayKey: 'F' }], allowInFullscreen: true },
     hideAll: { bindings: [{ key: '.', modifier: 'none', displayKey: '.' }], allowInFullscreen: true },
     revealAll: { bindings: [{ key: '.', modifier: 'shift', displayKey: '.' }], allowInFullscreen: true },
-    toggleCanvasHints: { bindings: [{ key: 'h', modifier: 'none', displayKey: 'H' }], allowInFullscreen: true }
+    toggleCanvasHints: { bindings: [{ key: 'h', modifier: 'none', displayKey: 'H' }], allowInFullscreen: true },
+    deleteSelectedShape: {
+        bindings: [
+            { key: 'Delete', modifier: 'none', displayKey: 'Delete' },
+            { key: 'Backspace', modifier: 'none', displayKey: 'Backspace' }
+        ],
+        allowInFullscreen: false
+    },
+    cycleFocusedShapeNext: { bindings: [{ key: 'Tab', modifier: 'none', displayKey: 'Tab' }], allowInFullscreen: true },
+    cycleFocusedShapePrev: { bindings: [{ key: 'Tab', modifier: 'shift', displayKey: 'Tab' }], allowInFullscreen: true },
+    toggleFocusedShapeVisibility: {
+        bindings: [
+            { key: ' ', modifier: 'none', displayKey: 'Space' },
+            { key: 'Enter', modifier: 'none', displayKey: 'Enter' }
+        ],
+        allowInFullscreen: true
+    }
 };
 
 export function shortcutHint(id: ShortcutId): string {
