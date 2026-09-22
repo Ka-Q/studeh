@@ -567,6 +567,10 @@ dialog::backdrop {
     opacity: 1;
 }
 
+#page-list-fade {
+    background: linear-gradient(to bottom, transparent, var(--color-surface-secondary));
+}
+
 #page-list {
     height: 100%;
     overflow-y: auto;
