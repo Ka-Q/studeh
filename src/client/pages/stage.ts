@@ -18,6 +18,7 @@ import { mountImageCanvas, type ImageCanvasHandle } from '../canvas/imageCanvas'
 import { initFullscreenControl, requestFullscreen } from '../canvas/fullscreen';
 import { initCanvasHints, type CanvasHintsHandle } from '../canvas/canvasHints';
 import { initCanvasZoom, type CanvasZoomHandle } from '../canvas/canvasZoom';
+import { initPageNavigator, type PageNavigatorHandle } from '../canvas/pageNavigator';
 import { confirmDialog } from '../dialogs/confirmDialog';
 import { createModeToggle, type ModeToggleHandle } from '../modes/modeToggle';
 import { browseDialog } from '../document/browseDialog';
@@ -38,6 +39,7 @@ let dragOverlay: HTMLDivElement;
 let modeToggleHandle: ModeToggleHandle;
 let canvasHintsHandle: CanvasHintsHandle;
 let canvasZoomHandle: CanvasZoomHandle;
+let pageNavigatorHandle: PageNavigatorHandle;
 let mountedCanvas: MountedCanvas | null = null;
 let isFullscreen = false;
 
@@ -60,11 +62,13 @@ export function initStage(): void {
     container.append(controlsEl, canvasMount);
     canvasHintsHandle = initCanvasHints(overlayStack, getState().mode);
     canvasZoomHandle = initCanvasZoom(canvasMount);
+    pageNavigatorHandle = initPageNavigator(canvasMount);
 
     initFullscreenControl(canvasMount, function onFullscreenChange(nextIsFullscreen) {
         isFullscreen = nextIsFullscreen;
         modeToggleHandle.setFullscreen(isFullscreen);
         mountedCanvas?.handle.setFullscreen(isFullscreen);
+        pageNavigatorHandle.setFullscreen(isFullscreen);
     });
     initImageDrop();
     initImagePaste();

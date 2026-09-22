@@ -15,7 +15,7 @@ function reorderActivePage(direction: -1 | 1): void {
     }
 }
 
-function selectAdjacentPage(direction: -1 | 1): void {
+export function selectAdjacentPage(direction: -1 | 1): void {
     const { document: doc, activePageId } = getState();
     if (!doc || doc.pages.length === 0) {
         return;
