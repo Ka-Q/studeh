@@ -7,10 +7,15 @@ const CODE_TO_KEY: Partial<Record<string, string>> = {
     Period: '.'
 };
 
-const handlersById: Partial<Record<ShortcutId, () => void>> = {};
+interface ShortcutRegistration {
+    handler: () => void;
+    guard?: () => boolean;
+}
 
-export function registerShortcut(id: ShortcutId, handler: () => void): void {
-    handlersById[id] = handler;
+const handlersById: Partial<Record<ShortcutId, ShortcutRegistration>> = {};
+
+export function registerShortcut(id: ShortcutId, handler: () => void, guard?: () => boolean): void {
+    handlersById[id] = { handler, guard };
 }
 
 export function initShortcutDispatch(): void {
@@ -27,7 +32,10 @@ function onKeyDown(event: KeyboardEvent): void {
         return;
     }
     event.preventDefault();
-    handlersById[id]?.();
+    const registration = handlersById[id];
+    if (registration && (!registration.guard || registration.guard())) {
+        registration.handler();
+    }
 }
 
 const SHORTCUT_LOOKUP = buildShortcutLookup();
