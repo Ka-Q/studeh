@@ -72,23 +72,19 @@ export function initStage(): void {
     });
     initImageDrop();
     initImagePaste();
-    registerShortcut('toggleFullscreen', () => {
-        if (isStudyModeWithImage()) {
-            toggleFullscreen();
-        }
-    });
+    registerShortcut('toggleFullscreen', toggleFullscreen, isStudyModeWithImage);
     registerShortcut('hideAll', () => {
         const page = getActivePage();
-        if (isStudyModeWithImage() && page) {
+        if (page) {
             setPageShapesVisibility(page.id, false);
         }
-    });
+    }, isStudyModeWithImage);
     registerShortcut('revealAll', () => {
         const page = getActivePage();
-        if (isStudyModeWithImage() && page) {
+        if (page) {
             setPageShapesVisibility(page.id, true);
         }
-    });
+    }, isStudyModeWithImage);
 
     subscribe(render);
     render();
