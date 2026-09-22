@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { addPage, assignActivePageImage, createDocument, uniqueName } from './helpers';
+import { addPage, assignActivePageImage, createDocument, dragOnCanvas, fetchManifest, imageOnScreenRect, saveDocument, uniqueName } from './helpers';
 
 test('Ctrl+Up/Down reorders the active page; plain arrows only navigate', async ({ page }) => {
     await page.goto('/');
@@ -97,6 +97,32 @@ test('sidebar/toolbar shortcuts do not fire in fullscreen; canvas-scoped shortcu
 
     await page.keyboard.press('f');
     await expect(page.locator('.fullscreen-close')).toBeHidden();
+});
+
+test('Shift+Period triggers Reveal all on a US layout, and only in study mode', async ({ page }) => {
+    await page.goto('/');
+    const docId = await createDocument(page, uniqueName('Shift Period Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+    const imageRect = await imageOnScreenRect(page);
+    await dragOnCanvas(page, { x: imageRect.left + 20, y: imageRect.top + 20 }, { x: imageRect.left + 70, y: imageRect.top + 60 });
+
+    async function pressShiftPeriod(): Promise<void> {
+        await page.evaluate(function dispatchShiftPeriod() {
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: '>', code: 'Period', shiftKey: true, bubbles: true }));
+        });
+    }
+
+    await pressShiftPeriod();
+    await saveDocument(page);
+    let manifest = await fetchManifest(page, docId);
+    expect(manifest.pages[0].shapes[0].visible).toBe(false);
+
+    await page.locator('.canvas-mode-toggle').click();
+    await pressShiftPeriod();
+    await saveDocument(page);
+    manifest = await fetchManifest(page, docId);
+    expect(manifest.pages[0].shapes[0].visible).toBe(true);
 });
 
 test('plain arrow-key page navigation still works in fullscreen', async ({ page }) => {
