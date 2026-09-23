@@ -11,3 +11,15 @@ test('shortcutHint joins multiple bindings with " / "', function () {
     assert.equal(shortcutHint('selectPreviousPage'), 'Up arrow / Left arrow');
     assert.equal(shortcutHint('selectNextPage'), 'Down arrow / Right arrow');
 });
+
+test('shortcutHint formats the zoom shortcuts', function () {
+    assert.equal(shortcutHint('zoomIn'), '+');
+    assert.equal(shortcutHint('zoomOut'), '-');
+    assert.equal(shortcutHint('resetZoom'), '0');
+    assert.equal(shortcutHint('fitToView'), '=');
+});
+
+test('shortcutHint formats the hide/reveal-all shortcuts', function () {
+    assert.equal(shortcutHint('hideAll'), '.');
+    assert.equal(shortcutHint('revealAll'), ',');
+});

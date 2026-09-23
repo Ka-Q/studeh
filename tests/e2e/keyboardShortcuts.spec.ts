@@ -99,30 +99,118 @@ test('sidebar/toolbar shortcuts do not fire in fullscreen; canvas-scoped shortcu
     await expect(page.locator('.fullscreen-close')).toBeHidden();
 });
 
-test('Shift+Period triggers Reveal all on a US layout, and only in study mode', async ({ page }) => {
+test(',/. trigger Reveal all/Hide all regardless of Shift state, and only in study mode', async ({ page }) => {
     await page.goto('/');
-    const docId = await createDocument(page, uniqueName('Shift Period Doc'));
+    const docId = await createDocument(page, uniqueName('Reveal Hide Doc'));
     await addPage(page);
     await assignActivePageImage(page);
     const imageRect = await imageOnScreenRect(page);
     await dragOnCanvas(page, { x: imageRect.left + 20, y: imageRect.top + 20 }, { x: imageRect.left + 70, y: imageRect.top + 60 });
 
-    async function pressShiftPeriod(): Promise<void> {
-        await page.evaluate(function dispatchShiftPeriod() {
-            document.dispatchEvent(new KeyboardEvent('keydown', { key: '>', code: 'Period', shiftKey: true, bubbles: true }));
-        });
+    async function dispatchKey(key: string, shiftKey: boolean): Promise<void> {
+        await page.evaluate(function dispatch(options) {
+            document.dispatchEvent(new KeyboardEvent('keydown', { ...options, bubbles: true }));
+        }, { key, shiftKey });
     }
 
-    await pressShiftPeriod();
+    // Blocked outside study mode: the freshly-drawn shape stays at its default (hidden) state.
+    await dispatchKey(',', false);
     await saveDocument(page);
     let manifest = await fetchManifest(page, docId);
     expect(manifest.pages[0].shapes[0].visible).toBe(false);
 
     await page.locator('.canvas-mode-toggle').click();
-    await pressShiftPeriod();
+
+    // Comma reveals, whether or not Shift happens to be held for it on this layout.
+    await dispatchKey(',', true);
     await saveDocument(page);
     manifest = await fetchManifest(page, docId);
     expect(manifest.pages[0].shapes[0].visible).toBe(true);
+
+    // Period hides, likewise regardless of Shift state.
+    await dispatchKey('.', false);
+    await saveDocument(page);
+    manifest = await fetchManifest(page, docId);
+    expect(manifest.pages[0].shapes[0].visible).toBe(false);
+});
+
+test('"=" triggers Fit to view regardless of which physical key or Shift state produces it', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('Fit To View Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+
+    const percent = page.locator('.canvas-zoom-percent');
+    const pristinePercent = await percent.textContent();
+
+    async function dispatchKey(key: string, code: string, shiftKey: boolean): Promise<void> {
+        await page.evaluate(function dispatch(options) {
+            document.dispatchEvent(new KeyboardEvent('keydown', { ...options, bubbles: true }));
+        }, { key, code, shiftKey });
+    }
+
+    await page.locator('.canvas-zoom button[aria-label="Zoom in"]').click();
+    await expect(percent).not.toHaveText(pristinePercent ?? '');
+    // US layout: the bare (unshifted) Equal key already produces '='.
+    await dispatchKey('=', 'Equal', false);
+    await expect(percent).toHaveText(pristinePercent ?? '');
+
+    await page.locator('.canvas-zoom button[aria-label="Zoom in"]').click();
+    await expect(percent).not.toHaveText(pristinePercent ?? '');
+    // Nordic layout: '=' is Shift+0 instead, a different physical code entirely.
+    await dispatchKey('=', 'Digit0', true);
+    await expect(percent).toHaveText(pristinePercent ?? '');
+});
+
+test('+/- zoom shortcuts fire on whatever physical key/Shift-state actually produces the symbol', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('Zoom Plus Minus Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+
+    const percent = page.locator('.canvas-zoom-percent');
+    await expect(percent).toHaveText('100');
+
+    async function dispatchKey(key: string, code: string, shiftKey: boolean): Promise<void> {
+        await page.evaluate(function dispatch(options) {
+            document.dispatchEvent(new KeyboardEvent('keydown', { ...options, bubbles: true }));
+        }, { key, code, shiftKey });
+    }
+
+    // US layout: '+' requires Shift held on the Equal-code key.
+    await dispatchKey('+', 'Equal', true);
+    await expect(percent).toHaveText('110');
+
+    // Nordic layout: '+' is unshifted, and on a different physical code entirely.
+    await dispatchKey('+', 'Minus', false);
+    await expect(percent).toHaveText('120');
+
+    // US layout: '-' is the bare (unshifted) Minus-code key.
+    await dispatchKey('-', 'Minus', false);
+    await expect(percent).toHaveText('110');
+});
+
+test('a symbol shortcut still fires when the layout requires AltGr to produce it', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('AltGr Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+
+    const percent = page.locator('.canvas-zoom-percent');
+    await expect(percent).toHaveText('100');
+
+    // Some layouts gate '+' behind AltGr, which browsers report as Ctrl+Alt
+    // on Windows/Linux (modifierAltGraph makes getModifierState('AltGraph') true).
+    await page.evaluate(function dispatchAltGrPlus() {
+        document.dispatchEvent(new KeyboardEvent('keydown', {
+            key: '+',
+            ctrlKey: true,
+            altKey: true,
+            modifierAltGraph: true,
+            bubbles: true
+        }));
+    });
+    await expect(percent).toHaveText('110');
 });
 
 test('Tab cycles shape focus in fullscreen study mode; Enter toggles the focused shape, Shift+Tab cycles backward', async ({ page }) => {
