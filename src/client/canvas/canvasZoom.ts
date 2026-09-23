@@ -1,10 +1,15 @@
 import { iconSpan } from '../dom';
 import { startInlineEdit } from '../inlineEdit';
+import { shortcutHint } from '../shortcuts';
 import { MAX_ZOOM, MIN_ZOOM } from './viewport';
 import type { ImageCanvasHandle } from './imageCanvas';
 
 export interface CanvasZoomHandle {
     setSource(source: ImageCanvasHandle | null): void;
+    zoomIn(): void;
+    zoomOut(): void;
+    resetZoom(): void;
+    fitToView(): void;
 }
 
 const ZOOM_STEP_PERCENT = 10;
@@ -20,7 +25,7 @@ export function initCanvasZoom(container: HTMLElement): CanvasZoomHandle {
     const zoomInButton = document.createElement('button');
     zoomInButton.type = 'button';
     zoomInButton.className = 'canvas-zoom-button canvas-zoom-step';
-    zoomInButton.title = 'Zoom in (Scroll up)';
+    zoomInButton.title = `Zoom in (Scroll up / ${shortcutHint('zoomIn')})`;
     zoomInButton.setAttribute('aria-label', 'Zoom in');
     zoomInButton.append(iconSpan('icon-plus'));
 
@@ -31,7 +36,7 @@ export function initCanvasZoom(container: HTMLElement): CanvasZoomHandle {
     const zoomOutButton = document.createElement('button');
     zoomOutButton.type = 'button';
     zoomOutButton.className = 'canvas-zoom-button canvas-zoom-step';
-    zoomOutButton.title = 'Zoom out (Scroll down)';
+    zoomOutButton.title = `Zoom out (Scroll down / ${shortcutHint('zoomOut')})`;
     zoomOutButton.setAttribute('aria-label', 'Zoom out');
     zoomOutButton.append(iconSpan('icon-minus'));
 
@@ -42,14 +47,14 @@ export function initCanvasZoom(container: HTMLElement): CanvasZoomHandle {
     const resetButton = document.createElement('button');
     resetButton.type = 'button';
     resetButton.className = 'canvas-zoom-button';
-    resetButton.title = 'Reset zoom to 100%';
+    resetButton.title = `Reset zoom to 100% (${shortcutHint('resetZoom')})`;
     resetButton.setAttribute('aria-label', 'Reset zoom to 100%');
     resetButton.append(iconSpan('icon-reset'));
 
     const fitButton = document.createElement('button');
     fitButton.type = 'button';
     fitButton.className = 'canvas-zoom-button';
-    fitButton.title = 'Fit to view (reset zoom and pan)';
+    fitButton.title = `Fit to view (reset zoom and pan) (${shortcutHint('fitToView')})`;
     fitButton.setAttribute('aria-label', 'Fit to view');
     fitButton.append(iconSpan('icon-fit'));
 
@@ -93,10 +98,26 @@ export function initCanvasZoom(container: HTMLElement): CanvasZoomHandle {
         source?.setZoom(percent / 100);
     }
 
-    zoomOutButton.addEventListener('click', () => applyPercent(currentPercent() - ZOOM_STEP_PERCENT));
-    zoomInButton.addEventListener('click', () => applyPercent(currentPercent() + ZOOM_STEP_PERCENT));
-    resetButton.addEventListener('click', () => applyPercent(DEFAULT_ZOOM_PERCENT));
-    fitButton.addEventListener('click', () => source?.fitToView());
+    function stepZoomIn(): void {
+        applyPercent(currentPercent() + ZOOM_STEP_PERCENT);
+    }
+
+    function stepZoomOut(): void {
+        applyPercent(currentPercent() - ZOOM_STEP_PERCENT);
+    }
+
+    function resetZoom(): void {
+        applyPercent(DEFAULT_ZOOM_PERCENT);
+    }
+
+    function fitToView(): void {
+        source?.fitToView();
+    }
+
+    zoomOutButton.addEventListener('click', stepZoomOut);
+    zoomInButton.addEventListener('click', stepZoomIn);
+    resetButton.addEventListener('click', resetZoom);
+    fitButton.addEventListener('click', fitToView);
 
     percentEl.addEventListener('dblclick', () => {
         if (!isSourceReady()) {
@@ -127,7 +148,11 @@ export function initCanvasZoom(container: HTMLElement): CanvasZoomHandle {
                 unsubscribe = source.onViewportChange(refresh);
             }
             refresh();
-        }
+        },
+        zoomIn: stepZoomIn,
+        zoomOut: stepZoomOut,
+        resetZoom,
+        fitToView
     };
 }
 

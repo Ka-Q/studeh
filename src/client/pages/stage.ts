@@ -85,6 +85,10 @@ export function initStage(): void {
             setPageShapesVisibility(page.id, true);
         }
     }, isStudyModeWithImage);
+    registerShortcut('zoomIn', () => canvasZoomHandle.zoomIn(), hasReadyCanvas);
+    registerShortcut('zoomOut', () => canvasZoomHandle.zoomOut(), hasReadyCanvas);
+    registerShortcut('resetZoom', () => canvasZoomHandle.resetZoom(), hasReadyCanvas);
+    registerShortcut('fitToView', () => canvasZoomHandle.fitToView(), hasReadyCanvas);
 
     subscribe(render);
     render();
@@ -92,6 +96,10 @@ export function initStage(): void {
 
 function isStudyModeWithImage(): boolean {
     return getState().mode === 'study' && !!getActivePage()?.image;
+}
+
+function hasReadyCanvas(): boolean {
+    return mountedCanvas?.handle.isReady() ?? false;
 }
 
 function isEditMode(): boolean {

@@ -1,11 +1,5 @@
 import { isBlockedByInputOrDialog, isPrimaryModifierPressed } from './dom';
-import { SHORTCUTS, type ShortcutId, type ShortcutModifier } from './shortcuts';
-
-// Some physical keys produce a different `event.key` symbol when Shift is held
-// (e.g. Period -> '.'/'>'), which would otherwise vary by keyboard layout.
-const CODE_TO_KEY: Partial<Record<string, string>> = {
-    Period: '.'
-};
+import { Modifier, SHORTCUTS, type ShortcutId } from './shortcuts';
 
 interface ShortcutRegistration {
     handler: () => void;
@@ -31,7 +25,7 @@ function onKeyDown(event: KeyboardEvent): void {
         return;
     }
     const isFullscreen = document.fullscreenElement !== null;
-    const id = matchShortcutId(resolveKey(event), modifierCombo(event));
+    const id = matchShortcutId(event.key, modifierCombo(event));
     if (!id || (isFullscreen && !SHORTCUTS[id].allowInFullscreen)) {
         return;
     }
@@ -49,27 +43,30 @@ function buildShortcutLookup(): Partial<Record<string, ShortcutId>> {
     const lookup: Partial<Record<string, ShortcutId>> = {};
     for (const id of Object.keys(SHORTCUTS) as ShortcutId[]) {
         for (const binding of SHORTCUTS[id].bindings) {
+            if (binding.modifier === Modifier.ANY) {
+                lookup[shortcutLookupKey(binding.key, Modifier.NONE)] = id;
+                lookup[shortcutLookupKey(binding.key, Modifier.SHIFT)] = id;
+                continue;
+            }
             lookup[shortcutLookupKey(binding.key, binding.modifier)] = id;
         }
     }
     return lookup;
 }
 
-function shortcutLookupKey(key: string, modifier: ShortcutModifier): string {
+function shortcutLookupKey(key: string, modifier: Modifier): string {
     return `${key.toLowerCase()}:${modifier}`;
 }
 
-export function matchShortcutId(key: string, modifier: ShortcutModifier): ShortcutId | null {
+export function matchShortcutId(key: string, modifier: Modifier): ShortcutId | null {
     return SHORTCUT_LOOKUP[shortcutLookupKey(key, modifier)] ?? null;
 }
 
-export function resolveKey(event: Pick<KeyboardEvent, 'key' | 'code'>): string {
-    return CODE_TO_KEY[event.code] ?? event.key;
-}
-
-function modifierCombo(event: KeyboardEvent): ShortcutModifier {
-    if (isPrimaryModifierPressed(event)) {
-        return event.shiftKey ? 'primaryShift' : 'primary';
+function modifierCombo(event: KeyboardEvent): Modifier {
+    // AltGr reports as Ctrl+Alt on Windows/Linux, which would otherwise be
+    // misread as the primary modifier on layouts that gate a symbol behind it.
+    if (!event.getModifierState('AltGraph') && isPrimaryModifierPressed(event)) {
+        return event.shiftKey ? Modifier.PRIMARY_SHIFT : Modifier.PRIMARY;
     }
-    return event.shiftKey ? 'shift' : 'none';
+    return event.shiftKey ? Modifier.SHIFT : Modifier.NONE;
 }

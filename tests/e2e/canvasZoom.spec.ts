@@ -143,6 +143,37 @@ test('fit to view resets both zoom and pan back to the pristine just-opened view
     expect(manifest.pages[0].shapes).toHaveLength(0);
 });
 
+test('+/-/0 keyboard shortcuts step, reset, and fit zoom, in both edit and study mode', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('Zoom Keyboard Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+    await getCanvas(page).click();
+
+    const percent = page.locator('.canvas-zoom-percent');
+    await expect(percent).toHaveText('100');
+
+    await page.keyboard.press('+');
+    await expect(percent).toHaveText('110');
+
+    await page.keyboard.press('-');
+    await page.keyboard.press('-');
+    await expect(percent).toHaveText('90');
+
+    await page.keyboard.press('0');
+    await expect(percent).toHaveText('100');
+
+    await zoomInButton(page).click();
+    await zoomInButton(page).click();
+    await expect(percent).not.toHaveText('100');
+    await page.keyboard.press('=');
+    await expect(percent).toHaveText('100');
+
+    await page.locator('.canvas-mode-toggle').click();
+    await page.keyboard.press('+');
+    await expect(percent).toHaveText('110');
+});
+
 test('the zoom control stays visible and usable through a fullscreen transition', async ({ page }) => {
     await page.goto('/');
     await createDocument(page, uniqueName('Zoom Fullscreen Doc'));
@@ -158,5 +189,10 @@ test('the zoom control stays visible and usable through a fullscreen transition'
     const fitPercent = await percent.textContent();
 
     await zoomInButton(page).click();
+    await expect(percent).not.toHaveText(fitPercent ?? '');
+
+    await page.keyboard.press('=');
+    await expect(percent).toHaveText(fitPercent ?? '');
+    await page.keyboard.press('+');
     await expect(percent).not.toHaveText(fitPercent ?? '');
 });
