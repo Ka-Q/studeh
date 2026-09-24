@@ -69,10 +69,47 @@ export async function dragOnCanvas(page: Page, from: { x: number; y: number }, t
 
 export async function fetchManifest(page: Page, documentId: string): Promise<{
     id: string;
-    pages: { id: string; shapes: { id: string; visible: boolean }[] }[];
+    pages: { id: string; shapes: { id: string }[] }[];
 }> {
     const res = await page.request.get(`/api/documents/${documentId}`);
     return res.json();
+}
+
+export async function isShapeRevealed(page: Page, point: { x: number; y: number }): Promise<boolean> {
+    return getCanvas(page).evaluate(async function readPixel(canvas: HTMLCanvasElement, target: { x: number; y: number }) {
+        function samplePixel(): Uint8ClampedArray {
+            const rect = canvas.getBoundingClientRect();
+            const context = canvas.getContext('2d')!;
+            return context.getImageData(
+                Math.round((target.x - rect.left) * (canvas.width / rect.width)),
+                Math.round((target.y - rect.top) * (canvas.height / rect.height)),
+                1,
+                1
+            ).data;
+        }
+
+        // A freshly (re)mounted canvas hasn't drawn the image yet on the first
+        // animation frame or two — wait for this point to stop being transparent
+        // (cleared, never drawn) before treating its color as meaningful.
+        const deadline = Date.now() + 2000;
+        let pixel = samplePixel();
+        while (pixel[3] === 0 && Date.now() < deadline) {
+            await new Promise(function waitForNextFrame(resolve) {
+                requestAnimationFrame(resolve);
+            });
+            pixel = samplePixel();
+        }
+
+        // Matches imageCanvas.ts's OCCLUSION_FILL_STYLE ('rgb(121, 122, 123)') — this
+        // runs serialized in the browser context, so it can't import that constant.
+        const occlusionFillRgb = { r: 121, g: 122, b: 123 };
+        const tolerance = 12;
+        return !(
+            Math.abs(pixel[0] - occlusionFillRgb.r) < tolerance &&
+            Math.abs(pixel[1] - occlusionFillRgb.g) < tolerance &&
+            Math.abs(pixel[2] - occlusionFillRgb.b) < tolerance
+        );
+    }, point);
 }
 
 export async function saveDocument(page: Page): Promise<void> {

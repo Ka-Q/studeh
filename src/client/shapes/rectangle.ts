@@ -29,6 +29,10 @@ export function isRectEmpty(rect: Rect): boolean {
     return rect.width <= 0 || rect.height <= 0;
 }
 
+export function rectsEqual(a: Rect, b: Rect): boolean {
+    return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+}
+
 export function moveRect(rect: Rect, dx: number, dy: number): Rect {
     return { ...rect, x: rect.x + dx, y: rect.y + dy };
 }

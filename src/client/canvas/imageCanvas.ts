@@ -6,6 +6,7 @@ import {
     isRectEmpty,
     moveRect,
     rectFromPoints,
+    rectsEqual,
     resizeRect,
     topmostShapeAt,
     type Rect,
@@ -29,7 +30,7 @@ type ActiveDrag =
     | { kind: 'resize'; shapeId: string; handle: ResizeHandle; original: Rect; startCanvasPoint: Point; current: Rect };
 
 export interface ImageCanvasHandle {
-    update(shapes: RectangleShape[], selectedShapeId: string | null, mode: Mode): void;
+    update(shapes: RectangleShape[], selectedShapeId: string | null, mode: Mode, revealedShapeIds: ReadonlySet<string>): void;
     setFullscreen(isFullscreen: boolean): void;
     destroy(): void;
     isReady(): boolean;
@@ -85,6 +86,7 @@ export function mountImageCanvas(
     initialSelectedShapeId: string | null,
     initialMode: Mode,
     initialIsFullscreen: boolean,
+    initialRevealedShapeIds: ReadonlySet<string>,
     callbacks: ImageCanvasCallbacks
 ): ImageCanvasHandle {
     const canvas = document.createElement('canvas');
@@ -98,6 +100,7 @@ export function mountImageCanvas(
     let selectedShapeId = initialSelectedShapeId;
     let mode = initialMode;
     let isFullscreen = initialIsFullscreen;
+    let revealedShapeIds = initialRevealedShapeIds;
     let focusedShapeId: string | null = null;
     let stopPanning: (() => void) | null = null;
     let creatingRect: { start: Point; current: Point } | null = null;
@@ -189,7 +192,7 @@ export function mountImageCanvas(
         );
         if (mode === 'study') {
             for (const shape of shapes) {
-                drawRect(shape, shape.visible ? revealedStyle : occlusionStyle, false);
+                drawRect(shape, revealedShapeIds.has(shape.id) ? revealedStyle : occlusionStyle, false);
                 if (isFullscreen && shape.id === focusedShapeId) {
                     drawFocusOutline(shape);
                 }
@@ -477,9 +480,11 @@ export function mountImageCanvas(
         if (!activeDrag) {
             return;
         }
-        const { shapeId, current } = activeDrag;
+        const { shapeId, original, current } = activeDrag;
         activeDrag = null;
-        callbacks.onUpdateShapeRect(shapeId, current);
+        if (!rectsEqual(original, current)) {
+            callbacks.onUpdateShapeRect(shapeId, current);
+        }
         draw();
     }
 
@@ -587,13 +592,14 @@ export function mountImageCanvas(
     }
 
     return {
-        update(nextShapes: RectangleShape[], nextSelectedShapeId: string | null, nextMode: Mode): void {
+        update(nextShapes: RectangleShape[], nextSelectedShapeId: string | null, nextMode: Mode, nextRevealedShapeIds: ReadonlySet<string>): void {
             shapes = nextShapes;
             selectedShapeId = nextSelectedShapeId;
             if (mode !== nextMode) {
                 canvas.style.cursor = 'default';
             }
             mode = nextMode;
+            revealedShapeIds = nextRevealedShapeIds;
             draw();
         },
         setFullscreen(nextIsFullscreen: boolean): void {

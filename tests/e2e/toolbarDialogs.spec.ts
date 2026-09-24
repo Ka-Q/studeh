@@ -27,6 +27,38 @@ test('New, add page, rename, Save, then Open round-trips all changes', async ({ 
     await expect(page).toHaveURL(new RegExp(`/${docId}$`));
 });
 
+test('renaming the document or a page away and back to its saved name leaves the document clean', async ({ page }) => {
+    await page.goto('/');
+    const originalName = uniqueName('Revert Doc');
+    await createDocument(page, originalName);
+    await addPage(page);
+    await page.locator('#btn-save').click();
+    await expect(page.locator('#save-status')).toHaveText('Saved');
+
+    await page.locator('#btn-rename-document').click();
+    await page.locator('#doc-title').fill('Temporary Name');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#save-status')).toHaveText('Unsaved changes');
+
+    await page.locator('#btn-rename-document').click();
+    await page.locator('#doc-title').fill(originalName);
+    await page.keyboard.press('Enter');
+    // Not plain textContent — updateSaveStatus(false) only removes the 'visible'
+    // class, it doesn't clear the stale "Unsaved changes" text underneath.
+    await expect(page.locator('#save-status.visible', { hasText: 'Unsaved changes' })).toHaveCount(0);
+
+    const pageName = page.locator('.page-item .page-name').first();
+    await pageName.dblclick();
+    await page.locator('.page-item .page-name.inline-edit').fill('Temporary Page Name');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#save-status')).toHaveText('Unsaved changes');
+
+    await page.locator('.page-item .page-name').first().dblclick();
+    await page.locator('.page-item .page-name.inline-edit').fill('Page 1');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#save-status.visible', { hasText: 'Unsaved changes' })).toHaveCount(0);
+});
+
 test('confirm-discard prompt blocks New when there are unsaved changes', async ({ page }) => {
     await page.goto('/');
     const name = uniqueName('Dirty Doc');

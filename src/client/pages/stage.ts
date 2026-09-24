@@ -299,7 +299,7 @@ function createImageFileInput(documentId: string, pageId: string): HTMLInputElem
 }
 
 function renderCanvas(documentId: string, page: Page): void {
-    const { selectedShapeId, mode } = getState();
+    const { selectedShapeId, mode, revealedShapeIds } = getState();
     canvasHintsHandle.setMode(mode);
 
     if (!page.image) {
@@ -310,7 +310,7 @@ function renderCanvas(documentId: string, page: Page): void {
     }
 
     if (mountedCanvas?.pageId === page.id && mountedCanvas.imageFile === page.image.file) {
-        mountedCanvas.handle.update(page.shapes, selectedShapeId, mode);
+        mountedCanvas.handle.update(page.shapes, selectedShapeId, mode, revealedShapeIds);
         return;
     }
 
@@ -326,6 +326,7 @@ function renderCanvas(documentId: string, page: Page): void {
             selectedShapeId,
             mode,
             isFullscreen,
+            revealedShapeIds,
             {
                 onCreateShape(rect) {
                     addShape(page.id, rect);
@@ -340,7 +341,7 @@ function renderCanvas(documentId: string, page: Page): void {
                     deleteSelectedShape();
                 },
                 onToggleVisibility(shapeId) {
-                    toggleShapeVisibility(page.id, shapeId);
+                    toggleShapeVisibility(shapeId);
                 }
             }
         )
