@@ -5,6 +5,11 @@ export function isFileDrag(event: DragEvent): boolean {
 const IS_MAC_PLATFORM = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
 export function isPrimaryModifierPressed(event: MouseEvent | KeyboardEvent): boolean {
+    // AltGr reports as Ctrl+Alt on Windows/Linux, which would otherwise be
+    // misread as the primary modifier on layouts that gate a symbol behind it.
+    if (event.getModifierState('AltGraph')) {
+        return false;
+    }
     return IS_MAC_PLATFORM ? event.metaKey : event.ctrlKey;
 }
 
