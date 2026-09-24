@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { MAX_ZOOM, canvasToImage, fitViewport, imageToCanvas, zoomAtCanvasPoint, zoomToLevelAtCanvasPoint } from './viewport';
+import { MAX_ZOOM, MIN_ZOOM, canvasToImage, fitViewport, imageToCanvas, zoomAtCanvasPoint, zoomToLevelAtCanvasPoint } from './viewport';
 
 test('fitViewport centers and scales a smaller canvas down to fit', function () {
     const viewport = fitViewport({ width: 200, height: 100 }, { width: 100, height: 100 });
@@ -24,6 +24,19 @@ test('fitViewport clamps the scale-up to MAX_ZOOM and centers the remainder with
     assert.equal(viewport.zoom, MAX_ZOOM);
     assert.equal(viewport.panX, 50);
     assert.equal(viewport.panY, 50);
+});
+
+test('fitViewport scales below MIN_ZOOM rather than overflowing the canvas for an extreme aspect ratio', function () {
+    const viewport = fitViewport({ width: 100, height: 20000 }, { width: 800, height: 600 });
+
+    assert.equal(viewport.zoom, 0.03);
+    assert.ok(viewport.zoom < MIN_ZOOM);
+});
+
+test('fitViewport falls back to the unpadded canvas width when padding would exceed it', function () {
+    const viewport = fitViewport({ width: 100, height: 100 }, { width: 100, height: 100 }, 64);
+
+    assert.equal(viewport.zoom, 1);
 });
 
 test('imageToCanvas and canvasToImage are inverse transforms', function () {
