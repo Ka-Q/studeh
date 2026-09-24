@@ -46,9 +46,9 @@ export function setDocument(document: DocumentManifest | null): void {
     notify();
 }
 
-export function markClean(): void {
-    lastSavedDocument = state.document;
-    state.dirty = false;
+export function markClean(savedDocument: DocumentManifest): void {
+    lastSavedDocument = savedDocument;
+    state.dirty = !deepEqual(state.document, savedDocument);
     notify();
 }
 

@@ -90,7 +90,7 @@ export async function onSave(): Promise<void> {
     }
     try {
         await saveDocument(doc);
-        markClean();
+        markClean(doc);
         showSavedStatus();
     } catch (error) {
         reportError('save document', error);
