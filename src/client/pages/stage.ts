@@ -284,6 +284,17 @@ function buildAssignImagePrompt(documentId: string, pageId: string): HTMLElement
     return container;
 }
 
+function buildStudyEmptyState(): HTMLElement {
+    const message = document.createElement('span');
+    message.className = 'canvas-empty-state-message';
+    message.append(iconSpan('icon-image-placeholder'), document.createTextNode('Go to edit mode to assign an image'));
+
+    const container = document.createElement('div');
+    container.className = 'canvas-empty-state-container';
+    container.append(message);
+    return container;
+}
+
 function createImageFileInput(documentId: string, pageId: string): HTMLInputElement {
     const input = document.createElement('input');
     input.type = 'file';
@@ -305,7 +316,7 @@ function renderCanvas(documentId: string, page: Page): void {
     if (!page.image) {
         unmountCanvas();
         canvasBody.textContent = '';
-        canvasBody.append(buildAssignImagePrompt(documentId, page.id));
+        canvasBody.append(isEditMode() ? buildAssignImagePrompt(documentId, page.id) : buildStudyEmptyState());
         return;
     }
 
