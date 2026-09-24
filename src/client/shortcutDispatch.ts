@@ -63,9 +63,7 @@ export function matchShortcutId(key: string, modifier: Modifier): ShortcutId | n
 }
 
 function modifierCombo(event: KeyboardEvent): Modifier {
-    // AltGr reports as Ctrl+Alt on Windows/Linux, which would otherwise be
-    // misread as the primary modifier on layouts that gate a symbol behind it.
-    if (!event.getModifierState('AltGraph') && isPrimaryModifierPressed(event)) {
+    if (isPrimaryModifierPressed(event)) {
         return event.shiftKey ? Modifier.PRIMARY_SHIFT : Modifier.PRIMARY;
     }
     return event.shiftKey ? Modifier.SHIFT : Modifier.NONE;
