@@ -852,6 +852,19 @@ dialog::backdrop {
     font-size: var(--font-size-sm);
 }
 
+.canvas-empty-state-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-text-muted);
+}
+
+.canvas-empty-state-message .icon {
+    width: 48px;
+    height: 48px;
+}
+
 .canvas-mount canvas {
     display: block;
     width: 100%;
