@@ -18,8 +18,8 @@ export const MIN_ZOOM = 0.1;
 export const MAX_ZOOM = 8;
 
 export function fitViewport(imageSize: Size, canvasSize: Size, horizontalPadding = 0): Viewport {
-    const paddedWidth = Math.max(0, canvasSize.width - horizontalPadding * 2);
-    const zoom = clamp(Math.min(paddedWidth / imageSize.width, canvasSize.height / imageSize.height), MIN_ZOOM, MAX_ZOOM);
+    const paddedWidth = canvasSize.width > horizontalPadding * 2 ? canvasSize.width - horizontalPadding * 2 : canvasSize.width;
+    const zoom = Math.min(paddedWidth / imageSize.width, canvasSize.height / imageSize.height, MAX_ZOOM);
     return {
         zoom,
         panX: (canvasSize.width - imageSize.width * zoom) / 2,
