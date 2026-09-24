@@ -99,6 +99,9 @@ export async function isShapeRevealed(page: Page, point: { x: number; y: number 
             });
             pixel = samplePixel();
         }
+        if (pixel[3] === 0) {
+            throw new Error('Canvas did not paint within 2000ms');
+        }
 
         // Matches imageCanvas.ts's OCCLUSION_FILL_STYLE ('rgb(121, 122, 123)') — this
         // runs serialized in the browser context, so it can't import that constant.
