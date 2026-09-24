@@ -175,14 +175,24 @@ test('moving a shape away and back across two separate calls leaves the document
     assert.equal(getState().dirty, false);
 });
 
-test('markClean rebaselines dirty tracking to the current document', function () {
+test('markClean rebaselines dirty tracking to the given document', function () {
     setDocument(fixtureDocument(['page-1']));
     renamePage('page-1', 'Renamed');
 
-    markClean();
+    markClean(getState().document!);
     assert.equal(getState().dirty, false);
 
     renamePage('page-1', 'page-1');
+
+    assert.equal(getState().dirty, true);
+});
+
+test('markClean leaves the document dirty if it has changed since the given document was saved', function () {
+    setDocument(fixtureDocument(['page-1']));
+    const savedDocument = getState().document!;
+    renamePage('page-1', 'Renamed');
+
+    markClean(savedDocument);
 
     assert.equal(getState().dirty, true);
 });
