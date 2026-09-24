@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { canvasToImage, fitViewport, imageToCanvas, zoomAtCanvasPoint, zoomToLevelAtCanvasPoint } from './viewport';
+import { MAX_ZOOM, canvasToImage, fitViewport, imageToCanvas, zoomAtCanvasPoint, zoomToLevelAtCanvasPoint } from './viewport';
 
 test('fitViewport centers and scales a smaller canvas down to fit', function () {
     const viewport = fitViewport({ width: 200, height: 100 }, { width: 100, height: 100 });
@@ -10,12 +10,20 @@ test('fitViewport centers and scales a smaller canvas down to fit', function () 
     assert.equal(viewport.panY, 25);
 });
 
-test('fitViewport never scales an image up past 1 and centers it with letterboxing', function () {
-    const viewport = fitViewport({ width: 50, height: 50 }, { width: 200, height: 200 });
+test('fitViewport scales a smaller image up to fill a larger canvas', function () {
+    const viewport = fitViewport({ width: 50, height: 50 }, { width: 100, height: 100 });
 
-    assert.equal(viewport.zoom, 1);
-    assert.equal(viewport.panX, 75);
-    assert.equal(viewport.panY, 75);
+    assert.equal(viewport.zoom, 2);
+    assert.equal(viewport.panX, 0);
+    assert.equal(viewport.panY, 0);
+});
+
+test('fitViewport clamps the scale-up to MAX_ZOOM and centers the remainder with letterboxing', function () {
+    const viewport = fitViewport({ width: 50, height: 50 }, { width: 500, height: 500 });
+
+    assert.equal(viewport.zoom, MAX_ZOOM);
+    assert.equal(viewport.panX, 50);
+    assert.equal(viewport.panY, 50);
 });
 
 test('imageToCanvas and canvasToImage are inverse transforms', function () {

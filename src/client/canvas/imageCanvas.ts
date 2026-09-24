@@ -44,6 +44,7 @@ const MIDDLE_MOUSE_BUTTON = 1;
 const LEFT_MOUSE_BUTTON = 0;
 const ZOOM_STEP_PER_WHEEL_TICK = 1.1;
 const CLICK_DRAG_THRESHOLD_PX = 3;
+const FIT_VIEW_HORIZONTAL_PADDING_PX = 64;
 const HANDLE_HIT_RADIUS_PX = 6;
 const HANDLE_SIZE_PX = 8;
 const UNSELECTED_STROKE_STYLE = 'rgba(37, 99, 235, 0.9)';
@@ -129,7 +130,8 @@ export function mountImageCanvas(
         resizeCanvasToContainer();
         viewport = fitViewport(
             { width: image.naturalWidth, height: image.naturalHeight },
-            { width: canvas.clientWidth, height: canvas.clientHeight }
+            { width: canvas.clientWidth, height: canvas.clientHeight },
+            FIT_VIEW_HORIZONTAL_PADDING_PX
         );
         notifyViewportChange();
     }
