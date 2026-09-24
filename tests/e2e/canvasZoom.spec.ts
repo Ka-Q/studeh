@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { addPage, assignActivePageImage, createDocument, dragOnCanvas, fetchManifest, getCanvas, imageOnScreenRect, saveDocument, uniqueName } from './helpers';
+import { addPage, assignActivePageImage, createDocument, dragOnCanvas, fetchManifest, getCanvas, imageOnScreenRect, resetZoomTo100, saveDocument, uniqueName } from './helpers';
 
 function zoomInButton(page: Page) {
     return page.locator('.canvas-zoom button[aria-label="Zoom in"]');
@@ -19,6 +19,7 @@ test('zoom buttons step by 10 points, the reset button returns to 100%, and boun
     await createDocument(page, uniqueName('Zoom Doc'));
     await addPage(page);
     await assignActivePageImage(page);
+    await resetZoomTo100(page);
 
     const percent = page.locator('.canvas-zoom-percent');
     const zoomIn = zoomInButton(page);
@@ -151,6 +152,9 @@ test('+/-/0 keyboard shortcuts step, reset, and fit zoom, in both edit and study
     await getCanvas(page).click();
 
     const percent = page.locator('.canvas-zoom-percent');
+    const fitPercent = await percent.textContent();
+
+    await page.keyboard.press('0');
     await expect(percent).toHaveText('100');
 
     await page.keyboard.press('+');
@@ -167,11 +171,11 @@ test('+/-/0 keyboard shortcuts step, reset, and fit zoom, in both edit and study
     await zoomInButton(page).click();
     await expect(percent).not.toHaveText('100');
     await page.keyboard.press('=');
-    await expect(percent).toHaveText('100');
+    await expect(percent).toHaveText(fitPercent ?? '');
 
     await page.locator('.canvas-mode-toggle').click();
     await page.keyboard.press('+');
-    await expect(percent).toHaveText('110');
+    await expect(percent).toHaveText(String(Number(fitPercent) + 10));
 });
 
 test('the zoom control stays visible and usable through a fullscreen transition', async ({ page }) => {
@@ -186,6 +190,10 @@ test('the zoom control stays visible and usable through a fullscreen transition'
 
     const percent = page.locator('.canvas-zoom-percent');
     await expect(page.locator('.canvas-zoom')).toBeVisible();
+
+    // Fit isn't recomputed by the resize alone, so the pre-fullscreen fit percent
+    // (for a different canvas size) can't stand in for this canvas's fit percent.
+    await fitButton(page).click();
     const fitPercent = await percent.textContent();
 
     await zoomInButton(page).click();
