@@ -47,7 +47,16 @@ export interface ScreenRect {
     height: number;
 }
 
+export async function resetZoomTo100(page: Page): Promise<void> {
+    await getCanvas(page).click();
+    await page.keyboard.press('0');
+}
+
 export async function imageOnScreenRect(page: Page, imageSize = SAMPLE_IMAGE_SIZE): Promise<ScreenRect> {
+    // Fit-to-view no longer guarantees 100% zoom (it can scale small images up
+    // past that), so pin zoom to a known 1:1 scale before computing this rect --
+    // every caller relies on screen-space offsets mapping directly to image pixels.
+    await resetZoomTo100(page);
     const box = await getCanvas(page).boundingBox();
     if (!box) {
         throw new Error('Canvas has no bounding box');

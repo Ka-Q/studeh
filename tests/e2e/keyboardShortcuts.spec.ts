@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { addPage, assignActivePageImage, createDocument, dragOnCanvas, imageOnScreenRect, isShapeRevealed, uniqueName } from './helpers';
+import { addPage, assignActivePageImage, createDocument, dragOnCanvas, imageOnScreenRect, isShapeRevealed, resetZoomTo100, uniqueName } from './helpers';
 
 test('Ctrl+Up/Down reorders the active page; plain arrows only navigate', async ({ page }) => {
     await page.goto('/');
@@ -163,6 +163,7 @@ test('+/- zoom shortcuts fire on whatever physical key/Shift-state actually prod
     await createDocument(page, uniqueName('Zoom Plus Minus Doc'));
     await addPage(page);
     await assignActivePageImage(page);
+    await resetZoomTo100(page);
 
     const percent = page.locator('.canvas-zoom-percent');
     await expect(percent).toHaveText('100');
@@ -191,6 +192,7 @@ test('a symbol shortcut still fires when the layout requires AltGr to produce it
     await createDocument(page, uniqueName('AltGr Doc'));
     await addPage(page);
     await assignActivePageImage(page);
+    await resetZoomTo100(page);
 
     const percent = page.locator('.canvas-zoom-percent');
     await expect(percent).toHaveText('100');
@@ -232,8 +234,12 @@ test('Tab cycles shape focus in fullscreen study mode; Enter toggles the focused
 
     await page.locator('.fullscreen-close').click();
     await page.locator('.fullscreen-close').waitFor({ state: 'hidden' });
-    const shapeOneCenter = { x: imageRect.left + 40, y: imageRect.top + 35 };
-    const shapeTwoCenter = { x: imageRect.left + 40, y: imageRect.top + 135 };
+
+    // Entering and leaving fullscreen each re-fit the view, so the pre-fullscreen
+    // rect no longer applies -- recompute it now that we're back in windowed mode.
+    const postFullscreenRect = await imageOnScreenRect(page);
+    const shapeOneCenter = { x: postFullscreenRect.left + 40, y: postFullscreenRect.top + 35 };
+    const shapeTwoCenter = { x: postFullscreenRect.left + 40, y: postFullscreenRect.top + 135 };
     expect(await isShapeRevealed(page, shapeOneCenter)).toBe(false);
     expect(await isShapeRevealed(page, shapeTwoCenter)).toBe(true);
 });
@@ -259,7 +265,11 @@ test('navigating to an imageless page in fullscreen leaves no stale shape-focus 
     await page.locator('.fullscreen-close').click();
     await page.locator('.fullscreen-close').waitFor({ state: 'hidden' });
     await page.locator('.page-item').first().locator('.page-thumb').click();
-    const shapeCenter = { x: imageRect.left + 40, y: imageRect.top + 35 };
+
+    // Entering and leaving fullscreen each re-fit the view, so the pre-fullscreen
+    // rect no longer applies -- recompute it now that we're back in windowed mode.
+    const postFullscreenRect = await imageOnScreenRect(page);
+    const shapeCenter = { x: postFullscreenRect.left + 40, y: postFullscreenRect.top + 35 };
     expect(await isShapeRevealed(page, shapeCenter)).toBe(false);
 });
 
