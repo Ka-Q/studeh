@@ -8,7 +8,19 @@ import { test } from 'node:test';
     }
 };
 
-const { deletePages, getState, selectShape, setActivePage, setDocument, subscribe } = await import('./state');
+const {
+    deletePages,
+    getState,
+    markClean,
+    renameDocument,
+    renamePage,
+    selectShape,
+    setActivePage,
+    setDocument,
+    setPageImage,
+    subscribe,
+    updateShapeRect
+} = await import('./state');
 
 function fixtureDocument(pageIds: string[]) {
     return {
@@ -19,6 +31,21 @@ function fixtureDocument(pageIds: string[]) {
         pages: pageIds.map(function toPage(id) {
             return { id, name: id, image: null, shapes: [] };
         })
+    };
+}
+
+function fixtureDocumentWithShape() {
+    return {
+        format: 'image-occlusion-study' as const,
+        version: 1 as const,
+        id: 'doc-fixture',
+        name: 'Fixture',
+        pages: [{
+            id: 'page-1',
+            name: 'Page 1',
+            image: { mimeType: 'image/png', file: 'a.png' },
+            shapes: [{ id: 'shape-1', type: 'rectangle' as const, x: 10, y: 10, width: 20, height: 20, visible: false }]
+        }]
     };
 }
 
@@ -55,4 +82,107 @@ test('setActivePage is a no-op when called with the already-active page id', fun
 
     assert.equal(notifyCount, 0);
     assert.equal(getState().selectedShapeId, 'shape-1');
+});
+
+test('updateShapeRect does not mark the document dirty when the rect is unchanged', function () {
+    setDocument(fixtureDocumentWithShape());
+
+    updateShapeRect('page-1', 'shape-1', { x: 10, y: 10, width: 20, height: 20 });
+
+    assert.equal(getState().dirty, false);
+});
+
+test('updateShapeRect marks the document dirty when the rect actually changes', function () {
+    setDocument(fixtureDocumentWithShape());
+
+    updateShapeRect('page-1', 'shape-1', { x: 15, y: 10, width: 20, height: 20 });
+
+    assert.equal(getState().dirty, true);
+    assert.equal(getState().document?.pages[0].shapes[0].x, 15);
+});
+
+test('renamePage does not mark the document dirty when the name is unchanged', function () {
+    setDocument(fixtureDocument(['page-1']));
+
+    renamePage('page-1', 'page-1');
+
+    assert.equal(getState().dirty, false);
+});
+
+test('renamePage marks the document dirty when the name actually changes', function () {
+    setDocument(fixtureDocument(['page-1']));
+
+    renamePage('page-1', 'Renamed');
+
+    assert.equal(getState().dirty, true);
+    assert.equal(getState().document?.pages[0].name, 'Renamed');
+});
+
+test('renameDocument does not mark the document dirty when the name is unchanged', function () {
+    setDocument(fixtureDocument(['page-1']));
+
+    renameDocument('Fixture');
+
+    assert.equal(getState().dirty, false);
+});
+
+test('setPageImage does not mark the document dirty when the image is unchanged', function () {
+    setDocument(fixtureDocumentWithShape());
+
+    setPageImage('page-1', { mimeType: 'image/png', file: 'a.png' });
+
+    assert.equal(getState().dirty, false);
+});
+
+test('setPageImage marks the document dirty when the image actually changes', function () {
+    setDocument(fixtureDocumentWithShape());
+
+    setPageImage('page-1', { mimeType: 'image/png', file: 'b.png' });
+
+    assert.equal(getState().dirty, true);
+});
+
+test('renaming a page away and back to its saved name across two separate calls leaves the document clean', function () {
+    setDocument(fixtureDocument(['page-1']));
+
+    renamePage('page-1', 'Renamed');
+    assert.equal(getState().dirty, true);
+
+    renamePage('page-1', 'page-1');
+
+    assert.equal(getState().dirty, false);
+});
+
+test('renaming the document away and back to its saved name across two separate calls leaves it clean', function () {
+    setDocument(fixtureDocument(['page-1']));
+
+    renameDocument('Renamed Doc');
+    assert.equal(getState().dirty, true);
+
+    renameDocument('Fixture');
+
+    assert.equal(getState().dirty, false);
+});
+
+test('moving a shape away and back across two separate calls leaves the document clean', function () {
+    setDocument(fixtureDocumentWithShape());
+
+    updateShapeRect('page-1', 'shape-1', { x: 50, y: 50, width: 20, height: 20 });
+    assert.equal(getState().dirty, true);
+
+    updateShapeRect('page-1', 'shape-1', { x: 10, y: 10, width: 20, height: 20 });
+
+    assert.equal(getState().dirty, false);
+});
+
+test('markClean rebaselines dirty tracking to the current document', function () {
+    setDocument(fixtureDocument(['page-1']));
+    renamePage('page-1', 'Renamed');
+
+    markClean();
+    assert.equal(getState().dirty, false);
+
+    renamePage('page-1', 'page-1');
+
+    assert.equal(getState().dirty, true);
 });

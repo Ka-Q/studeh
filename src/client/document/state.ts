@@ -9,6 +9,7 @@ export interface AppState {
     selectedShapeId: string | null;
     dirty: boolean;
     mode: Mode;
+    revealedShapeIds: ReadonlySet<string>;
 }
 
 type Listener = (state: AppState) => void;
@@ -18,10 +19,12 @@ const state: AppState = {
     activePageId: null,
     selectedShapeId: null,
     dirty: false,
-    mode: 'edit'
+    mode: 'edit',
+    revealedShapeIds: new Set()
 };
 
 const listeners = new Set<Listener>();
+let lastSavedDocument: DocumentManifest | null = null;
 
 export function getState(): AppState {
     return state;
@@ -33,15 +36,18 @@ export function subscribe(listener: Listener): void {
 
 export function setDocument(document: DocumentManifest | null): void {
     replaceDocument(document);
+    lastSavedDocument = state.document;
     state.activePageId = document?.pages[0]?.id ?? null;
     state.selectedShapeId = null;
     state.dirty = false;
     state.mode = 'edit';
+    state.revealedShapeIds = new Set();
     syncUrlWithDocument(document);
     notify();
 }
 
 export function markClean(): void {
+    lastSavedDocument = state.document;
     state.dirty = false;
     notify();
 }
@@ -74,7 +80,7 @@ export function addPage(name: string): Page | null {
     };
     replaceDocument({ ...state.document, pages: [...state.document.pages, page] });
     state.activePageId = page.id;
-    markDirty();
+    notify();
     return page;
 }
 
@@ -84,7 +90,7 @@ export function renamePage(pageId: string, name: string): void {
     })) {
         return;
     }
-    markDirty();
+    notify();
 }
 
 export function deletePage(pageId: string): void {
@@ -100,7 +106,7 @@ export function deletePage(pageId: string): void {
         state.activePageId = pickActivePageIdAfterDeletion(pages, new Set([pageId]), pageId, remaining);
     }
     state.selectedShapeId = null;
-    markDirty();
+    notify();
 }
 
 export function movePage(pageId: string, direction: -1 | 1): void {
@@ -118,7 +124,7 @@ export function movePage(pageId: string, direction: -1 | 1): void {
     const reordered = [...pages];
     [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
     replaceDocument({ ...state.document, pages: reordered });
-    markDirty();
+    notify();
 }
 
 export function deletePages(pageIds: string[]): void {
@@ -135,7 +141,7 @@ export function deletePages(pageIds: string[]): void {
         state.activePageId = pickActivePageIdAfterDeletion(pages, idsToDelete, state.activePageId, remaining);
     }
     state.selectedShapeId = null;
-    markDirty();
+    notify();
 }
 
 export function setPageImage(pageId: string, image: PageImage): void {
@@ -144,7 +150,7 @@ export function setPageImage(pageId: string, image: PageImage): void {
     })) {
         return;
     }
-    markDirty();
+    notify();
 }
 
 export function addShape(pageId: string, rect: Rect): void {
@@ -163,49 +169,55 @@ export function addShape(pageId: string, rect: Rect): void {
         return;
     }
     state.selectedShapeId = shape.id;
-    markDirty();
+    notify();
 }
 
 export function updateShapeRect(pageId: string, shapeId: string, rect: Rect): void {
-    const updated = updatePageShapes(pageId, function applyRect(shapes) {
+    if (!updatePageShapes(pageId, function applyRect(shapes) {
         return shapes.map(function updateShapeIfTarget(shape) {
             return shape.id === shapeId ? { ...shape, ...rect } : shape;
         });
-    });
-    if (!updated) {
+    })) {
         return;
     }
-    markDirty();
+    notify();
 }
 
 export function setMode(mode: Mode): void {
     state.mode = mode;
     state.selectedShapeId = null;
+    if (mode === 'study') {
+        state.revealedShapeIds = new Set();
+    }
     notify();
 }
 
-export function toggleShapeVisibility(pageId: string, shapeId: string): void {
-    const updated = updatePageShapes(pageId, function toggleShapeIfTarget(shapes) {
-        return shapes.map(function toggle(shape) {
-            return shape.id === shapeId ? { ...shape, visible: !shape.visible } : shape;
-        });
-    });
-    if (!updated) {
-        return;
+export function toggleShapeVisibility(shapeId: string): void {
+    const next = new Set(state.revealedShapeIds);
+    if (next.has(shapeId)) {
+        next.delete(shapeId);
+    } else {
+        next.add(shapeId);
     }
-    markDirty();
+    state.revealedShapeIds = next;
+    notify();
 }
 
 export function setPageShapesVisibility(pageId: string, visible: boolean): void {
-    const updated = updatePageShapes(pageId, function setAllVisibility(shapes) {
-        return shapes.map(function setShapeVisibility(shape) {
-            return { ...shape, visible };
-        });
-    });
-    if (!updated) {
+    const page = findPage(pageId);
+    if (!page) {
         return;
     }
-    markDirty();
+    const next = new Set(state.revealedShapeIds);
+    for (const shape of page.shapes) {
+        if (visible) {
+            next.add(shape.id);
+        } else {
+            next.delete(shape.id);
+        }
+    }
+    state.revealedShapeIds = next;
+    notify();
 }
 
 export function selectShape(shapeId: string | null): void {
@@ -227,7 +239,7 @@ export function deleteSelectedShape(): void {
         return;
     }
     state.selectedShapeId = null;
-    markDirty();
+    notify();
 }
 
 export function renameDocument(name: string): void {
@@ -235,7 +247,7 @@ export function renameDocument(name: string): void {
         return;
     }
     replaceDocument({ ...state.document, name });
-    markDirty();
+    notify();
 }
 
 export function documentUrlPath(document: DocumentManifest | null): string {
@@ -297,6 +309,7 @@ function generateId(prefix: string): string {
 
 function replaceDocument(document: DocumentManifest | null): void {
     state.document = document && deepFreezeDocument(document);
+    state.dirty = !deepEqual(state.document, lastSavedDocument);
 }
 
 function deepFreezeDocument(document: DocumentManifest): DocumentManifest {
@@ -311,9 +324,25 @@ function deepFreezeDocument(document: DocumentManifest): DocumentManifest {
     return Object.freeze(document);
 }
 
-function markDirty(): void {
-    state.dirty = true;
-    notify();
+function deepEqual(a: unknown, b: unknown): boolean {
+    if (a === b) {
+        return true;
+    }
+    if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) {
+        return false;
+    }
+    if (Array.isArray(a) || Array.isArray(b)) {
+        return Array.isArray(a) && Array.isArray(b) && a.length === b.length &&
+            a.every(function matchesAtIndex(value, index) {
+                return deepEqual(value, b[index]);
+            });
+    }
+    const aRecord = a as Record<string, unknown>;
+    const bRecord = b as Record<string, unknown>;
+    const aKeys = Object.keys(aRecord);
+    return aKeys.length === Object.keys(bRecord).length && aKeys.every(function matchesKey(key) {
+        return deepEqual(aRecord[key], bRecord[key]);
+    });
 }
 
 function notify(): void {

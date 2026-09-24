@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { addPage, assignActivePageImage, createDocument, dragOnCanvas, fetchManifest, imageOnScreenRect, saveDocument, uniqueName } from './helpers';
+import { addPage, assignActivePageImage, createDocument, dragOnCanvas, imageOnScreenRect, isShapeRevealed, uniqueName } from './helpers';
 
 test('Ctrl+Up/Down reorders the active page; plain arrows only navigate', async ({ page }) => {
     await page.goto('/');
@@ -101,11 +101,12 @@ test('sidebar/toolbar shortcuts do not fire in fullscreen; canvas-scoped shortcu
 
 test(',/. trigger Reveal all/Hide all regardless of Shift state, and only in study mode', async ({ page }) => {
     await page.goto('/');
-    const docId = await createDocument(page, uniqueName('Reveal Hide Doc'));
+    await createDocument(page, uniqueName('Reveal Hide Doc'));
     await addPage(page);
     await assignActivePageImage(page);
     const imageRect = await imageOnScreenRect(page);
     await dragOnCanvas(page, { x: imageRect.left + 20, y: imageRect.top + 20 }, { x: imageRect.left + 70, y: imageRect.top + 60 });
+    const shapeCenter = { x: imageRect.left + 45, y: imageRect.top + 40 };
 
     async function dispatchKey(key: string, shiftKey: boolean): Promise<void> {
         await page.evaluate(function dispatch(options) {
@@ -113,25 +114,20 @@ test(',/. trigger Reveal all/Hide all regardless of Shift state, and only in stu
         }, { key, shiftKey });
     }
 
-    // Blocked outside study mode: the freshly-drawn shape stays at its default (hidden) state.
+    // Blocked outside study mode: dispatched while still in edit mode, where reveal
+    // state isn't even rendered — checked below, right after entering study mode.
     await dispatchKey(',', false);
-    await saveDocument(page);
-    let manifest = await fetchManifest(page, docId);
-    expect(manifest.pages[0].shapes[0].visible).toBe(false);
 
     await page.locator('.canvas-mode-toggle').click();
+    expect(await isShapeRevealed(page, shapeCenter)).toBe(false);
 
     // Comma reveals, whether or not Shift happens to be held for it on this layout.
     await dispatchKey(',', true);
-    await saveDocument(page);
-    manifest = await fetchManifest(page, docId);
-    expect(manifest.pages[0].shapes[0].visible).toBe(true);
+    expect(await isShapeRevealed(page, shapeCenter)).toBe(true);
 
     // Period hides, likewise regardless of Shift state.
     await dispatchKey('.', false);
-    await saveDocument(page);
-    manifest = await fetchManifest(page, docId);
-    expect(manifest.pages[0].shapes[0].visible).toBe(false);
+    expect(await isShapeRevealed(page, shapeCenter)).toBe(false);
 });
 
 test('"=" triggers Fit to view regardless of which physical key or Shift state produces it', async ({ page }) => {
@@ -215,7 +211,7 @@ test('a symbol shortcut still fires when the layout requires AltGr to produce it
 
 test('Tab cycles shape focus in fullscreen study mode; Enter toggles the focused shape, Shift+Tab cycles backward', async ({ page }) => {
     await page.goto('/');
-    const docId = await createDocument(page, uniqueName('Focus Cycle Doc'));
+    await createDocument(page, uniqueName('Focus Cycle Doc'));
     await addPage(page);
     await assignActivePageImage(page);
     const imageRect = await imageOnScreenRect(page);
@@ -235,15 +231,16 @@ test('Tab cycles shape focus in fullscreen study mode; Enter toggles the focused
     await page.keyboard.press('Enter');
 
     await page.locator('.fullscreen-close').click();
-    await saveDocument(page);
-    const manifest = await fetchManifest(page, docId);
-    const visibilities = (manifest.pages[0].shapes as unknown as { visible: boolean }[]).map(function v(s) { return s.visible; });
-    expect(visibilities).toEqual([false, true]);
+    await page.locator('.fullscreen-close').waitFor({ state: 'hidden' });
+    const shapeOneCenter = { x: imageRect.left + 40, y: imageRect.top + 35 };
+    const shapeTwoCenter = { x: imageRect.left + 40, y: imageRect.top + 135 };
+    expect(await isShapeRevealed(page, shapeOneCenter)).toBe(false);
+    expect(await isShapeRevealed(page, shapeTwoCenter)).toBe(true);
 });
 
 test('navigating to an imageless page in fullscreen leaves no stale shape-focus shortcut behind', async ({ page }) => {
     await page.goto('/');
-    const docId = await createDocument(page, uniqueName('Stale Focus Doc'));
+    await createDocument(page, uniqueName('Stale Focus Doc'));
     await addPage(page);
     await assignActivePageImage(page);
     const imageRect = await imageOnScreenRect(page);
@@ -260,9 +257,10 @@ test('navigating to an imageless page in fullscreen leaves no stale shape-focus 
     await page.keyboard.press('Enter');
 
     await page.locator('.fullscreen-close').click();
-    await saveDocument(page);
-    const manifest = await fetchManifest(page, docId);
-    expect(manifest.pages[0].shapes[0].visible).toBe(false);
+    await page.locator('.fullscreen-close').waitFor({ state: 'hidden' });
+    await page.locator('.page-item').first().locator('.page-thumb').click();
+    const shapeCenter = { x: imageRect.left + 40, y: imageRect.top + 35 };
+    expect(await isShapeRevealed(page, shapeCenter)).toBe(false);
 });
 
 test('plain arrow-key page navigation still works in fullscreen', async ({ page }) => {

@@ -70,6 +70,26 @@ test('dragging a selected shape by its body moves it without changing its size',
     expect(shapes[0].y).toBeCloseTo(65, 0);
 });
 
+test('clicking a shape without moving it does not mark the document dirty', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('No-Op Click Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+    const imageRect = await imageOnScreenRect(page);
+
+    await dragOnCanvas(page, { x: imageRect.left + 40, y: imageRect.top + 30 }, { x: imageRect.left + 120, y: imageRect.top + 100 });
+    await saveDocument(page);
+
+    await page.mouse.click(imageRect.left + 80, imageRect.top + 65);
+
+    // Neither plain textContent (stale once hidden — updateSaveStatus(false) only
+    // removes the 'visible' class, it doesn't clear old text) nor '#save-status.visible'
+    // alone (shared with the transient "Saved" confirmation from the save above) is
+    // the right check — assert the element is never simultaneously visible and showing
+    // the dirty message.
+    await expect(page.locator('#save-status.visible', { hasText: 'Unsaved changes' })).toHaveCount(0);
+});
+
 test('resizing a selected shape from each of its 8 handles updates the corresponding edges', async ({ page }) => {
     await page.goto('/');
     const docId = await createDocument(page, uniqueName('Resize Handles Doc'));
