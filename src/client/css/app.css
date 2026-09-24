@@ -865,6 +865,20 @@ dialog::backdrop {
     height: 48px;
 }
 
+.canvas-no-pages-message {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-xl);
+}
+
+.canvas-no-pages-message .icon {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+}
+
 .canvas-mount canvas {
     display: block;
     width: 100%;

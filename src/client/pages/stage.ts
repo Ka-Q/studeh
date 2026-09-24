@@ -160,7 +160,7 @@ function render(): void {
 
     const page = getActivePage();
     if (!page) {
-        showMessage('This document has no pages yet. Add one from the sidebar.');
+        renderNoPagesState();
         return;
     }
 
@@ -168,14 +168,11 @@ function render(): void {
     renderCanvas(doc.id, page);
 }
 
-function showMessage(message: string): void {
+function renderNoPagesState(): void {
     controlsEl.innerHTML = '';
-    const text = document.createElement('span');
-    text.className = 'stage-page-title';
-    text.textContent = message;
-    controlsEl.append(text);
     unmountCanvas();
     canvasBody.textContent = '';
+    canvasBody.append(buildNoPagesPrompt());
 }
 
 function renderNoDocumentState(): void {
@@ -281,6 +278,17 @@ function buildAssignImagePrompt(documentId: string, pageId: string): HTMLElement
     const container = document.createElement('div');
     container.className = 'canvas-empty-state-container';
     container.append(assignButton, hint, input);
+    return container;
+}
+
+function buildNoPagesPrompt(): HTMLElement {
+    const message = document.createElement('span');
+    message.className = 'canvas-no-pages-message';
+    message.append(iconSpan('icon-chevron-left'), document.createTextNode('You can add a page from the sidebar'));
+
+    const container = document.createElement('div');
+    container.className = 'canvas-empty-state-container';
+    container.append(message);
     return container;
 }
 
