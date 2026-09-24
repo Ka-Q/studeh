@@ -3,6 +3,7 @@ import { getState, setActivePage, subscribe } from '../document/state';
 import { iconSpan, initScrollFade } from '../dom';
 import { selectAdjacentPage } from '../keyboardNav';
 import { renderThumbnail } from '../pages/sidebar';
+import { shortcutHint } from '../shortcuts';
 
 export interface PageNavigatorHandle {
     setFullscreen(isFullscreen: boolean): void;
@@ -27,14 +28,14 @@ export function initPageNavigator(container: HTMLElement): PageNavigatorHandle {
     const prevButton = document.createElement('button');
     prevButton.type = 'button';
     prevButton.className = 'icon-button page-navigator-step';
-    prevButton.title = 'Previous page';
+    prevButton.title = `Previous page (${shortcutHint('selectPreviousPage')})`;
     prevButton.setAttribute('aria-label', 'Previous page');
     prevButton.append(iconSpan('icon-chevron-right page-navigator-icon-prev'));
 
     const nextButton = document.createElement('button');
     nextButton.type = 'button';
     nextButton.className = 'icon-button page-navigator-step';
-    nextButton.title = 'Next page';
+    nextButton.title = `Next page (${shortcutHint('selectNextPage')})`;
     nextButton.setAttribute('aria-label', 'Next page');
     nextButton.append(iconSpan('icon-chevron-right page-navigator-icon-next'));
 

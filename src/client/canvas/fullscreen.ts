@@ -1,4 +1,5 @@
 import { iconSpan } from '../dom';
+import { shortcutHint } from '../shortcuts';
 
 export interface FullscreenControl {
     destroy(): void;
@@ -10,7 +11,7 @@ export function initFullscreenControl(
 ): FullscreenControl {
     const closeButton = document.createElement('button');
     closeButton.className = 'icon-button fullscreen-close';
-    closeButton.title = 'Exit fullscreen';
+    closeButton.title = `Exit fullscreen (${shortcutHint('toggleFullscreen')})`;
     closeButton.setAttribute('aria-label', 'Exit fullscreen');
     closeButton.hidden = true;
 
