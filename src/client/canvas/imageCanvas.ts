@@ -410,7 +410,7 @@ export function mountImageCanvas(
         }
         if (mode === 'study') {
             const hitShape = topmostShapeAt(canvasToImage(viewport, canvasPoint), shapes);
-            canvas.style.cursor = hitShape ? 'pointer' : 'grab';
+            canvas.style.cursor = hitShape ? 'pointer' : 'default';
             return;
         }
 
