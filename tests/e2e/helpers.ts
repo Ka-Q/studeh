@@ -48,7 +48,14 @@ export interface ScreenRect {
 }
 
 export async function resetZoomTo100(page: Page): Promise<void> {
-    await getCanvas(page).click();
+    // A trial click waits for the canvas to be stable and ready to receive
+    // events without any pointer side effects -- a real click here would
+    // toggle shape visibility in study mode. Blur any focused input too,
+    // since the resetZoom shortcut is blocked while one holds focus.
+    await getCanvas(page).click({ trial: true });
+    await page.evaluate(function blurActiveElement() {
+        (document.activeElement as HTMLElement | null)?.blur();
+    });
     await page.keyboard.press('0');
 }
 
