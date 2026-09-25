@@ -4,6 +4,7 @@ import { initBrowseDialog } from './document/browseDialog';
 import { getState, setDocument } from './document/state';
 import { initNavigationGuard } from './document/navigation';
 import { initConfirmDialog } from './dialogs/confirmDialog';
+import { initHelpDialog } from './dialogs/helpDialog';
 import { initNewDocumentDialog } from './dialogs/newDocumentDialog';
 import { initNoticeDialog } from './dialogs/noticeDialog';
 import { initPageSidebar } from './pages/sidebar';
@@ -20,6 +21,7 @@ function main(): void {
     initNoticeDialog();
     initConfirmDialog();
     initNewDocumentDialog();
+    initHelpDialog();
     initBrowseDialog();
     initToolbar();
     initPageSidebar();
