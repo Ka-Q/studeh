@@ -40,6 +40,9 @@
             </button>
         </div>
         <div class="flex-row toolbar-end">
+            <button id="btn-help" class="icon-button" title="Help" aria-label="Help">
+                <span class="icon icon-help" aria-hidden="true"></span>
+            </button>
             <button id="btn-theme-toggle" class="icon-button" title="Toggle theme" aria-label="Toggle theme">
                 <span id="theme-icon" class="icon" aria-hidden="true"></span>
             </button>
@@ -137,6 +140,41 @@
                 </button>
             </div>
         </form>
+    </dialog>
+    <dialog id="help-dialog">
+        <div id="help-dialog-header">
+            <h2>Help</h2>
+            <button id="btn-close-help-dialog" class="icon-button" title="Close" aria-label="Close">
+                <span class="icon icon-close" aria-hidden="true"></span>
+            </button>
+        </div>
+        <div id="help-dialog-body" class="scroll-fade-wrapper">
+            <div id="help-dialog-content">
+                <section class="help-section">
+                    <p>
+                        Studeh is a local study app for learning by obstructing and
+                        revealing parts of images with independently controllable
+                        occlusion shapes.
+                    </p>
+                </section>
+                <section class="help-section">
+                    <h3>Supported image formats</h3>
+                    <p>PNG, JPEG, WEBP, GIF</p>
+                </section>
+                <section class="help-section">
+                    <h3>Drag &amp; drop and paste</h3>
+                    <p>
+                        Both the sidebar and the canvas accept image files via
+                        drag-and-drop, and pasting an image from the clipboard.
+                    </p>
+                </section>
+                <section class="help-section">
+                    <h3>Keyboard shortcuts</h3>
+                    <div id="help-shortcut-groups"></div>
+                </section>
+            </div>
+            <div id="help-dialog-fade" class="scroll-fade" aria-hidden="true"></div>
+        </div>
     </dialog>
     <script type="module" src="./app.ts"></script>
 </body>

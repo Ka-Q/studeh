@@ -231,6 +231,11 @@ button:hover:not(:disabled) {
     mask-image: url('/icons/fit.svg');
 }
 
+.icon-help {
+    -webkit-mask-image: url('/icons/help.svg');
+    mask-image: url('/icons/help.svg');
+}
+
 .icon-button {
     padding: var(--space-1);
 }
@@ -330,6 +335,102 @@ dialog::backdrop {
     justify-content: flex-end;
     gap: var(--space-2);
     margin-top: var(--space-4);
+}
+
+#help-dialog {
+    width: 720px;
+    max-width: calc(100vw - var(--space-6) * 2);
+    height: calc(100vh - var(--space-6) * 2);
+    max-height: calc(100vh - var(--space-6) * 2);
+    padding: 0;
+    overflow: hidden;
+}
+
+#help-dialog[open] {
+    display: flex;
+    flex-direction: column;
+}
+
+#help-dialog-header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+}
+
+#help-dialog-header h2 {
+    margin: 0;
+    font-size: var(--font-size-xl);
+}
+
+#help-dialog-body {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+#help-dialog-content {
+    height: 100%;
+    overflow-y: auto;
+    padding: var(--space-4);
+}
+
+.help-section {
+    margin-bottom: var(--space-5);
+}
+
+.help-section:last-child {
+    margin-bottom: 0;
+}
+
+.help-section h3 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--font-size-lg);
+}
+
+.help-section p {
+    margin: 0;
+    color: var(--color-text-muted);
+}
+
+.help-shortcut-group {
+    margin-bottom: var(--space-4);
+}
+
+.help-shortcut-group:last-child {
+    margin-bottom: 0;
+}
+
+.help-shortcut-group h4 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--font-size-md);
+    color: var(--color-text-muted);
+}
+
+.help-shortcut-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.help-shortcut-row:last-child {
+    border-bottom: none;
+}
+
+.help-shortcut-key {
+    flex: 0 0 auto;
+    font: inherit;
+    font-size: var(--font-size-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    padding: var(--space-1) var(--space-2);
+    white-space: nowrap;
 }
 
 .dialog-field-label {
