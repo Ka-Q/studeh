@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { addPage, assignActivePageImage, createDocument, dragOnCanvas, fetchManifest, imageOnScreenRect, isShapeRevealed, saveDocument, uniqueName } from './helpers';
+import { addPage, assignActivePageImage, createDocument, dragOnCanvas, fetchManifest, getCanvas, imageOnScreenRect, isShapeRevealed, saveDocument, uniqueName } from './helpers';
 
 async function toggleMode(page: import('@playwright/test').Page): Promise<void> {
     await page.locator('.canvas-mode-toggle').click();
@@ -95,4 +95,27 @@ test('revealed shapes are not persisted and reset to hidden each time Study Mode
     await toggleMode(page); // back to edit
     await toggleMode(page); // re-enter study
     expect(await isShapeRevealed(page, shapeCenter)).toBe(false);
+});
+
+test('in study mode the cursor is a pointer over a shape and default elsewhere, grab only while holding the pan modifier', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('Study Cursor Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+    const imageRect = await imageOnScreenRect(page);
+    const canvas = getCanvas(page);
+
+    await dragOnCanvas(page, { x: imageRect.left + 40, y: imageRect.top + 30 }, { x: imageRect.left + 120, y: imageRect.top + 100 });
+    await toggleMode(page);
+
+    await page.mouse.move(imageRect.left + 80, imageRect.top + 65);
+    await expect(canvas).toHaveCSS('cursor', 'pointer');
+
+    await page.mouse.move(imageRect.left + 200, imageRect.top + 200);
+    await expect(canvas).toHaveCSS('cursor', 'default');
+
+    await page.keyboard.down('Control');
+    await expect(canvas).toHaveCSS('cursor', 'grab');
+    await page.keyboard.up('Control');
+    await expect(canvas).toHaveCSS('cursor', 'default');
 });
