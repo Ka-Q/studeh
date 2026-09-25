@@ -89,9 +89,11 @@ export async function onSave(): Promise<void> {
         return;
     }
     try {
-        await saveDocument(doc);
-        markClean(doc);
-        showSavedStatus();
+        const saved = await saveDocument(doc);
+        if (getState().document?.id === doc.id) {
+            markClean(saved);
+            showSavedStatus();
+        }
     } catch (error) {
         reportError('save document', error);
     }
