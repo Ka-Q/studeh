@@ -178,6 +178,33 @@ test('+/-/0 keyboard shortcuts step, reset, and fit zoom, in both edit and study
     await expect(percent).toHaveText(String(Number(fitPercent) + 10));
 });
 
+test('resizes that land after a fullscreen toggle keep the view fitted until the user zooms', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('Zoom Fullscreen Resize Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+
+    await page.locator('.canvas-mode-toggle').click();
+    await page.locator('button:has-text("Fullscreen")').click();
+    await page.locator('.fullscreen-close').click();
+    await expect(page.locator('.fullscreen-close')).toBeHidden();
+    const percent = page.locator('.canvas-zoom-percent');
+    const toggleFitPercent = await percent.textContent();
+
+    // Stands in for a window manager that finishes resizing the window after fullscreenchange fired
+    // (a fullscreen window itself can't be resized from the test, so this exercises the exit toggle).
+    await page.setViewportSize({ width: 800, height: 500 });
+    await expect(percent).not.toHaveText(toggleFitPercent ?? '');
+    const resizedPercent = await percent.textContent();
+    await fitButton(page).click();
+    await expect(percent).toHaveText(resizedPercent ?? '');
+
+    await zoomInButton(page).click();
+    const zoomedPercent = await percent.textContent();
+    await page.setViewportSize({ width: 1000, height: 600 });
+    await expect(percent).toHaveText(zoomedPercent ?? '');
+});
+
 test('the zoom control stays visible and usable through a fullscreen transition', async ({ page }) => {
     await page.goto('/');
     await createDocument(page, uniqueName('Zoom Fullscreen Doc'));

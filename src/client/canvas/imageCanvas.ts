@@ -108,10 +108,17 @@ export function mountImageCanvas(
     let activeDrag: ActiveDrag | null = null;
     let isPanModifierPressed = false;
     let lastHoverPoint: Point | null = null;
+    // The fullscreenchange event can fire before the window has finished resizing, so the fit made on
+    // toggle keeps being redone on resize until the user zooms or pans (which replaces the viewport object).
+    let fullscreenToggleFit: Viewport | null = null;
     const viewportChangeListeners = new Set<() => void>();
 
     const resizeObserver = new ResizeObserver(function onResize() {
         resizeCanvasToContainer();
+        if (viewport === fullscreenToggleFit) {
+            refitViewport();
+            fullscreenToggleFit = viewport;
+        }
         draw();
     });
     resizeObserver.observe(container);
@@ -608,6 +615,7 @@ export function mountImageCanvas(
             isFullscreen = nextIsFullscreen;
             focusedShapeId = null;
             refitViewport();
+            fullscreenToggleFit = viewport;
             draw();
         },
         isReady(): boolean {
