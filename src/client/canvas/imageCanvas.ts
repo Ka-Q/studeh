@@ -57,6 +57,11 @@ const REVEALED_FILL_STYLE = 'rgba(242, 242, 242, 0.05)';
 const REVEALED_STROKE_STYLE = 'rgb(68, 202, 31)';
 const FOCUS_OUTLINE_STYLE = 'rgb(37, 99, 235)';
 const FOCUS_OUTLINE_PADDING_PX = 4;
+const SHAPE_NUMBER_FONT = 'bold 11px system-ui, sans-serif';
+const SHAPE_NUMBER_SIZE_PX = 16;
+const SHAPE_NUMBER_PADDING_PX = 4;
+const SHAPE_NUMBER_BACKGROUND_STYLE = 'rgba(17, 24, 39, 0.8)';
+const SHAPE_NUMBER_TEXT_STYLE = 'rgb(255, 255, 255)';
 const EDIT_MODE_HATCH_SPACING_PX = 256;
 const EDIT_MODE_HATCH_LINE_WIDTH_PX = 1;
 const EDIT_MODE_HATCH_LINE_COLOR = 'rgba(106, 106, 106, 0.2)';
@@ -207,6 +212,9 @@ export function mountImageCanvas(
                     drawFocusOutline(shape);
                 }
             }
+            for (const [index, shape] of shapesInReadingOrder(shapes).entries()) {
+                drawShapeNumber(shape, index + 1);
+            }
             return;
         }
         for (const shape of shapes) {
@@ -300,6 +308,21 @@ export function mountImageCanvas(
             width + FOCUS_OUTLINE_PADDING_PX * 2,
             height + FOCUS_OUTLINE_PADDING_PX * 2
         );
+        context.restore();
+    }
+
+    function drawShapeNumber(rect: Rect, shapeNumber: number): void {
+        const topLeft = imageToCanvas(viewport, { x: rect.x, y: rect.y });
+        const text = String(shapeNumber);
+        context.save();
+        context.font = SHAPE_NUMBER_FONT;
+        const width = Math.max(SHAPE_NUMBER_SIZE_PX, context.measureText(text).width + SHAPE_NUMBER_PADDING_PX * 2);
+        context.fillStyle = SHAPE_NUMBER_BACKGROUND_STYLE;
+        context.fillRect(topLeft.x, topLeft.y, width, SHAPE_NUMBER_SIZE_PX);
+        context.fillStyle = SHAPE_NUMBER_TEXT_STYLE;
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText(text, topLeft.x + width / 2, topLeft.y + SHAPE_NUMBER_SIZE_PX / 2);
         context.restore();
     }
 
