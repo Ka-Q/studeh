@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { addPage, assignActivePageImage, createDocument, dragOnCanvas, imageOnScreenRect, isShapeRevealed, resetZoomTo100, uniqueName } from './helpers';
+import { addPage, assignActivePageImage, createDocument, dragOnCanvas, getCanvas, imageOnScreenRect, isShapeRevealed, resetZoomTo100, uniqueName } from './helpers';
 
 test('Ctrl+Up/Down reorders the active page; plain arrows only navigate', async ({ page }) => {
     await page.goto('/');
@@ -242,6 +242,39 @@ test('Tab cycles shape focus in fullscreen study mode; Enter toggles the focused
     const shapeTwoCenter = { x: postFullscreenRect.left + 40, y: postFullscreenRect.top + 135 };
     expect(await isShapeRevealed(page, shapeOneCenter)).toBe(false);
     expect(await isShapeRevealed(page, shapeTwoCenter)).toBe(true);
+});
+
+test('in windowed study mode Tab cycles shape focus only while the canvas has focus, and leaves the canvas after the last shape', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('Windowed Focus Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+    const imageRect = await imageOnScreenRect(page);
+    const shapeOneCenter = { x: imageRect.left + 40, y: imageRect.top + 35 };
+    const shapeTwoCenter = { x: imageRect.left + 40, y: imageRect.top + 135 };
+
+    await dragOnCanvas(page, { x: imageRect.left + 20, y: imageRect.top + 20 }, { x: imageRect.left + 60, y: imageRect.top + 50 });
+    await dragOnCanvas(page, { x: imageRect.left + 20, y: imageRect.top + 120 }, { x: imageRect.left + 60, y: imageRect.top + 150 });
+    await page.locator('.canvas-mode-toggle').click();
+    await page.locator('.canvas-mode-toggle').blur();
+
+    await page.keyboard.press('Space');
+    expect(await isShapeRevealed(page, shapeOneCenter)).toBe(false);
+
+    await getCanvas(page).focus();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Space');
+    expect(await isShapeRevealed(page, shapeOneCenter)).toBe(false);
+    expect(await isShapeRevealed(page, shapeTwoCenter)).toBe(true);
+
+    await page.keyboard.press('Tab');
+    await expect(getCanvas(page)).not.toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(getCanvas(page)).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Enter');
+    expect(await isShapeRevealed(page, shapeTwoCenter)).toBe(false);
 });
 
 test('navigating to an imageless page in fullscreen leaves no stale shape-focus shortcut behind', async ({ page }) => {

@@ -169,12 +169,13 @@ export function mountImageCanvas(
     canvas.addEventListener('mousedown', onMouseDown);
     canvas.addEventListener('mousemove', onHoverMove);
     canvas.addEventListener('contextmenu', onContextMenu);
+    canvas.addEventListener('blur', onCanvasBlur);
     window.addEventListener('keydown', onPanModifierKeyDown);
     window.addEventListener('keyup', onPanModifierKeyUp);
     window.addEventListener('blur', onWindowBlur);
     registerShortcut('deleteSelectedShape', deleteSelectedShape, canDeleteSelectedShape);
-    registerShortcut('cycleFocusedShapeNext', () => cycleFocusedShape(1), canCycleFocusedShape);
-    registerShortcut('cycleFocusedShapePrev', () => cycleFocusedShape(-1), canCycleFocusedShape);
+    registerShortcut('cycleFocusedShapeNext', () => cycleFocusedShape(1), () => canCycleFocusedShape(1));
+    registerShortcut('cycleFocusedShapePrev', () => cycleFocusedShape(-1), () => canCycleFocusedShape(-1));
     registerShortcut('toggleFocusedShapeVisibility', toggleFocusedShapeVisibility, canToggleFocusedShapeVisibility);
 
     function resizeCanvasToContainer(): void {
@@ -202,7 +203,7 @@ export function mountImageCanvas(
         if (mode === 'study') {
             for (const shape of shapes) {
                 drawRect(shape, revealedShapeIds.has(shape.id) ? revealedStyle : occlusionStyle, false);
-                if (isFullscreen && shape.id === focusedShapeId) {
+                if (shape.id === focusedShapeId) {
                     drawFocusOutline(shape);
                 }
             }
@@ -573,22 +574,43 @@ export function mountImageCanvas(
         callbacks.onDeleteSelected();
     }
 
-    function canCycleFocusedShape(): boolean {
-        return mode === 'study' && isFullscreen && shapes.length > 0;
+    function hasShapeKeyboardFocus(): boolean {
+        return mode === 'study' && shapes.length > 0 && (isFullscreen || document.activeElement === canvas);
+    }
+
+    function focusedShapeIndex(ordered: RectangleShape[]): number {
+        return ordered.findIndex(function isFocused(shape) {
+            return shape.id === focusedShapeId;
+        });
+    }
+
+    function canCycleFocusedShape(direction: 1 | -1): boolean {
+        if (!hasShapeKeyboardFocus()) {
+            return false;
+        }
+        // Windowed, Tab past the last shape (or Shift+Tab before the first) falls through to the browser
+        // and leaves the canvas instead of wrapping, so the canvas never traps keyboard focus.
+        const edgeIndex = direction === 1 ? shapes.length - 1 : 0;
+        return isFullscreen || focusedShapeIndex(shapesInReadingOrder(shapes)) !== edgeIndex;
     }
 
     function cycleFocusedShape(direction: 1 | -1): void {
         const ordered = shapesInReadingOrder(shapes);
-        const currentIndex = ordered.findIndex(function isFocused(shape) {
-            return shape.id === focusedShapeId;
-        });
+        const currentIndex = focusedShapeIndex(ordered);
         const nextIndex = cycleFocusedShapeIndex(currentIndex === -1 ? null : currentIndex, direction, ordered.length);
         focusedShapeId = ordered[nextIndex].id;
         draw();
     }
 
     function canToggleFocusedShapeVisibility(): boolean {
-        return mode === 'study' && isFullscreen && shapes.length > 0 && focusedShapeId !== null;
+        return hasShapeKeyboardFocus() && focusedShapeId !== null;
+    }
+
+    function onCanvasBlur(): void {
+        if (!isFullscreen && focusedShapeId !== null) {
+            focusedShapeId = null;
+            draw();
+        }
     }
 
     function toggleFocusedShapeVisibility(): void {
@@ -606,6 +628,7 @@ export function mountImageCanvas(
             selectedShapeId = nextSelectedShapeId;
             if (mode !== nextMode) {
                 canvas.style.cursor = 'default';
+                focusedShapeId = null;
             }
             mode = nextMode;
             revealedShapeIds = nextRevealedShapeIds;
@@ -646,6 +669,7 @@ export function mountImageCanvas(
             canvas.removeEventListener('mousedown', onMouseDown);
             canvas.removeEventListener('mousemove', onHoverMove);
             canvas.removeEventListener('contextmenu', onContextMenu);
+            canvas.removeEventListener('blur', onCanvasBlur);
             window.removeEventListener('keydown', onPanModifierKeyDown);
             window.removeEventListener('keyup', onPanModifierKeyUp);
             window.removeEventListener('blur', onWindowBlur);
