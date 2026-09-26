@@ -7,7 +7,9 @@ import {
     moveRect,
     rectFromPoints,
     resizeRect,
-    topmostShapeAt
+    shapesInReadingOrder,
+    topmostShapeAt,
+    type Rect
 } from './rectangle';
 import type { RectangleShape } from '../../shared/types';
 
@@ -73,4 +75,32 @@ test('resizeRect normalizes negative dimensions when a handle is dragged past th
     assert.equal(resized.width > 0, true);
     assert.equal(resized.height > 0, true);
     assert.deepEqual(resized, { x: -20, y: -20, width: 40, height: 40 });
+});
+
+function rect(x: number, y: number, width: number, height: number): Rect {
+    return { x, y, width, height };
+}
+
+test('shapesInReadingOrder keeps a slightly higher shape to the right in the same row, after its left neighbour', function () {
+    const left = rect(20, 20, 70, 40);
+    const right = rect(120, 15, 80, 55);
+
+    assert.deepEqual(shapesInReadingOrder([right, left]), [left, right]);
+});
+
+test('shapesInReadingOrder reads a jittered grid row by row, left to right', function () {
+    const topLeft = rect(0, 4, 50, 40);
+    const topRight = rect(100, 0, 50, 40);
+    const bottomLeft = rect(0, 100, 50, 40);
+    const bottomRight = rect(100, 96, 50, 40);
+
+    assert.deepEqual(shapesInReadingOrder([bottomRight, topRight, bottomLeft, topLeft]), [topLeft, topRight, bottomLeft, bottomRight]);
+});
+
+test('shapesInReadingOrder splits shapes overlapping by less than half the shorter height into separate rows', function () {
+    const first = rect(100, 0, 50, 40);
+    const second = rect(50, 25, 50, 40);
+    const third = rect(0, 50, 50, 40);
+
+    assert.deepEqual(shapesInReadingOrder([third, second, first]), [first, second, third]);
 });

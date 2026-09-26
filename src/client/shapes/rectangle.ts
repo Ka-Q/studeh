@@ -1,6 +1,9 @@
 import type { Point, Size } from '../canvas/viewport';
 import type { RectangleShape } from '../../shared/types';
 
+// Two shapes read as one row when their vertical overlap covers at least this share of the shorter one's height.
+const SAME_ROW_MIN_OVERLAP_RATIO = 0.5;
+
 export interface Rect {
     x: number;
     y: number;
@@ -97,6 +100,36 @@ export function topmostShapeAt(point: Point, shapes: RectangleShape[]): Rectangl
         }
     }
     return null;
+}
+
+// Groups shapes into rows before ordering left to right, so a shape a few pixels higher than its
+// neighbour doesn't jump ahead of it. A row is anchored on its topmost shape to keep stepped layouts from chaining into one row.
+export function shapesInReadingOrder<T extends Rect>(shapes: T[]): T[] {
+    const rows: T[][] = [];
+    for (const shape of [...shapes].sort(byTopThenLeft)) {
+        const currentRow = rows[rows.length - 1];
+        if (currentRow && isSameRow(currentRow[0], shape)) {
+            currentRow.push(shape);
+        } else {
+            rows.push([shape]);
+        }
+    }
+    return rows.flatMap(function sortRowLeftToRight(row) {
+        return row.sort(byLeftThenTop);
+    });
+}
+
+function isSameRow(a: Rect, b: Rect): boolean {
+    const overlap = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+    return overlap >= Math.min(a.height, b.height) * SAME_ROW_MIN_OVERLAP_RATIO;
+}
+
+function byTopThenLeft(a: Rect, b: Rect): number {
+    return a.y - b.y || a.x - b.x;
+}
+
+function byLeftThenTop(a: Rect, b: Rect): number {
+    return a.x - b.x || a.y - b.y;
 }
 
 function clamp(value: number, min: number, max: number): number {

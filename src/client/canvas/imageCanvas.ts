@@ -8,6 +8,7 @@ import {
     rectFromPoints,
     rectsEqual,
     resizeRect,
+    shapesInReadingOrder,
     topmostShapeAt,
     type Rect,
     type ResizeHandle
@@ -710,12 +711,6 @@ function cycleFocusedShapeIndex(current: number | null, direction: 1 | -1, lengt
         return direction === 1 ? 0 : length - 1;
     }
     return (current + direction + length) % length;
-}
-
-function shapesInReadingOrder(shapes: RectangleShape[]): RectangleShape[] {
-    return [...shapes].sort(function byTopThenLeft(a, b) {
-        return a.y - b.y || a.x - b.x;
-    });
 }
 
 function getContext2d(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
