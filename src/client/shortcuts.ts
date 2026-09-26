@@ -109,10 +109,10 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutSpec> = {
         ],
         allowInFullscreen: false
     },
-    cycleFocusedShapeNext: { label: 'Cycle focused shape (fullscreen Study mode)', group: 'canvas', bindings: [{ key: 'Tab', modifier: Modifier.NONE, displayKey: 'Tab' }], allowInFullscreen: true },
-    cycleFocusedShapePrev: { label: 'Cycle focused shape backward (fullscreen Study mode)', group: 'canvas', bindings: [{ key: 'Tab', modifier: Modifier.SHIFT, displayKey: 'Tab' }], allowInFullscreen: true },
+    cycleFocusedShapeNext: { label: 'Cycle focused shape (Study mode)', group: 'canvas', bindings: [{ key: 'Tab', modifier: Modifier.NONE, displayKey: 'Tab' }], allowInFullscreen: true },
+    cycleFocusedShapePrev: { label: 'Cycle focused shape backward (Study mode)', group: 'canvas', bindings: [{ key: 'Tab', modifier: Modifier.SHIFT, displayKey: 'Tab' }], allowInFullscreen: true },
     toggleFocusedShapeVisibility: {
-        label: 'Toggle focused shape (fullscreen Study mode)',
+        label: 'Toggle focused shape (Study mode)',
         group: 'canvas',
         bindings: [
             { key: ' ', modifier: Modifier.NONE, displayKey: 'Space' },
