@@ -104,3 +104,21 @@ test('shapesInReadingOrder splits shapes overlapping by less than half the short
 
     assert.deepEqual(shapesInReadingOrder([third, second, first]), [first, second, third]);
 });
+
+test('shapesInReadingOrder keeps a gently slanted row together, left to right', function () {
+    const first = rect(5, 208, 150, 17);
+    const second = rect(165, 207, 150, 15);
+    const third = rect(326, 207, 150, 15);
+    const fourth = rect(499, 203, 150, 16);
+    const fifth = rect(675, 196, 150, 18);
+
+    assert.deepEqual(shapesInReadingOrder([fifth, fourth, third, second, first]), [first, second, third, fourth, fifth]);
+});
+
+test('shapesInReadingOrder reads shapes stacked beside a tall one top to bottom, even when the lower starts further left', function () {
+    const tall = rect(0, 0, 20, 100);
+    const upper = rect(32, 0, 20, 20);
+    const lower = rect(30, 30, 20, 20);
+
+    assert.deepEqual(shapesInReadingOrder([lower, upper, tall]), [tall, upper, lower]);
+});

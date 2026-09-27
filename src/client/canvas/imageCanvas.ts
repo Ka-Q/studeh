@@ -8,7 +8,6 @@ import {
     rectFromPoints,
     rectsEqual,
     resizeRect,
-    shapesInReadingOrder,
     topmostShapeAt,
     type Rect,
     type ResizeHandle
@@ -17,6 +16,7 @@ import type { RectangleShape } from '../../shared/types';
 import type { Mode } from '../document/state';
 import { isBlockedByInputOrDialog, isPrimaryModifierKey, isPrimaryModifierPressed, startDragSession } from '../dom';
 import { registerShortcut, unregisterShortcut } from '../shortcutDispatch';
+import { imagePanels, shapesInPanelOrder } from './subjectRegions';
 
 export interface ImageCanvasCallbacks {
     onCreateShape(rect: Rect): void;
@@ -110,6 +110,7 @@ export function mountImageCanvas(
     let isFullscreen = initialIsFullscreen;
     let revealedShapeIds = initialRevealedShapeIds;
     let focusedShapeId: string | null = null;
+    let tabOrderCache: { shapes: RectangleShape[]; ordered: RectangleShape[] } | null = null;
     let stopPanning: (() => void) | null = null;
     let creatingRect: { start: Point; current: Point } | null = null;
     let activeDrag: ActiveDrag | null = null;
@@ -133,6 +134,7 @@ export function mountImageCanvas(
     const loadedImage = new Image();
     function onImageLoad(): void {
         image = loadedImage;
+        tabOrderCache = null;
         refitViewport();
         draw();
     }
@@ -215,7 +217,7 @@ export function mountImageCanvas(
                 }
             }
             if (SHOW_SHAPE_NUMBERS) {
-                for (const [index, shape] of shapesInReadingOrder(shapes).entries()) {
+                for (const [index, shape] of shapesInTabOrder().entries()) {
                     drawShapeNumber(shape, index + 1);
                 }
             }
@@ -601,6 +603,14 @@ export function mountImageCanvas(
         callbacks.onDeleteSelected();
     }
 
+    // Recomputed only when the shapes change: the shape array is replaced on every edit, never mutated.
+    function shapesInTabOrder(): RectangleShape[] {
+        if (tabOrderCache?.shapes !== shapes) {
+            tabOrderCache = { shapes, ordered: shapesInPanelOrder(shapes, image ? imagePanels(image) : []) };
+        }
+        return tabOrderCache.ordered;
+    }
+
     function hasShapeKeyboardFocus(): boolean {
         return mode === 'study' && shapes.length > 0 && (isFullscreen || document.activeElement === canvas);
     }
@@ -618,11 +628,11 @@ export function mountImageCanvas(
         // Windowed, Tab past the last shape (or Shift+Tab before the first) falls through to the browser
         // and leaves the canvas instead of wrapping, so the canvas never traps keyboard focus.
         const edgeIndex = direction === 1 ? shapes.length - 1 : 0;
-        return isFullscreen || focusedShapeIndex(shapesInReadingOrder(shapes)) !== edgeIndex;
+        return isFullscreen || focusedShapeIndex(shapesInTabOrder()) !== edgeIndex;
     }
 
     function cycleFocusedShape(direction: 1 | -1): void {
-        const ordered = shapesInReadingOrder(shapes);
+        const ordered = shapesInTabOrder();
         const currentIndex = focusedShapeIndex(ordered);
         const nextIndex = cycleFocusedShapeIndex(currentIndex === -1 ? null : currentIndex, direction, ordered.length);
         focusedShapeId = ordered[nextIndex].id;

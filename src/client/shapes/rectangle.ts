@@ -2,7 +2,7 @@ import type { Point, Size } from '../canvas/viewport';
 import type { RectangleShape } from '../../shared/types';
 
 // Two shapes read as one row when their vertical overlap covers at least this share of the shorter one's height.
-const SAME_ROW_MIN_OVERLAP_RATIO = 0.5;
+const MIN_BAND_OVERLAP_RATIO = 0.5;
 
 export interface Rect {
     x: number;
@@ -103,25 +103,62 @@ export function topmostShapeAt(point: Point, shapes: RectangleShape[]): Rectangl
 }
 
 // Groups shapes into rows before ordering left to right, so a shape a few pixels higher than its
-// neighbour doesn't jump ahead of it. A row is anchored on its topmost shape to keep stepped layouts from chaining into one row.
+// neighbour doesn't jump ahead of it. Each shape is compared against the row's average vertical band, which
+// follows a gently slanted row but not a staircase whose steps exceed half a shape's height.
 export function shapesInReadingOrder<T extends Rect>(shapes: T[]): T[] {
-    const rows: T[][] = [];
-    for (const shape of [...shapes].sort(byTopThenLeft)) {
-        const currentRow = rows[rows.length - 1];
-        if (currentRow && isSameRow(currentRow[0], shape)) {
-            currentRow.push(shape);
-        } else {
-            rows.push([shape]);
-        }
-    }
-    return rows.flatMap(function sortRowLeftToRight(row) {
-        return row.sort(byLeftThenTop);
+    return groupAlong('y', [...shapes].sort(byTopThenLeft)).flatMap(function rowLeftToRight(row) {
+        return columnsTopToBottom(row);
     });
 }
 
-function isSameRow(a: Rect, b: Rect): boolean {
-    const overlap = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
-    return overlap >= Math.min(a.height, b.height) * SAME_ROW_MIN_OVERLAP_RATIO;
+// A tall shape draws the shapes stacked beside it into its row. Stacked shapes read top to bottom, as a column,
+// rather than by whichever happens to start a little further left.
+function columnsTopToBottom<T extends Rect>(row: T[]): T[] {
+    return groupAlong('x', [...row].sort(byLeftThenTop)).flatMap(function columnTopToBottom(column) {
+        return column.sort(byTopThenLeft);
+    });
+}
+
+// Splits shapes, sorted along the axis, into groups whose extents on that axis overlap the group's average band
+// by at least half the shorter extent: rows for 'y', columns for 'x'.
+function groupAlong<T extends Rect>(axis: 'x' | 'y', sortedShapes: T[]): T[][] {
+    const groups: { shapes: T[]; band: Band }[] = [];
+    for (const shape of sortedShapes) {
+        const currentGroup = groups[groups.length - 1];
+        const extent = bandOf(shape, axis);
+        if (currentGroup && overlapsHalf(currentGroup.band, extent)) {
+            currentGroup.shapes.push(shape);
+            currentGroup.band = averageBand(currentGroup.shapes, axis);
+        } else {
+            groups.push({ shapes: [shape], band: extent });
+        }
+    }
+    return groups.map((group) => group.shapes);
+}
+
+interface Band {
+    start: number;
+    end: number;
+}
+
+function bandOf(shape: Rect, axis: 'x' | 'y'): Band {
+    return axis === 'y' ? { start: shape.y, end: shape.y + shape.height } : { start: shape.x, end: shape.x + shape.width };
+}
+
+function averageBand(shapes: Rect[], axis: 'x' | 'y'): Band {
+    let start = 0;
+    let end = 0;
+    for (const shape of shapes) {
+        const band = bandOf(shape, axis);
+        start += band.start;
+        end += band.end;
+    }
+    return { start: start / shapes.length, end: end / shapes.length };
+}
+
+function overlapsHalf(a: Band, b: Band): boolean {
+    const overlap = Math.min(a.end, b.end) - Math.max(a.start, b.start);
+    return overlap >= Math.min(a.end - a.start, b.end - b.start) * MIN_BAND_OVERLAP_RATIO;
 }
 
 function byTopThenLeft(a: Rect, b: Rect): number {
