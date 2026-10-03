@@ -16,7 +16,7 @@ import type { RectangleShape } from '../../shared/types';
 import type { Mode } from '../document/state';
 import { isBlockedByInputOrDialog, isPrimaryModifierKey, isPrimaryModifierPressed, startDragSession } from '../dom';
 import { registerShortcut, unregisterShortcut } from '../shortcutDispatch';
-import { imagePanels, shapesInPanelOrder } from './subjectRegions';
+import { imagePanels, shapesInPanelOrder } from '../imageAnalysis/subjectRegions';
 
 export interface ImageCanvasCallbacks {
     onCreateShape(rect: Rect): void;
