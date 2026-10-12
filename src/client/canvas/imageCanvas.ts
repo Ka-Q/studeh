@@ -16,7 +16,8 @@ import type { RectangleShape } from '../../shared/types';
 import type { Mode } from '../document/state';
 import { isBlockedByInputOrDialog, isPrimaryModifierKey, isPrimaryModifierPressed, startDragSession } from '../dom';
 import { registerShortcut, unregisterShortcut } from '../shortcutDispatch';
-import { imagePanels, shapesInPanelOrder } from '../imageAnalysis/subjectRegions';
+import { imageAnalysis } from '../imageAnalysis/analysisClient';
+import { shapesInReadingOrder } from '../shapes/rectangle';
 
 export interface ImageCanvasCallbacks {
     onCreateShape(rect: Rect): void;
@@ -64,6 +65,8 @@ const SHAPE_NUMBER_SIZE_PX = 16;
 const SHAPE_NUMBER_PADDING_PX = 4;
 const SHAPE_NUMBER_BACKGROUND_STYLE = 'rgba(17, 24, 39, 0.8)';
 const SHAPE_NUMBER_TEXT_STYLE = 'rgb(255, 255, 255)';
+// Numbers given by the image analysis after the page is shown fade in over this long, rather than popping in.
+const SHAPE_NUMBER_FADE_MS = 250;
 const EDIT_MODE_HATCH_SPACING_PX = 256;
 const EDIT_MODE_HATCH_LINE_WIDTH_PX = 1;
 const EDIT_MODE_HATCH_LINE_COLOR = 'rgba(106, 106, 106, 0.2)';
@@ -110,7 +113,10 @@ export function mountImageCanvas(
     let isFullscreen = initialIsFullscreen;
     let revealedShapeIds = initialRevealedShapeIds;
     let focusedShapeId: string | null = null;
-    let tabOrderCache: { shapes: RectangleShape[]; ordered: RectangleShape[] } | null = null;
+    let tabOrderCache: { shapes: RectangleShape[]; ordered: RectangleShape[]; isFinal: boolean } | null = null;
+    // When the image analysis's order arrived while the page was shown, and the frame drawing its fade, if any.
+    let numbersArrivedAt: number | null = null;
+    let fadeFrame: number | null = null;
     let stopPanning: (() => void) | null = null;
     let creatingRect: { start: Point; current: Point } | null = null;
     let activeDrag: ActiveDrag | null = null;
@@ -135,6 +141,8 @@ export function mountImageCanvas(
     function onImageLoad(): void {
         image = loadedImage;
         tabOrderCache = null;
+        // Started in edit mode too, so the order is usually known by the time study mode shows it.
+        imageAnalysis.analyse(image);
         refitViewport();
         draw();
     }
@@ -216,9 +224,11 @@ export function mountImageCanvas(
                     drawFocusOutline(shape);
                 }
             }
-            if (SHOW_SHAPE_NUMBERS) {
-                for (const [index, shape] of shapesInTabOrder().entries()) {
-                    drawShapeNumber(shape, index + 1);
+            const ordered = shapesInTabOrder();
+            if (SHOW_SHAPE_NUMBERS && tabOrderCache!.isFinal) {
+                const opacity = shapeNumberOpacity();
+                for (const [index, shape] of ordered.entries()) {
+                    drawShapeNumber(shape, index + 1, opacity);
                 }
             }
             return;
@@ -317,10 +327,11 @@ export function mountImageCanvas(
         context.restore();
     }
 
-    function drawShapeNumber(rect: Rect, shapeNumber: number): void {
+    function drawShapeNumber(rect: Rect, shapeNumber: number, opacity: number): void {
         const topLeft = imageToCanvas(viewport, { x: rect.x, y: rect.y });
         const text = String(shapeNumber);
         context.save();
+        context.globalAlpha = opacity;
         context.font = SHAPE_NUMBER_FONT;
         const width = Math.max(SHAPE_NUMBER_SIZE_PX, context.measureText(text).width + SHAPE_NUMBER_PADDING_PX * 2);
         context.fillStyle = SHAPE_NUMBER_BACKGROUND_STYLE;
@@ -603,12 +614,38 @@ export function mountImageCanvas(
         callbacks.onDeleteSelected();
     }
 
-    // Recomputed only when the shapes change: the shape array is replaced on every edit, never mutated.
+    // Recomputed only when the shapes change: the shape array is replaced on every edit, never mutated. The image
+    // analysis runs in a worker: until it has given the order, no numbers are shown (numbers changing as the order
+    // arrives would flicker) and Tab follows plain reading order. The canvas's data-numbering says which ('pending'
+    // or 'final').
     function shapesInTabOrder(): RectangleShape[] {
         if (tabOrderCache?.shapes !== shapes) {
-            tabOrderCache = { shapes, ordered: shapesInPanelOrder(shapes, image ? imagePanels(image) : []) };
+            const order = image ? imageAnalysis.orderOf(image, shapes, () => {
+                numbersArrivedAt = performance.now();
+                tabOrderCache = null;
+                draw();
+            }) : null;
+            const byId = new Map(shapes.map((shape) => [shape.id, shape]));
+            const isFinal = order !== null || !image;
+            tabOrderCache = { shapes, ordered: order ? order.map((id) => byId.get(id)!) : shapesInReadingOrder(shapes), isFinal };
+            canvas.dataset.numbering = isFinal ? 'final' : 'pending';
         }
         return tabOrderCache.ordered;
+    }
+
+    // The numbers' opacity while they fade in after arriving (eased out), drawing the fade's next frame; 1 otherwise.
+    function shapeNumberOpacity(): number {
+        const elapsed = numbersArrivedAt === null ? Infinity : performance.now() - numbersArrivedAt;
+        if (elapsed >= SHAPE_NUMBER_FADE_MS || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            numbersArrivedAt = null;
+            return 1;
+        }
+        fadeFrame ??= requestAnimationFrame(() => {
+            fadeFrame = null;
+            draw();
+        });
+        const progress = elapsed / SHAPE_NUMBER_FADE_MS;
+        return 1 - (1 - progress) ** 2;
     }
 
     function hasShapeKeyboardFocus(): boolean {
@@ -698,6 +735,9 @@ export function mountImageCanvas(
             };
         },
         destroy(): void {
+            if (fadeFrame !== null) {
+                cancelAnimationFrame(fadeFrame);
+            }
             stopPanning?.();
             resizeObserver.disconnect();
             loadedImage.removeEventListener('load', onImageLoad);

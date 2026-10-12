@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { addPage, assignActivePageImage, createDocument, dragOnCanvas, getCanvas, imageOnScreenRect, isShapeRevealed, resetZoomTo100, uniqueName } from './helpers';
+import { addPage, assignActivePageImage, createDocument, dragOnCanvas, getCanvas, imageOnScreenRect, isShapeRevealed, resetZoomTo100, uniqueName, waitForNumbering } from './helpers';
 
 test('Ctrl+Up/Down reorders the active page; plain arrows only navigate', async ({ page }) => {
     await page.goto('/');
@@ -222,6 +222,7 @@ test('Tab cycles shape focus in fullscreen study mode; Enter toggles the focused
     await dragOnCanvas(page, { x: imageRect.left + 20, y: imageRect.top + 120 }, { x: imageRect.left + 60, y: imageRect.top + 150 });
 
     await page.locator('.canvas-mode-toggle').click();
+    await waitForNumbering(page);
     await page.getByRole('button', { name: 'Fullscreen' }).click();
     await page.locator('.fullscreen-close').waitFor({ state: 'visible' });
 
@@ -257,6 +258,7 @@ test('in windowed study mode Tab cycles shape focus only while the canvas has fo
     await dragOnCanvas(page, { x: imageRect.left + 20, y: imageRect.top + 120 }, { x: imageRect.left + 60, y: imageRect.top + 150 });
     await page.locator('.canvas-mode-toggle').click();
     await page.locator('.canvas-mode-toggle').blur();
+    await waitForNumbering(page);
 
     await page.keyboard.press('Space');
     expect(await isShapeRevealed(page, shapeOneCenter)).toBe(false);

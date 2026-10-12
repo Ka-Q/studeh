@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -29,6 +29,11 @@ export async function addPage(page: Page): Promise<void> {
 
 export function getCanvas(page: Page) {
     return page.locator('#canvas-area .canvas-body canvas');
+}
+
+// Study mode numbers the boxes in reading order until the image analysis, running in a worker, has given its order.
+export async function waitForNumbering(page: Page): Promise<void> {
+    await expect(getCanvas(page)).toHaveAttribute('data-numbering', 'final');
 }
 
 export async function assignActivePageImage(page: Page, filePath = SAMPLE_IMAGE_PATH): Promise<void> {
