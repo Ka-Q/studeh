@@ -58,6 +58,7 @@ const REVEALED_FILL_STYLE = 'rgba(242, 242, 242, 0.05)';
 const REVEALED_STROKE_STYLE = 'rgb(68, 202, 31)';
 const FOCUS_OUTLINE_STYLE = 'rgb(37, 99, 235)';
 const FOCUS_OUTLINE_PADDING_PX = 4;
+const SHOW_SHAPE_NUMBERS = false;
 const SHAPE_NUMBER_FONT = 'bold 11px system-ui, sans-serif';
 const SHAPE_NUMBER_SIZE_PX = 16;
 const SHAPE_NUMBER_PADDING_PX = 4;
@@ -213,8 +214,10 @@ export function mountImageCanvas(
                     drawFocusOutline(shape);
                 }
             }
-            for (const [index, shape] of shapesInReadingOrder(shapes).entries()) {
-                drawShapeNumber(shape, index + 1);
+            if (SHOW_SHAPE_NUMBERS) {
+                for (const [index, shape] of shapesInReadingOrder(shapes).entries()) {
+                    drawShapeNumber(shape, index + 1);
+                }
             }
             return;
         }
