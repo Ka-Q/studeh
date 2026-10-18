@@ -189,8 +189,9 @@ export function mountImageCanvas(
     function onImageLoad(): void {
         image = loadedImage;
         tabOrderCache = null;
-        // Started in edit mode too, so the order is usually known by the time study mode shows it.
-        imageAnalysis.analyse(image);
+        // Asked for in edit mode too, so the order is usually known by the time study mode shows it. A page whose order
+        // is already known isn't analysed again.
+        shapesInTabOrder();
         refitViewport();
         draw();
         canvas.dataset.image = 'loaded';
