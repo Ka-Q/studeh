@@ -1,5 +1,5 @@
 import type { DocumentManifest, Page, PageImage, RectangleShape } from '../../shared/types';
-import type { Rect } from '../shapes/rectangle';
+import type { Rect, RotatedRect } from '../shapes/rectangle';
 
 export type Mode = 'edit' | 'study';
 
@@ -186,15 +186,24 @@ function insertShape(pageId: string, shape: RectangleShape): void {
     notify();
 }
 
-export function updateShapeRect(pageId: string, shapeId: string, rect: Rect): void {
+export function updateShapeRect(pageId: string, shapeId: string, rect: RotatedRect): void {
     if (!updatePageShapes(pageId, function applyRect(shapes) {
         return shapes.map(function updateShapeIfTarget(shape) {
-            return shape.id === shapeId ? { ...shape, ...rect } : shape;
+            return shape.id === shapeId ? withRect(shape, rect) : shape;
         });
     })) {
         return;
     }
     notify();
+}
+
+// An unrotated shape keeps no rotation, as in documents made before shapes could rotate.
+function withRect(shape: RectangleShape, rect: RotatedRect): RectangleShape {
+    const next = { ...shape, ...rect };
+    if (!next.rotation) {
+        delete next.rotation;
+    }
+    return next;
 }
 
 export function setMode(mode: Mode): void {

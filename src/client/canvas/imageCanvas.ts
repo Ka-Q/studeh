@@ -1,24 +1,33 @@
 import { canvasToImage, fitViewport, imageToCanvas, panViewport, zoomAtCanvasPoint, zoomToLevelAtCanvasPoint, type Point, type Size, type Viewport } from './viewport';
 import {
+    boundingRect,
     clampMoveToBounds,
     clampRectToBounds,
+    handlePoint,
     handlePoints,
     isRectEmpty,
     moveRect,
     offsetCopyRect,
+    rectCenter,
+    rectCorners,
     rectFromPoints,
     rectsEqual,
     resizeRect,
+    rotatedHandleDirection,
+    rotationHandlePoint,
+    rotationOf,
+    rotationTowards,
     topmostShapeAt,
     type Rect,
-    type ResizeHandle
+    type ResizeHandle,
+    type RotatedRect
 } from '../shapes/rectangle';
 import type { RectangleShape } from '../../shared/types';
 import type { Mode } from '../document/state';
 import { iconSpan, isBlockedByInputOrDialog, isPrimaryModifierKey, isPrimaryModifierPressed, startDragSession } from '../dom';
 import { registerShortcut, unregisterShortcut } from '../shortcutDispatch';
 import { shortcutHint } from '../shortcuts';
-import { imageAnalysis } from '../imageAnalysis/analysisClient';
+import { imageAnalysis, type AnalysedShape } from '../imageAnalysis/analysisClient';
 import { shapesInReadingOrder } from '../shapes/rectangle';
 
 // The order shapes are numbered in: by the image analysis or in plain rows.
@@ -27,15 +36,15 @@ export type NumberingMode = 'smart' | 'rows';
 export interface ImageCanvasCallbacks {
     onCreateShape(rect: Rect): void;
     onSelectShape(shapeId: string | null): void;
-    onUpdateShapeRect(shapeId: string, rect: Rect): void;
+    onUpdateShapeRect(shapeId: string, rect: RotatedRect): void;
     onDeleteSelected(): void;
     onCloneSelected(rect: Rect): void;
     onToggleVisibility(shapeId: string): void;
 }
 
 type ActiveDrag =
-    | { kind: 'move'; shapeId: string; original: Rect; startCanvasPoint: Point; current: Rect }
-    | { kind: 'resize'; shapeId: string; handle: ResizeHandle; original: Rect; startCanvasPoint: Point; current: Rect };
+    | { kind: 'move' | 'rotate'; shapeId: string; original: RotatedRect; startCanvasPoint: Point; current: RotatedRect }
+    | { kind: 'resize'; shapeId: string; handle: ResizeHandle; original: RotatedRect; startCanvasPoint: Point; current: RotatedRect };
 
 export interface ImageCanvasHandle {
     update(shapes: RectangleShape[], selectedShapeId: string | null, mode: Mode, numbering: NumberingMode, showNumbers: boolean, revealedShapeIds: ReadonlySet<string>): void;
@@ -55,6 +64,11 @@ const CLICK_DRAG_THRESHOLD_PX = 3;
 const FIT_VIEW_HORIZONTAL_PADDING_PX = 64;
 const HANDLE_HIT_RADIUS_PX = 6;
 const HANDLE_SIZE_PX = 8;
+// From the shape's top edge to the rotation handle's centre.
+const ROTATION_HANDLE_OFFSET_PX = 24;
+// The radius the rotation handle's icon (mode-toggle at 22px) draws its arrows round.
+const ROTATION_HANDLE_ICON_RADIUS_PX = 8;
+const ROTATION_SNAP_DEGREES = 45;
 // In screen pixels, so a clone sits visibly apart from its original at any zoom.
 const CLONE_OFFSET_PX = 12;
 const SHAPE_ACTIONS_GAP_PX = 8;
@@ -63,6 +77,10 @@ const UNSELECTED_STROKE_STYLE = 'rgba(37, 99, 235, 0.9)';
 const UNSELECTED_FILL_STYLE = 'rgba(37, 99, 235, 0.15)';
 const SELECTED_STROKE_STYLE = 'rgba(220, 38, 38, 0.95)';
 const SELECTED_FILL_STYLE = 'rgba(220, 38, 38, 0.2)';
+// A dark edge round the selection's outline, handles and icons (the icons' is in the CSS), so they show on dark or busy
+// images too.
+const SELECTION_CASING_STYLE = 'rgba(0, 0, 0, 0.55)';
+const SELECTION_CASING_PX = 1;
 const OCCLUSION_FILL_STYLE = 'rgb(121, 122, 123)';
 const OCCLUSION_STROKE_STYLE = 'rgb(213, 35, 35)';
 const REVEALED_FILL_STYLE = 'rgba(242, 242, 242, 0.05)';
@@ -85,9 +103,10 @@ interface RectStyle {
     fill: string | null;
     stroke: string;
     lineWidth: number;
+    isCased?: boolean;
 }
 const unselectedStyle: RectStyle = { fill: UNSELECTED_FILL_STYLE, stroke: UNSELECTED_STROKE_STYLE, lineWidth: 2 };
-const selectedStyle: RectStyle = { fill: SELECTED_FILL_STYLE, stroke: SELECTED_STROKE_STYLE, lineWidth: 2 };
+const selectedStyle: RectStyle = { fill: SELECTED_FILL_STYLE, stroke: SELECTED_STROKE_STYLE, lineWidth: 2, isCased: true };
 const occlusionStyle: RectStyle = { fill: OCCLUSION_FILL_STYLE, stroke: OCCLUSION_STROKE_STYLE, lineWidth: 2 };
 const revealedStyle: RectStyle = { fill: REVEALED_FILL_STYLE, stroke: REVEALED_STROKE_STYLE, lineWidth: 3 };
 const handleCursors: Record<ResizeHandle, string> = {
@@ -118,7 +137,8 @@ export function mountImageCanvas(
     const context = getContext2d(canvas);
     container.appendChild(canvas);
     const shapeActions = buildShapeActions();
-    container.appendChild(shapeActions);
+    const rotationHandle = buildRotationHandle();
+    container.append(shapeActions, rotationHandle);
 
     let image: HTMLImageElement | null = null;
     let viewport: Viewport = { zoom: 1, panX: 0, panY: 0 };
@@ -223,6 +243,7 @@ export function mountImageCanvas(
     function draw(): void {
         context.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
         shapeActions.hidden = true;
+        rotationHandle.hidden = true;
         if (!image) {
             return;
         }
@@ -262,6 +283,7 @@ export function mountImageCanvas(
         }
         const selectedRect = selectedShapeRect();
         if (selectedRect) {
+            placeRotationHandle(selectedRect);
             drawHandles(selectedRect);
             placeShapeActions(selectedRect);
         }
@@ -270,6 +292,7 @@ export function mountImageCanvas(
     function buildShapeActions(): HTMLDivElement {
         const actions = document.createElement('div');
         actions.className = 'shape-actions';
+        actions.style.color = SELECTED_STROKE_STYLE;
         actions.hidden = true;
         actions.append(
             buildShapeActionButton('icon-clone', `Clone (${shortcutHint('cloneSelectedShape')})`, cloneSelectedShape),
@@ -291,21 +314,65 @@ export function mountImageCanvas(
         return button;
     }
 
-    // Centred under the shape, or above it when only above has room; they leave the view with the shape.
-    function placeShapeActions(rect: Rect): void {
-        shapeActions.hidden = false;
-        const topLeft = imageToCanvas(viewport, { x: rect.x, y: rect.y });
-        const bottomRight = imageToCanvas(viewport, { x: rect.x + rect.width, y: rect.y + rect.height });
-        const height = shapeActions.offsetHeight;
-        const below = bottomRight.y + SHAPE_ACTIONS_GAP_PX;
-        const above = topLeft.y - SHAPE_ACTIONS_GAP_PX - height;
-        const fitsBelow = below + height <= canvas.clientHeight - SHAPE_ACTIONS_EDGE_MARGIN_PX;
-        const fitsAbove = above >= SHAPE_ACTIONS_EDGE_MARGIN_PX;
-        shapeActions.style.left = `${(topLeft.x + bottomRight.x - shapeActions.offsetWidth) / 2}px`;
-        shapeActions.style.top = `${!fitsBelow && fitsAbove ? above : below}px`;
+    // Dragged to rotate the selected shape; it has no click or keyboard action, so it stays out of the tab order.
+    function buildRotationHandle(): HTMLButtonElement {
+        const hint = 'Rotate (hold Shift to snap to 45°)';
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'icon-button shape-rotation-handle';
+        // Drawn in the selected shape's border colour, as if part of its outline.
+        button.style.color = SELECTED_STROKE_STYLE;
+        button.hidden = true;
+        button.tabIndex = -1;
+        button.append(iconSpan('icon-mode-toggle'));
+        button.title = hint;
+        button.setAttribute('aria-label', hint);
+        button.addEventListener('mousedown', (event) => {
+            // Keeps keyboard focus on the canvas, so its shortcuts keep working after a rotation.
+            event.preventDefault();
+            const selectedShape = findShape(selectedShapeId);
+            if (event.button === LEFT_MOUSE_BUTTON && selectedShape) {
+                startRotating(selectedShape, toCanvasPoint(event));
+            }
+        });
+        return button;
     }
 
-    function selectedShapeRect(): Rect | null {
+    function placeRotationHandle(rect: RotatedRect): void {
+        rotationHandle.hidden = false;
+        const center = rotationHandleOnCanvas(rect);
+        rotationHandle.style.left = `${center.x - rotationHandle.offsetWidth / 2}px`;
+        rotationHandle.style.top = `${center.y - rotationHandle.offsetHeight / 2}px`;
+        rotationHandle.style.transform = `rotate(${rotationOf(rect)}deg)`;
+    }
+
+    // Upright, off the middle of the shape's own bottom side as the rotation handle is off its top side, so they turn
+    // round the shape with it; past the rotation handle when only there they fit in the canvas. They leave the view
+    // with the shape.
+    function placeShapeActions(rect: RotatedRect): void {
+        shapeActions.hidden = false;
+        const width = shapeActions.offsetWidth;
+        const height = shapeActions.offsetHeight;
+        const radians = rotationOf(rect) * Math.PI / 180;
+        const down = { x: -Math.sin(radians), y: Math.cos(radians) };
+        // From the buttons' centre to past their far side, along the shape's down direction.
+        const reach = Math.abs(down.x) * width / 2 + Math.abs(down.y) * height / 2 + SHAPE_ACTIONS_GAP_PX;
+        const bottomMiddle = imageToCanvas(viewport, handlePoint(rect, 's'));
+        const rotationHandleCenter = rotationHandleOnCanvas(rect);
+        const below = { x: bottomMiddle.x + down.x * reach, y: bottomMiddle.y + down.y * reach };
+        const aboveDistance = rotationHandle.offsetHeight / 2 + reach;
+        const above = { x: rotationHandleCenter.x - down.x * aboveDistance, y: rotationHandleCenter.y - down.y * aboveDistance };
+        const center = !fitsInCanvasHeight(below, height) && fitsInCanvasHeight(above, height) ? above : below;
+        shapeActions.style.left = `${center.x - width / 2}px`;
+        shapeActions.style.top = `${center.y - height / 2}px`;
+    }
+
+    function fitsInCanvasHeight(center: Point, height: number): boolean {
+        return center.y - height / 2 >= SHAPE_ACTIONS_EDGE_MARGIN_PX &&
+            center.y + height / 2 <= canvas.clientHeight - SHAPE_ACTIONS_EDGE_MARGIN_PX;
+    }
+
+    function selectedShapeRect(): RotatedRect | null {
         if (!selectedShapeId || creatingRect) {
             return null;
         }
@@ -338,56 +405,82 @@ export function mountImageCanvas(
         context.restore();
     }
 
-    function drawHandles(rect: Rect): void {
-        context.fillStyle = SELECTED_STROKE_STYLE;
-        for (const { point } of handlePoints(rect)) {
-            const screenPoint = imageToCanvas(viewport, point);
-            context.fillRect(
-                screenPoint.x - HANDLE_SIZE_PX / 2,
-                screenPoint.y - HANDLE_SIZE_PX / 2,
-                HANDLE_SIZE_PX,
-                HANDLE_SIZE_PX
-            );
+    function drawHandles(rect: RotatedRect): void {
+        const topMiddle = imageToCanvas(viewport, rotationHandlePoint(rect, 0));
+        // Ends at the icon's arrows: the handle has no background to hide the line under its icon.
+        const lineEnd = imageToCanvas(viewport, rotationHandlePoint(rect, (ROTATION_HANDLE_OFFSET_PX - ROTATION_HANDLE_ICON_RADIUS_PX) / viewport.zoom));
+        // The dark casing first, all of it, so it never crosses the red where the line meets a handle.
+        const passes: [string, number][] = [[SELECTION_CASING_STYLE, SELECTION_CASING_PX], [SELECTED_STROKE_STYLE, 0]];
+        for (const [color, casing] of passes) {
+            context.strokeStyle = color;
+            context.fillStyle = color;
+            context.lineWidth = 2 + casing * 2;
+            context.beginPath();
+            context.moveTo(topMiddle.x, topMiddle.y);
+            context.lineTo(lineEnd.x, lineEnd.y);
+            context.stroke();
+            const size = HANDLE_SIZE_PX + casing * 2;
+            for (const { point } of handlePoints(rect)) {
+                const screenPoint = imageToCanvas(viewport, point);
+                context.fillRect(screenPoint.x - size / 2, screenPoint.y - size / 2, size, size);
+            }
         }
     }
 
-    function drawRect(rect: Rect, style: RectStyle, isPreview: boolean): void {
-        const topLeft = isPreview ? rect : imageToCanvas(viewport, { x: rect.x, y: rect.y });
-        const width = isPreview ? rect.width : rect.width * viewport.zoom;
-        const height = isPreview ? rect.height : rect.height * viewport.zoom;
+    // A preview rect is in canvas coordinates; any other is in image coordinates.
+    function drawRect(rect: RotatedRect, style: RectStyle, isPreview: boolean): void {
         context.save();
-        if (isPreview) {
-            context.setLineDash([4, 4]);
-        }
         context.strokeStyle = style.stroke;
         context.lineWidth = style.lineWidth;
-        if (!isPreview && style.fill) {
-            context.fillStyle = style.fill;
-            context.fillRect(topLeft.x, topLeft.y, width, height);
+        if (isPreview) {
+            context.setLineDash([4, 4]);
+            context.strokeRect(rect.x, rect.y, rect.width, rect.height);
+        } else {
+            const { width, height } = enterRectFrame(rect);
+            if (style.fill) {
+                context.fillStyle = style.fill;
+                context.fillRect(-width / 2, -height / 2, width, height);
+            }
+            if (style.isCased) {
+                context.save();
+                context.strokeStyle = SELECTION_CASING_STYLE;
+                context.lineWidth = style.lineWidth + SELECTION_CASING_PX * 2;
+                context.strokeRect(-width / 2, -height / 2, width, height);
+                context.restore();
+            }
+            context.strokeRect(-width / 2, -height / 2, width, height);
         }
-        context.strokeRect(topLeft.x, topLeft.y, width, height);
         context.restore();
     }
 
-    function drawFocusOutline(rect: Rect): void {
-        const topLeft = imageToCanvas(viewport, { x: rect.x, y: rect.y });
-        const width = rect.width * viewport.zoom;
-        const height = rect.height * viewport.zoom;
+    function drawFocusOutline(rect: RotatedRect): void {
         context.save();
         context.setLineDash([6, 4]);
         context.strokeStyle = FOCUS_OUTLINE_STYLE;
         context.lineWidth = 3;
+        const { width, height } = enterRectFrame(rect);
         context.strokeRect(
-            topLeft.x - FOCUS_OUTLINE_PADDING_PX,
-            topLeft.y - FOCUS_OUTLINE_PADDING_PX,
+            -width / 2 - FOCUS_OUTLINE_PADDING_PX,
+            -height / 2 - FOCUS_OUTLINE_PADDING_PX,
             width + FOCUS_OUTLINE_PADDING_PX * 2,
             height + FOCUS_OUTLINE_PADDING_PX * 2
         );
         context.restore();
     }
 
-    function drawShapeNumber(rect: Rect, shapeNumber: number, opacity: number): void {
-        const topLeft = imageToCanvas(viewport, { x: rect.x, y: rect.y });
+    // Moves the context's origin to the rect's centre on screen and turns it with the rect; gives the rect's screen size.
+    function enterRectFrame(rect: RotatedRect): Size {
+        const center = imageToCanvas(viewport, rectCenter(rect));
+        context.translate(center.x, center.y);
+        context.rotate(rotationOf(rect) * Math.PI / 180);
+        return { width: rect.width * viewport.zoom, height: rect.height * viewport.zoom };
+    }
+
+    // Upright, hanging from the shape's corner nearest the top left of the page.
+    function drawShapeNumber(rect: RotatedRect, shapeNumber: number, opacity: number): void {
+        const topLeft = imageToCanvas(viewport, rectCorners(rect).reduce(function nearerTopLeft(best, corner) {
+            return corner.x + corner.y < best.x + best.y ? corner : best;
+        }));
         const text = String(shapeNumber);
         context.save();
         context.globalAlpha = opacity;
@@ -516,8 +609,8 @@ export function mountImageCanvas(
 
         const selectedShape = findShape(selectedShapeId);
         const handle = selectedShape ? handleAtCanvasPoint(selectedShape, canvasPoint) : null;
-        if (handle) {
-            canvas.style.cursor = handleCursors[handle];
+        if (selectedShape && handle) {
+            canvas.style.cursor = handleCursors[rotatedHandleDirection(handle, rotationOf(selectedShape))];
             return;
         }
         const hitShape = topmostShapeAt(canvasToImage(viewport, canvasPoint), shapes);
@@ -530,7 +623,7 @@ export function mountImageCanvas(
         }) ?? null;
     }
 
-    function handleAtCanvasPoint(rect: Rect, canvasPoint: Point): ResizeHandle | null {
+    function handleAtCanvasPoint(rect: RotatedRect, canvasPoint: Point): ResizeHandle | null {
         for (const { handle, point } of handlePoints(rect)) {
             const screenPoint = imageToCanvas(viewport, point);
             if (Math.hypot(screenPoint.x - canvasPoint.x, screenPoint.y - canvasPoint.y) <= HANDLE_HIT_RADIUS_PX) {
@@ -538,6 +631,10 @@ export function mountImageCanvas(
             }
         }
         return null;
+    }
+
+    function rotationHandleOnCanvas(rect: RotatedRect): Point {
+        return imageToCanvas(viewport, rotationHandlePoint(rect, ROTATION_HANDLE_OFFSET_PX / viewport.zoom));
     }
 
     function imagePointDelta(a: Point, b: Point): Point {
@@ -550,8 +647,12 @@ export function mountImageCanvas(
         return { width: image!.naturalWidth, height: image!.naturalHeight };
     }
 
+    function rectOf(shape: RectangleShape): RotatedRect {
+        return { x: shape.x, y: shape.y, width: shape.width, height: shape.height, rotation: rotationOf(shape) };
+    }
+
     function startMoving(shape: RectangleShape, startCanvasPoint: Point): void {
-        const original: Rect = { x: shape.x, y: shape.y, width: shape.width, height: shape.height };
+        const original = rectOf(shape);
         startRectDrag(
             { kind: 'move', shapeId: shape.id, original, startCanvasPoint, current: original },
             function computeNext(delta) {
@@ -560,17 +661,33 @@ export function mountImageCanvas(
         );
     }
 
+    // A rotated shape may reach past the image's edges: clamping it would leave its corners at the edge and its sides
+    // short of where the pointer is.
     function startResizing(shape: RectangleShape, handle: ResizeHandle, startCanvasPoint: Point): void {
-        const original: Rect = { x: shape.x, y: shape.y, width: shape.width, height: shape.height };
+        const original = rectOf(shape);
         startRectDrag(
             { kind: 'resize', shapeId: shape.id, handle, original, startCanvasPoint, current: original },
             function computeNext(delta) {
-                return clampRectToBounds(resizeRect(original, handle, delta.x, delta.y), imageBounds());
+                const resized = resizeRect(original, handle, delta.x, delta.y);
+                return original.rotation ? resized : clampRectToBounds(resized, imageBounds());
             }
         );
     }
 
-    function startRectDrag(drag: ActiveDrag, computeNext: (delta: Point) => Rect): void {
+    function startRotating(shape: RectangleShape, startCanvasPoint: Point): void {
+        const original = rectOf(shape);
+        const center = rectCenter(original);
+        canvas.style.cursor = 'grabbing';
+        startRectDrag(
+            { kind: 'rotate', shapeId: shape.id, original, startCanvasPoint, current: original },
+            function computeNext(_delta, moveEvent) {
+                const pointer = canvasToImage(viewport, toCanvasPoint(moveEvent));
+                return { ...original, rotation: rotationTowards(center, pointer, moveEvent.shiftKey ? ROTATION_SNAP_DEGREES : undefined) };
+            }
+        );
+    }
+
+    function startRectDrag(drag: ActiveDrag, computeNext: (delta: Point, moveEvent: MouseEvent) => RotatedRect): void {
         activeDrag = drag;
         draw();
 
@@ -580,7 +697,7 @@ export function mountImageCanvas(
                 return;
             }
             const delta = imagePointDelta(drag.startCanvasPoint, toCanvasPoint(moveEvent));
-            activeDrag = { ...drag, current: computeNext(delta) };
+            activeDrag = { ...drag, current: computeNext(delta, moveEvent) };
             draw();
         }, finishDrag);
     }
@@ -686,7 +803,7 @@ export function mountImageCanvas(
     // flicker) and Tab follows plain reading order. The canvas's data-numbering says which ('pending' or 'final').
     function shapesInTabOrder(): RectangleShape[] {
         if (tabOrderCache?.shapes !== shapes || tabOrderCache.numbering !== numbering) {
-            const order = image && numbering !== 'rows' ? imageAnalysis.orderOf(image, shapes, () => {
+            const order = image && numbering !== 'rows' ? imageAnalysis.orderOf(image, analysedShapes(), () => {
                 numbersArrivedAt = performance.now();
                 tabOrderCache = null;
                 draw();
@@ -697,6 +814,11 @@ export function mountImageCanvas(
             canvas.dataset.numbering = isFinal ? 'final' : 'pending';
         }
         return tabOrderCache.ordered;
+    }
+
+    // A rotated shape is analysed as its bounding box, kept to the image.
+    function analysedShapes(): AnalysedShape[] {
+        return shapes.map((shape) => ({ id: shape.id, ...clampRectToBounds(boundingRect(shape), imageBounds()) }));
     }
 
     // The numbers' opacity while they fade in after arriving (eased out), drawing the fade's next frame; 1 otherwise.
@@ -825,6 +947,7 @@ export function mountImageCanvas(
             unregisterShortcut('toggleFocusedShapeVisibility');
             canvas.remove();
             shapeActions.remove();
+            rotationHandle.remove();
         }
     };
 }

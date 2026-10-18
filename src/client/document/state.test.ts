@@ -101,6 +101,17 @@ test('updateShapeRect marks the document dirty when the rect actually changes', 
     assert.equal(getState().document?.pages[0].shapes[0].x, 15);
 });
 
+test('updateShapeRect stores a rotation, and leaves none on a shape turned back to 0', function () {
+    setDocument(fixtureDocumentWithShape());
+
+    updateShapeRect('page-1', 'shape-1', { x: 10, y: 10, width: 20, height: 20, rotation: 45 });
+    assert.equal(getState().document?.pages[0].shapes[0].rotation, 45);
+
+    updateShapeRect('page-1', 'shape-1', { x: 10, y: 10, width: 20, height: 20, rotation: 0 });
+    assert.equal('rotation' in getState().document!.pages[0].shapes[0], false);
+    assert.equal(getState().dirty, false);
+});
+
 test('renamePage does not mark the document dirty when the name is unchanged', function () {
     setDocument(fixtureDocument(['page-1']));
 

@@ -155,6 +155,29 @@ test('resizing a selected shape from each of its 8 handles updates the correspon
     });
 });
 
+test('dragging the handle above a selected shape rotates it, in 45° steps with Shift, and the rotated outline is what a click hits', async ({ page }) => {
+    await page.goto('/');
+    const docId = await createDocument(page, uniqueName('Rotate Shape Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+    const imageRect = await imageOnScreenRect(page);
+
+    await dragOnCanvas(page, { x: imageRect.left + 60, y: imageRect.top + 50 }, { x: imageRect.left + 180, y: imageRect.top + 130 });
+    await page.keyboard.down('Shift');
+    await dragOnCanvas(page, { x: imageRect.left + 120, y: imageRect.top + 26 }, { x: imageRect.left + 200, y: imageRect.top + 95 });
+    await page.keyboard.up('Shift');
+    // Turned a quarter, the shape spans y 30–150 about its centre (120, 90): y 140 is only inside the rotated outline.
+    await dragOnCanvas(page, { x: imageRect.left + 120, y: imageRect.top + 140 }, { x: imageRect.left + 130, y: imageRect.top + 140 });
+
+    await saveDocument(page);
+    const manifest = await fetchManifest(page, docId);
+    const shapes = manifest.pages[0].shapes as unknown as { x: number; y: number; width: number; height: number; rotation?: number }[];
+
+    expect(shapes).toHaveLength(1);
+    expect(shapes[0].rotation).toBe(90);
+    expect([shapes[0].x, shapes[0].y, shapes[0].width, shapes[0].height]).toEqual([70, 50, 120, 80]);
+});
+
 test('transparent areas of a page image show as white', async ({ page }) => {
     await page.goto('/');
     await createDocument(page, uniqueName('Transparent Image Doc'));

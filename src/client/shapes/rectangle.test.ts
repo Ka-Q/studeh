@@ -1,13 +1,17 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+    boundingRect,
     clampMoveToBounds,
     clampRectToBounds,
     hitTestRectangle,
     moveRect,
     offsetCopyRect,
     rectFromPoints,
+    rectCorners,
     resizeRect,
+    rotatedHandleDirection,
+    rotationTowards,
     shapesInReadingOrder,
     topmostShapeAt,
     type Rect
@@ -85,6 +89,66 @@ test('resizeRect normalizes negative dimensions when a handle is dragged past th
     assert.equal(resized.width > 0, true);
     assert.equal(resized.height > 0, true);
     assert.deepEqual(resized, { x: -20, y: -20, width: 40, height: 40 });
+});
+
+function assertPointClose(actual: { x: number; y: number }, expected: { x: number; y: number }): void {
+    assert.ok(Math.hypot(actual.x - expected.x, actual.y - expected.y) < 1e-9, `${JSON.stringify(actual)} is not ${JSON.stringify(expected)}`);
+}
+
+test('hitTestRectangle tests a rotated shape in its own frame', function () {
+    const shape: RectangleShape = { id: 'shape-1', type: 'rectangle', x: 0, y: 40, width: 100, height: 20, visible: false, rotation: 90 };
+
+    assert.equal(hitTestRectangle({ x: 50, y: 5 }, shape), true);
+    assert.equal(hitTestRectangle({ x: 5, y: 50 }, shape), false);
+});
+
+test('boundingRect of a quarter-turned rect swaps its sides about its centre', function () {
+    const box = boundingRect({ x: 0, y: 40, width: 100, height: 20, rotation: 90 });
+
+    assertPointClose({ x: box.x, y: box.y }, { x: 40, y: 0 });
+    assertPointClose({ x: box.width, y: box.height }, { x: 20, y: 100 });
+});
+
+test('clampMoveToBounds keeps a rotated rect\'s bounding box inside the bounds', function () {
+    const clamped = clampMoveToBounds({ x: -10, y: 40, width: 100, height: 20, rotation: 90 }, { width: 200, height: 200 });
+
+    assert.ok(Math.abs(boundingRect(clamped).y) < 1e-9);
+    assert.equal(clamped.rotation, 90);
+});
+
+test('offsetCopyRect keeps the rotation', function () {
+    assert.deepEqual(offsetCopyRect({ x: 10, y: 10, width: 30, height: 30, rotation: 30 }, 5, { width: 100, height: 100 }).rotation, 30);
+});
+
+test('resizeRect on a rotated rect resizes in its own frame, keeping the opposite corner in place on the page', function () {
+    const original = { x: 20, y: 20, width: 40, height: 20, rotation: 30 };
+    // 10 along the rect's own x axis, 5 along its y axis, given in page coordinates.
+    const radians = 30 * Math.PI / 180;
+    const dx = 10 * Math.cos(radians) - 5 * Math.sin(radians);
+    const dy = 10 * Math.sin(radians) + 5 * Math.cos(radians);
+
+    const resized = resizeRect(original, 'se', dx, dy);
+
+    assertPointClose({ x: resized.width, y: resized.height }, { x: 50, y: 25 });
+    assert.equal(resized.rotation, 30);
+    assertPointClose(rectCorners(resized)[0], rectCorners(original)[0]);
+});
+
+test('rotationTowards turns the rect\'s top towards the point, snapping to the step when given', function () {
+    const center = { x: 0, y: 0 };
+
+    assert.equal(rotationTowards(center, { x: 0, y: -10 }), 0);
+    assert.equal(rotationTowards(center, { x: 10, y: 0 }), 90);
+    assert.equal(rotationTowards(center, { x: -10, y: 0 }), 270);
+    assert.equal(rotationTowards(center, { x: 10, y: -8 }, 45), 45);
+    assert.equal(rotationTowards(center, { x: -1, y: -10 }, 45), 0);
+});
+
+test('rotatedHandleDirection gives the page direction a handle points in once rotated', function () {
+    assert.equal(rotatedHandleDirection('n', 90), 'e');
+    assert.equal(rotatedHandleDirection('nw', 0), 'nw');
+    assert.equal(rotatedHandleDirection('w', 50), 'nw');
+    assert.equal(rotatedHandleDirection('n', 315), 'nw');
 });
 
 function rect(x: number, y: number, width: number, height: number): Rect {

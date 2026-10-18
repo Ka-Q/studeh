@@ -11,6 +11,11 @@ export interface Rect {
     height: number;
 }
 
+// Degrees clockwise about the rect's centre; absent means 0.
+export type RotatedRect = Rect & { rotation?: number };
+
+const FULL_TURN_DEGREES = 360;
+
 export function rectFromPoints(a: Point, b: Point): Rect {
     return {
         x: Math.min(a.x, b.x),
@@ -32,54 +37,137 @@ export function isRectEmpty(rect: Rect): boolean {
     return rect.width <= 0 || rect.height <= 0;
 }
 
-export function rectsEqual(a: Rect, b: Rect): boolean {
-    return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+export function rectsEqual(a: RotatedRect, b: RotatedRect): boolean {
+    return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height && rotationOf(a) === rotationOf(b);
 }
 
-export function moveRect(rect: Rect, dx: number, dy: number): Rect {
+export function rotationOf(rect: RotatedRect): number {
+    return rect.rotation ?? 0;
+}
+
+export function rectCenter(rect: Rect): Point {
+    return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+}
+
+export function rotatePoint(point: Point, center: Point, degrees: number): Point {
+    if (!degrees) {
+        return point;
+    }
+    const radians = degrees * Math.PI / 180;
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+    const dx = point.x - center.x;
+    const dy = point.y - center.y;
+    return { x: center.x + dx * cos - dy * sin, y: center.y + dx * sin + dy * cos };
+}
+
+// A point given in the rect's own (unrotated) frame, where it lies on the page.
+function placeInRect(rect: RotatedRect, point: Point): Point {
+    return rotatePoint(point, rectCenter(rect), rotationOf(rect));
+}
+
+// Clockwise from the top-left corner of the rect's own frame.
+export function rectCorners(rect: RotatedRect): Point[] {
+    const right = rect.x + rect.width;
+    const bottom = rect.y + rect.height;
+    return [{ x: rect.x, y: rect.y }, { x: right, y: rect.y }, { x: right, y: bottom }, { x: rect.x, y: bottom }]
+        .map((corner) => placeInRect(rect, corner));
+}
+
+export function boundingRect(rect: RotatedRect): Rect {
+    if (!rotationOf(rect)) {
+        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+    }
+    return boundingRectOfPoints(rectCorners(rect));
+}
+
+function boundingRectOfPoints(points: Point[]): Rect {
+    const xs = points.map((point) => point.x);
+    const ys = points.map((point) => point.y);
+    const left = Math.min(...xs);
+    const top = Math.min(...ys);
+    return { x: left, y: top, width: Math.max(...xs) - left, height: Math.max(...ys) - top };
+}
+
+export function moveRect<T extends Rect>(rect: T, dx: number, dy: number): T {
     return { ...rect, x: rect.x + dx, y: rect.y + dy };
 }
 
-export function clampMoveToBounds(rect: Rect, bounds: Size): Rect {
-    const maxX = Math.max(0, bounds.width - rect.width);
-    const maxY = Math.max(0, bounds.height - rect.height);
-    return { ...rect, x: clamp(rect.x, 0, maxX), y: clamp(rect.y, 0, maxY) };
+// Keeps the rect's bounding box inside the bounds, or, when the box is larger than the bounds, covering them.
+export function clampMoveToBounds<T extends RotatedRect>(rect: T, bounds: Size): T {
+    const box = boundingRect(rect);
+    return moveRect(rect, clampShift(box.x, box.width, bounds.width), clampShift(box.y, box.height, bounds.height));
+}
+
+function clampShift(start: number, size: number, limit: number): number {
+    const lastStart = limit - size;
+    return clamp(start, Math.min(0, lastStart), Math.max(0, lastStart)) - start;
 }
 
 // A copy of the rect shifted down and to the right by the offset, or up/left on an axis where that would leave the
 // bounds, so the copy never lands exactly on the original near the image's bottom or right edge.
-export function offsetCopyRect(rect: Rect, offset: number, bounds: Size): Rect {
-    return clampMoveToBounds({
-        ...rect,
-        x: stepWithinLimit(rect.x, rect.width, offset, bounds.width),
-        y: stepWithinLimit(rect.y, rect.height, offset, bounds.height)
-    }, bounds);
+export function offsetCopyRect<T extends RotatedRect>(rect: T, offset: number, bounds: Size): T {
+    const box = boundingRect(rect);
+    return clampMoveToBounds(moveRect(
+        rect,
+        stepWithinLimit(box.x, box.width, offset, bounds.width),
+        stepWithinLimit(box.y, box.height, offset, bounds.height)
+    ), bounds);
 }
 
 function stepWithinLimit(start: number, size: number, step: number, limit: number): number {
-    return start + step + size <= limit ? start + step : start - step;
+    return start + step + size <= limit ? step : -step;
 }
 
 export type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
-export function handlePoints(rect: Rect): { handle: ResizeHandle; point: Point }[] {
-    const midX = rect.x + rect.width / 2;
-    const midY = rect.y + rect.height / 2;
-    const right = rect.x + rect.width;
-    const bottom = rect.y + rect.height;
-    return [
-        { handle: 'nw', point: { x: rect.x, y: rect.y } },
-        { handle: 'n', point: { x: midX, y: rect.y } },
-        { handle: 'ne', point: { x: right, y: rect.y } },
-        { handle: 'e', point: { x: right, y: midY } },
-        { handle: 'se', point: { x: right, y: bottom } },
-        { handle: 's', point: { x: midX, y: bottom } },
-        { handle: 'sw', point: { x: rect.x, y: bottom } },
-        { handle: 'w', point: { x: rect.x, y: midY } }
-    ];
+// Clockwise from the top-left, a 45° turn apart around the rect.
+const RESIZE_HANDLES: ResizeHandle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+
+export function handlePoints(rect: RotatedRect): { handle: ResizeHandle; point: Point }[] {
+    return RESIZE_HANDLES.map((handle) => ({ handle, point: handlePoint(rect, handle) }));
 }
 
-export function resizeRect(rect: Rect, handle: ResizeHandle, dx: number, dy: number): Rect {
+export function handlePoint(rect: RotatedRect, handle: ResizeHandle): Point {
+    return placeInRect(rect, unrotatedHandlePoint(rect, handle));
+}
+
+// Above the middle of the rect's top edge, the offset away from it, turning with the rect.
+export function rotationHandlePoint(rect: RotatedRect, offset: number): Point {
+    return placeInRect(rect, { x: rect.x + rect.width / 2, y: rect.y - offset });
+}
+
+function unrotatedHandlePoint(rect: Rect, handle: ResizeHandle): Point {
+    const x = handle.includes('w') ? rect.x : handle.includes('e') ? rect.x + rect.width : rect.x + rect.width / 2;
+    const y = handle.includes('n') ? rect.y : handle.includes('s') ? rect.y + rect.height : rect.y + rect.height / 2;
+    return { x, y };
+}
+
+// The handle in that direction once the rect's rotation is applied, e.g. 'n' turned 90° points east: 'e'.
+export function rotatedHandleDirection(handle: ResizeHandle, rotation: number): ResizeHandle {
+    const steps = Math.round(rotation / 45);
+    const count = RESIZE_HANDLES.length;
+    return RESIZE_HANDLES[((RESIZE_HANDLES.indexOf(handle) + steps) % count + count) % count];
+}
+
+const OPPOSITE_HANDLES: Record<ResizeHandle, ResizeHandle> = { nw: 'se', n: 's', ne: 'sw', e: 'w', se: 'nw', s: 'n', sw: 'ne', w: 'e' };
+
+// The drag delta is in page coordinates; the rect resizes in its own frame, the handle opposite the dragged one staying
+// where it is on the page.
+export function resizeRect<T extends RotatedRect>(rect: T, handle: ResizeHandle, dx: number, dy: number): T {
+    const rotation = rotationOf(rect);
+    const delta = rotatePoint({ x: dx, y: dy }, { x: 0, y: 0 }, -rotation);
+    const resized = { ...rect, ...resizeUnrotated(rect, handle, delta.x, delta.y) };
+    if (!rotation) {
+        return resized;
+    }
+    const anchor = unrotatedHandlePoint(rect, OPPOSITE_HANDLES[handle]);
+    const anchorBefore = rotatePoint(anchor, rectCenter(rect), rotation);
+    const anchorAfter = rotatePoint(anchor, rectCenter(resized), rotation);
+    return moveRect(resized, anchorBefore.x - anchorAfter.x, anchorBefore.y - anchorAfter.y);
+}
+
+function resizeUnrotated(rect: Rect, handle: ResizeHandle, dx: number, dy: number): Rect {
     let { x, y, width, height } = rect;
     if (handle.includes('w')) {
         x += dx;
@@ -102,9 +190,17 @@ function normalizeRect(rect: Rect): Rect {
     return { x, y, width: Math.abs(rect.width), height: Math.abs(rect.height) };
 }
 
-export function hitTestRectangle(point: Point, shape: RectangleShape): boolean {
-    return point.x >= shape.x && point.x <= shape.x + shape.width &&
-        point.y >= shape.y && point.y <= shape.y + shape.height;
+// The rotation that turns the rect's top towards the point, in [0, 360), rounded to the nearest snap step if given.
+export function rotationTowards(center: Point, point: Point, snapStep?: number): number {
+    const degrees = Math.atan2(point.x - center.x, center.y - point.y) * 180 / Math.PI;
+    const snapped = snapStep ? Math.round(degrees / snapStep) * snapStep : degrees;
+    return (snapped % FULL_TURN_DEGREES + FULL_TURN_DEGREES) % FULL_TURN_DEGREES;
+}
+
+export function hitTestRectangle(point: Point, shape: RotatedRect): boolean {
+    const local = rotatePoint(point, rectCenter(shape), -rotationOf(shape));
+    return local.x >= shape.x && local.x <= shape.x + shape.width &&
+        local.y >= shape.y && local.y <= shape.y + shape.height;
 }
 
 export function topmostShapeAt(point: Point, shapes: RectangleShape[]): RectangleShape | null {

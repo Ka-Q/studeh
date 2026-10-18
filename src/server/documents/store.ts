@@ -159,6 +159,9 @@ function validateShape(shape: unknown, index: number, pageId: string): void {
             throw new InvalidManifestError(`Shape "${s.id}" on page "${pageId}" has an invalid ${field}`);
         }
     }
+    if (s.rotation !== undefined && (typeof s.rotation !== 'number' || !Number.isFinite(s.rotation))) {
+        throw new InvalidManifestError(`Shape "${s.id}" on page "${pageId}" has an invalid rotation`);
+    }
     if (typeof s.visible !== 'boolean') {
         throw new InvalidManifestError(`Shape "${s.id}" on page "${pageId}" is missing a valid visible flag`);
     }

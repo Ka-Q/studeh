@@ -8,6 +8,8 @@ export interface RectangleShape {
     y: number;
     width: number;
     height: number;
+    // Degrees clockwise about the shape's centre; absent means 0.
+    rotation?: number;
     // Kept for manifest-format stability; unused — Study Mode reveal state is
     // tracked client-side only (AppState.revealedShapeIds), never persisted.
     visible: boolean;
