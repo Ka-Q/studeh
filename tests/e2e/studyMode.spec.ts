@@ -142,3 +142,15 @@ test('the numbering order and shape numbers toggles apply to every page and are 
     await expect(rows).toHaveAttribute('aria-pressed', 'true');
     await expect(showNumbers).toHaveAttribute('aria-pressed', 'false');
 });
+
+test('a reload keeps study mode', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('Mode Reload Doc'));
+    await addPage(page);
+    await saveDocument(page);
+    await toggleMode(page);
+
+    await page.reload();
+
+    await expect(page.locator('.canvas-mode-toggle')).toContainText('Switch to edit mode');
+});
