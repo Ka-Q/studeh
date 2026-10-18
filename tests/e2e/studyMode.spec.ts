@@ -119,3 +119,26 @@ test('in study mode the cursor is a pointer over a shape and default elsewhere, 
     await page.keyboard.up('Control');
     await expect(canvas).toHaveCSS('cursor', 'default');
 });
+
+test('the numbering order and shape numbers toggles apply to every page and are remembered after a reload', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('Numbering Toggles Doc'));
+    await addPage(page);
+    const smart = page.getByRole('button', { name: 'Smart numbering' });
+    const rows = page.getByRole('button', { name: 'Row numbering' });
+    const showNumbers = page.getByRole('button', { name: 'Shape numbers' });
+    await expect(smart).toHaveAttribute('aria-pressed', 'true');
+    await expect(showNumbers).toHaveAttribute('aria-pressed', 'true');
+
+    await rows.click();
+    await showNumbers.click();
+    await addPage(page);
+
+    await expect(rows).toHaveAttribute('aria-pressed', 'true');
+    await expect(smart).toHaveAttribute('aria-pressed', 'false');
+    await expect(showNumbers).toHaveAttribute('aria-pressed', 'false');
+    await saveDocument(page);
+    await page.reload();
+    await expect(rows).toHaveAttribute('aria-pressed', 'true');
+    await expect(showNumbers).toHaveAttribute('aria-pressed', 'false');
+});

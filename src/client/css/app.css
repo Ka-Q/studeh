@@ -196,6 +196,21 @@ button:hover:not(:disabled) {
     mask-image: url('/icons/cancel.svg');
 }
 
+.icon-numbering-smart {
+    -webkit-mask-image: url('/icons/numbering-smart.svg');
+    mask-image: url('/icons/numbering-smart.svg');
+}
+
+.icon-numbering-rows {
+    -webkit-mask-image: url('/icons/numbering-rows.svg');
+    mask-image: url('/icons/numbering-rows.svg');
+}
+
+.icon-shape-numbers {
+    -webkit-mask-image: url('/icons/shape-numbers.svg');
+    mask-image: url('/icons/shape-numbers.svg');
+}
+
 .icon-sort {
     -webkit-mask-image: url('/icons/sort.svg');
     mask-image: url('/icons/sort.svg');
@@ -870,14 +885,55 @@ dialog::backdrop {
     min-width: 0;
 }
 
+/* Clears the collapsed sidebar's expand button. */
+#page-sidebar.collapsed ~ #canvas-area .stage-controls-left {
+    padding-left: var(--space-5);
+}
+
 .stage-page-title {
     flex: 1 1 auto;
     min-width: 0;
-    padding-left: var(--space-5);
+    padding-left: var(--space-2);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: var(--font-size-lg);
+}
+
+.segmented-control {
+    display: inline-flex;
+}
+
+.segmented-control button,
+.toggle-button {
+    color: var(--color-text-muted);
+}
+
+.segmented-control button {
+    border-radius: 0;
+    margin-left: -1px;
+}
+
+.segmented-control button:first-child {
+    margin-left: 0;
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.segmented-control button:last-child {
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.segmented-control button[aria-pressed='true'],
+button.toggle-button[aria-pressed='true'] {
+    position: relative;
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    color: var(--color-accent-text);
+}
+
+.segmented-control button:focus-visible {
+    position: relative;
+    z-index: 1;
 }
 
 .stage-controls-fixed {

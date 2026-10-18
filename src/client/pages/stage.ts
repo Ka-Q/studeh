@@ -14,7 +14,7 @@ import { pageImageUrl, uploadPageImage } from '../document/api';
 import type { Page } from '../../shared/types';
 import { getDroppedImageFiles, iconSpan, initHoverScopedPaste, isFileDrag, requireElement } from '../dom';
 import { reportError } from '../errors';
-import { mountImageCanvas, type ImageCanvasHandle } from '../canvas/imageCanvas';
+import { mountImageCanvas, type ImageCanvasHandle, type NumberingMode } from '../canvas/imageCanvas';
 import { initFullscreenControl, requestFullscreen } from '../canvas/fullscreen';
 import { initCanvasHints, type CanvasHintsHandle } from '../canvas/canvasHints';
 import { initCanvasZoom, type CanvasZoomHandle } from '../canvas/canvasZoom';
@@ -25,6 +25,9 @@ import { browseDialog } from '../document/browseDialog';
 import { onNew } from '../document/toolbar';
 import { shortcutHint } from '../shortcuts';
 import { registerShortcut } from '../shortcutDispatch';
+
+const NUMBERING_STORAGE_KEY = 'studeh:shapeNumbering';
+const SHOW_NUMBERS_STORAGE_KEY = 'studeh:showShapeNumbers';
 
 interface MountedCanvas {
     pageId: string;
@@ -42,6 +45,9 @@ let canvasZoomHandle: CanvasZoomHandle;
 let pageNavigatorHandle: PageNavigatorHandle;
 let mountedCanvas: MountedCanvas | null = null;
 let isFullscreen = false;
+// Numbering preferences for every page, kept in this browser like the theme.
+let numbering: NumberingMode = localStorage.getItem(NUMBERING_STORAGE_KEY) === 'rows' ? 'rows' : 'smart';
+let showNumbers = localStorage.getItem(SHOW_NUMBERS_STORAGE_KEY) !== 'false';
 
 export function initStage(): void {
     const container = requireElement('canvas-area');
@@ -215,7 +221,7 @@ function renderControls(documentId: string, page: Page): void {
     title.className = 'stage-page-title';
     title.textContent = page.name;
     title.title = page.name;
-    leftGroup.append(title);
+    leftGroup.append(buildNumberingToggle(), buildShowNumbersToggle(), title);
 
     if (isEditMode()) {
         const input = createImageFileInput(documentId, page.id);
@@ -237,6 +243,50 @@ function renderControls(documentId: string, page: Page): void {
     if (!isEditMode()) {
         controlsEl.append(buildStudyControls(page));
     }
+}
+
+const numberingOptions: { mode: NumberingMode; icon: string; hint: string }[] = [
+    { mode: 'smart', icon: 'icon-numbering-smart', hint: 'Smart numbering: by what the shapes label in the image' },
+    { mode: 'rows', icon: 'icon-numbering-rows', hint: 'Row numbering: row by row, left to right' }
+];
+
+function buildNumberingToggle(): HTMLElement {
+    const group = document.createElement('div');
+    group.className = 'segmented-control stage-controls-fixed';
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', 'Shape numbering');
+    for (const { mode, icon, hint } of numberingOptions) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'icon-button';
+        button.append(iconSpan(icon));
+        button.title = hint;
+        button.setAttribute('aria-label', hint);
+        button.setAttribute('aria-pressed', String(mode === numbering));
+        button.addEventListener('click', () => {
+            numbering = mode;
+            localStorage.setItem(NUMBERING_STORAGE_KEY, mode);
+            render();
+        });
+        group.append(button);
+    }
+    return group;
+}
+
+function buildShowNumbersToggle(): HTMLElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'icon-button toggle-button stage-controls-fixed';
+    button.append(iconSpan('icon-shape-numbers'));
+    button.title = showNumbers ? 'Hide shape numbers' : 'Show shape numbers';
+    button.setAttribute('aria-label', 'Shape numbers');
+    button.setAttribute('aria-pressed', String(showNumbers));
+    button.addEventListener('click', () => {
+        showNumbers = !showNumbers;
+        localStorage.setItem(SHOW_NUMBERS_STORAGE_KEY, String(showNumbers));
+        render();
+    });
+    return button;
 }
 
 function buildStudyControls(page: Page): HTMLElement {
@@ -329,7 +379,7 @@ function renderCanvas(documentId: string, page: Page): void {
     }
 
     if (mountedCanvas?.pageId === page.id && mountedCanvas.imageFile === page.image.file) {
-        mountedCanvas.handle.update(page.shapes, selectedShapeId, mode, revealedShapeIds);
+        mountedCanvas.handle.update(page.shapes, selectedShapeId, mode, numbering, showNumbers, revealedShapeIds);
         return;
     }
 
@@ -344,6 +394,8 @@ function renderCanvas(documentId: string, page: Page): void {
             page.shapes,
             selectedShapeId,
             mode,
+            numbering,
+            showNumbers,
             isFullscreen,
             revealedShapeIds,
             {

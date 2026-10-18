@@ -19,6 +19,9 @@ import { registerShortcut, unregisterShortcut } from '../shortcutDispatch';
 import { imageAnalysis } from '../imageAnalysis/analysisClient';
 import { shapesInReadingOrder } from '../shapes/rectangle';
 
+// The order shapes are numbered in: by the image analysis or in plain rows.
+export type NumberingMode = 'smart' | 'rows';
+
 export interface ImageCanvasCallbacks {
     onCreateShape(rect: Rect): void;
     onSelectShape(shapeId: string | null): void;
@@ -32,7 +35,7 @@ type ActiveDrag =
     | { kind: 'resize'; shapeId: string; handle: ResizeHandle; original: Rect; startCanvasPoint: Point; current: Rect };
 
 export interface ImageCanvasHandle {
-    update(shapes: RectangleShape[], selectedShapeId: string | null, mode: Mode, revealedShapeIds: ReadonlySet<string>): void;
+    update(shapes: RectangleShape[], selectedShapeId: string | null, mode: Mode, numbering: NumberingMode, showNumbers: boolean, revealedShapeIds: ReadonlySet<string>): void;
     setFullscreen(isFullscreen: boolean): void;
     destroy(): void;
     isReady(): boolean;
@@ -59,10 +62,12 @@ const REVEALED_FILL_STYLE = 'rgba(242, 242, 242, 0.05)';
 const REVEALED_STROKE_STYLE = 'rgb(68, 202, 31)';
 const FOCUS_OUTLINE_STYLE = 'rgb(37, 99, 235)';
 const FOCUS_OUTLINE_PADDING_PX = 4;
-const SHOW_SHAPE_NUMBERS = false;
-const SHAPE_NUMBER_FONT = 'bold 11px system-ui, sans-serif';
+const SHAPE_NUMBER_FONT_SIZE_PX = 11;
 const SHAPE_NUMBER_SIZE_PX = 16;
 const SHAPE_NUMBER_PADDING_PX = 4;
+// Zoomed out, the numbers shrink with the shapes, all to one size so they never cover more than this share of a
+// typical (median) shape's shorter side.
+const SHAPE_NUMBER_MAX_SHAPE_SHARE = 0.8;
 const SHAPE_NUMBER_BACKGROUND_STYLE = 'rgba(17, 24, 39, 0.8)';
 const SHAPE_NUMBER_TEXT_STYLE = 'rgb(255, 255, 255)';
 // Numbers given by the image analysis after the page is shown fade in over this long, rather than popping in.
@@ -96,6 +101,8 @@ export function mountImageCanvas(
     initialShapes: RectangleShape[],
     initialSelectedShapeId: string | null,
     initialMode: Mode,
+    initialNumbering: NumberingMode,
+    initialShowNumbers: boolean,
     initialIsFullscreen: boolean,
     initialRevealedShapeIds: ReadonlySet<string>,
     callbacks: ImageCanvasCallbacks
@@ -110,10 +117,12 @@ export function mountImageCanvas(
     let shapes = initialShapes;
     let selectedShapeId = initialSelectedShapeId;
     let mode = initialMode;
+    let numbering = initialNumbering;
+    let showNumbers = initialShowNumbers;
     let isFullscreen = initialIsFullscreen;
     let revealedShapeIds = initialRevealedShapeIds;
     let focusedShapeId: string | null = null;
-    let tabOrderCache: { shapes: RectangleShape[]; ordered: RectangleShape[]; isFinal: boolean } | null = null;
+    let tabOrderCache: { shapes: RectangleShape[]; numbering: NumberingMode; ordered: RectangleShape[]; isFinal: boolean } | null = null;
     // When the image analysis's order arrived while the page was shown, and the frame drawing its fade, if any.
     let numbersArrivedAt: number | null = null;
     let fadeFrame: number | null = null;
@@ -225,10 +234,14 @@ export function mountImageCanvas(
                 }
             }
             const ordered = shapesInTabOrder();
-            if (SHOW_SHAPE_NUMBERS && tabOrderCache!.isFinal) {
+            if (showNumbers && tabOrderCache!.isFinal) {
+                const size = shapeNumberSize();
                 const opacity = shapeNumberOpacity();
                 for (const [index, shape] of ordered.entries()) {
-                    drawShapeNumber(shape, index + 1, opacity);
+                    // A revealed shape's number would cover the answer.
+                    if (!revealedShapeIds.has(shape.id)) {
+                        drawShapeNumber(shape, index + 1, size, opacity);
+                    }
                 }
             }
             return;
@@ -327,19 +340,26 @@ export function mountImageCanvas(
         context.restore();
     }
 
-    function drawShapeNumber(rect: Rect, shapeNumber: number, opacity: number): void {
+    function shapeNumberSize(): number {
+        const shorterSides = shapes.map((shape) => Math.min(shape.width, shape.height)).sort((a, b) => a - b);
+        const medianShorterSide = shorterSides[Math.floor(shorterSides.length / 2)] ?? 0;
+        return Math.min(SHAPE_NUMBER_SIZE_PX, medianShorterSide * viewport.zoom * SHAPE_NUMBER_MAX_SHAPE_SHARE);
+    }
+
+    function drawShapeNumber(rect: Rect, shapeNumber: number, size: number, opacity: number): void {
+        const scale = size / SHAPE_NUMBER_SIZE_PX;
         const topLeft = imageToCanvas(viewport, { x: rect.x, y: rect.y });
         const text = String(shapeNumber);
         context.save();
         context.globalAlpha = opacity;
-        context.font = SHAPE_NUMBER_FONT;
-        const width = Math.max(SHAPE_NUMBER_SIZE_PX, context.measureText(text).width + SHAPE_NUMBER_PADDING_PX * 2);
+        context.font = `bold ${SHAPE_NUMBER_FONT_SIZE_PX * scale}px system-ui, sans-serif`;
+        const width = Math.max(size, context.measureText(text).width + SHAPE_NUMBER_PADDING_PX * scale * 2);
         context.fillStyle = SHAPE_NUMBER_BACKGROUND_STYLE;
-        context.fillRect(topLeft.x, topLeft.y, width, SHAPE_NUMBER_SIZE_PX);
+        context.fillRect(topLeft.x, topLeft.y, width, size);
         context.fillStyle = SHAPE_NUMBER_TEXT_STYLE;
         context.textAlign = 'center';
         context.textBaseline = 'middle';
-        context.fillText(text, topLeft.x + width / 2, topLeft.y + SHAPE_NUMBER_SIZE_PX / 2);
+        context.fillText(text, topLeft.x + width / 2, topLeft.y + size / 2);
         context.restore();
     }
 
@@ -614,20 +634,20 @@ export function mountImageCanvas(
         callbacks.onDeleteSelected();
     }
 
-    // Recomputed only when the shapes change: the shape array is replaced on every edit, never mutated. The image
-    // analysis runs in a worker: until it has given the order, no numbers are shown (numbers changing as the order
-    // arrives would flicker) and Tab follows plain reading order. The canvas's data-numbering says which ('pending'
-    // or 'final').
+    // Recomputed only when the shapes or the page's numbering change: the shape array is replaced on every edit, never
+    // mutated. Rows numbering is plain reading order. Smart numbering's order comes from the image analysis, which runs
+    // in a worker: until it has given the order, no numbers are shown (numbers changing as the order arrives would
+    // flicker) and Tab follows plain reading order. The canvas's data-numbering says which ('pending' or 'final').
     function shapesInTabOrder(): RectangleShape[] {
-        if (tabOrderCache?.shapes !== shapes) {
-            const order = image ? imageAnalysis.orderOf(image, shapes, () => {
+        if (tabOrderCache?.shapes !== shapes || tabOrderCache.numbering !== numbering) {
+            const order = image && numbering !== 'rows' ? imageAnalysis.orderOf(image, shapes, () => {
                 numbersArrivedAt = performance.now();
                 tabOrderCache = null;
                 draw();
             }) : null;
             const byId = new Map(shapes.map((shape) => [shape.id, shape]));
-            const isFinal = order !== null || !image;
-            tabOrderCache = { shapes, ordered: order ? order.map((id) => byId.get(id)!) : shapesInReadingOrder(shapes), isFinal };
+            const isFinal = order !== null || !image || numbering === 'rows';
+            tabOrderCache = { shapes, numbering, ordered: order ? order.map((id) => byId.get(id)!) : shapesInReadingOrder(shapes), isFinal };
             canvas.dataset.numbering = isFinal ? 'final' : 'pending';
         }
         return tabOrderCache.ordered;
@@ -697,7 +717,7 @@ export function mountImageCanvas(
     }
 
     return {
-        update(nextShapes: RectangleShape[], nextSelectedShapeId: string | null, nextMode: Mode, nextRevealedShapeIds: ReadonlySet<string>): void {
+        update(nextShapes: RectangleShape[], nextSelectedShapeId: string | null, nextMode: Mode, nextNumbering: NumberingMode, nextShowNumbers: boolean, nextRevealedShapeIds: ReadonlySet<string>): void {
             shapes = nextShapes;
             selectedShapeId = nextSelectedShapeId;
             if (mode !== nextMode) {
@@ -705,6 +725,8 @@ export function mountImageCanvas(
                 focusedShapeId = null;
             }
             mode = nextMode;
+            numbering = nextNumbering;
+            showNumbers = nextShowNumbers;
             revealedShapeIds = nextRevealedShapeIds;
             draw();
         },
