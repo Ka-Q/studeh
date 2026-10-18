@@ -20,6 +20,7 @@ import { initFullscreenControl, requestFullscreen } from '../canvas/fullscreen';
 import { initCanvasHints, type CanvasHintsHandle } from '../canvas/canvasHints';
 import { initCanvasZoom, type CanvasZoomHandle } from '../canvas/canvasZoom';
 import { initPageNavigator, type PageNavigatorHandle } from '../canvas/pageNavigator';
+import { initAnalysisStatus } from '../canvas/analysisStatus';
 import { confirmDialog } from '../dialogs/confirmDialog';
 import { createModeToggle, type ModeToggleHandle } from '../modes/modeToggle';
 import { browseDialog } from '../document/browseDialog';
@@ -70,6 +71,7 @@ export function initStage(): void {
     canvasHintsHandle = initCanvasHints(overlayStack, getState().mode);
     canvasZoomHandle = initCanvasZoom(canvasMount);
     pageNavigatorHandle = initPageNavigator(canvasMount);
+    initAnalysisStatus(canvasMount);
 
     initFullscreenControl(canvasMount, function onFullscreenChange(nextIsFullscreen) {
         isFullscreen = nextIsFullscreen;
