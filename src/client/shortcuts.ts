@@ -28,6 +28,7 @@ export type ShortcutId =
     | 'resetZoom'
     | 'fitToView'
     | 'deleteSelectedShape'
+    | 'cloneSelectedShape'
     | 'cycleFocusedShapeNext'
     | 'cycleFocusedShapePrev'
     | 'toggleFocusedShapeVisibility';
@@ -109,6 +110,7 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutSpec> = {
         ],
         allowInFullscreen: false
     },
+    cloneSelectedShape: { label: 'Clone selected shape (Edit mode)', group: 'canvas', bindings: [{ key: 'c', modifier: Modifier.NONE, displayKey: 'C' }], allowInFullscreen: false },
     cycleFocusedShapeNext: { label: 'Cycle focused shape (Study mode)', group: 'canvas', bindings: [{ key: 'Tab', modifier: Modifier.NONE, displayKey: 'Tab' }], allowInFullscreen: true },
     cycleFocusedShapePrev: { label: 'Cycle focused shape backward (Study mode)', group: 'canvas', bindings: [{ key: 'Tab', modifier: Modifier.SHIFT, displayKey: 'Tab' }], allowInFullscreen: true },
     toggleFocusedShapeVisibility: {

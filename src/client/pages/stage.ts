@@ -1,5 +1,6 @@
 import {
     addShape,
+    cloneSelectedShape,
     deleteSelectedShape,
     getActivePage,
     getState,
@@ -410,6 +411,9 @@ function renderCanvas(documentId: string, page: Page): void {
                 },
                 onDeleteSelected() {
                     deleteSelectedShape();
+                },
+                onCloneSelected(rect) {
+                    cloneSelectedShape(rect);
                 },
                 onToggleVisibility(shapeId) {
                     toggleShapeVisibility(shapeId);

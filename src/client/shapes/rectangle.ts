@@ -46,6 +46,20 @@ export function clampMoveToBounds(rect: Rect, bounds: Size): Rect {
     return { ...rect, x: clamp(rect.x, 0, maxX), y: clamp(rect.y, 0, maxY) };
 }
 
+// A copy of the rect shifted down and to the right by the offset, or up/left on an axis where that would leave the
+// bounds, so the copy never lands exactly on the original near the image's bottom or right edge.
+export function offsetCopyRect(rect: Rect, offset: number, bounds: Size): Rect {
+    return clampMoveToBounds({
+        ...rect,
+        x: stepWithinLimit(rect.x, rect.width, offset, bounds.width),
+        y: stepWithinLimit(rect.y, rect.height, offset, bounds.height)
+    }, bounds);
+}
+
+function stepWithinLimit(start: number, size: number, step: number, limit: number): number {
+    return start + step + size <= limit ? start + step : start - step;
+}
+
 export type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
 export function handlePoints(rect: Rect): { handle: ResizeHandle; point: Point }[] {

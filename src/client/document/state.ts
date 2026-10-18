@@ -154,7 +154,7 @@ export function setPageImage(pageId: string, image: PageImage): void {
 }
 
 export function addShape(pageId: string, rect: Rect): void {
-    const shape: RectangleShape = {
+    insertShape(pageId, {
         id: generateId('shape'),
         type: 'rectangle',
         x: rect.x,
@@ -162,7 +162,21 @@ export function addShape(pageId: string, rect: Rect): void {
         width: rect.width,
         height: rect.height,
         visible: false
-    };
+    });
+}
+
+// The copy keeps every property of the selected shape but its id and place, and becomes the selected shape.
+export function cloneSelectedShape(rect: Rect): void {
+    const page = getActivePage();
+    const original = page?.shapes.find(function isSelected(shape) {
+        return shape.id === state.selectedShapeId;
+    });
+    if (page && original) {
+        insertShape(page.id, { ...original, id: generateId('shape'), x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+    }
+}
+
+function insertShape(pageId: string, shape: RectangleShape): void {
     if (!updatePageShapes(pageId, function addShapeToPage(shapes) {
         return [...shapes, shape];
     })) {

@@ -48,6 +48,27 @@ test('clicking the topmost of two overlapping shapes selects it, not the one und
     expect(shapes[0].x).toBeCloseTo(20, 0);
 });
 
+test('the buttons under a selected shape clone it (as does C) and delete it', async ({ page }) => {
+    await page.goto('/');
+    const docId = await createDocument(page, uniqueName('Clone Delete Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+    const imageRect = await imageOnScreenRect(page);
+
+    await dragOnCanvas(page, { x: imageRect.left + 20, y: imageRect.top + 20 }, { x: imageRect.left + 100, y: imageRect.top + 100 });
+    await page.locator('.shape-actions button[aria-label^="Clone"]').click();
+    await page.keyboard.press('c');
+    await page.keyboard.press('c');
+    await page.locator('.shape-actions button[aria-label^="Delete"]').click();
+
+    await saveDocument(page);
+    const manifest = await fetchManifest(page, docId);
+    const shapes = manifest.pages[0].shapes as unknown as { x: number; y: number; width: number; height: number }[];
+
+    expect(shapes.map((shape) => [shape.x, shape.y, shape.width, shape.height])).toEqual([[20, 20, 80, 80], [32, 32, 80, 80], [44, 44, 80, 80]]);
+    await expect(page.locator('.shape-actions')).toBeHidden();
+});
+
 test('dragging a selected shape by its body moves it without changing its size', async ({ page }) => {
     await page.goto('/');
     const docId = await createDocument(page, uniqueName('Move Shape Doc'));

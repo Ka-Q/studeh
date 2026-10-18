@@ -5,6 +5,7 @@ import {
     clampRectToBounds,
     hitTestRectangle,
     moveRect,
+    offsetCopyRect,
     rectFromPoints,
     resizeRect,
     shapesInReadingOrder,
@@ -65,6 +66,15 @@ test('moveRect preserves size while clampMoveToBounds clamps translation to imag
 
     const clamped = clampMoveToBounds(moved, bounds);
     assert.deepEqual(clamped, { x: 70, y: 70, width: 30, height: 30 });
+});
+
+test('offsetCopyRect shifts down-right, or up/left on an axis where the copy would leave the image', function () {
+    const bounds = { width: 100, height: 100 };
+
+    assert.deepEqual(offsetCopyRect({ x: 10, y: 10, width: 30, height: 30 }, 5, bounds), { x: 15, y: 15, width: 30, height: 30 });
+    assert.deepEqual(offsetCopyRect({ x: 70, y: 10, width: 30, height: 30 }, 5, bounds), { x: 65, y: 15, width: 30, height: 30 });
+    assert.deepEqual(offsetCopyRect({ x: 70, y: 70, width: 30, height: 30 }, 5, bounds), { x: 65, y: 65, width: 30, height: 30 });
+    assert.deepEqual(offsetCopyRect({ x: 0, y: 0, width: 100, height: 100 }, 5, bounds), { x: 0, y: 0, width: 100, height: 100 });
 });
 
 test('resizeRect normalizes negative dimensions when a handle is dragged past the opposite edge', function () {

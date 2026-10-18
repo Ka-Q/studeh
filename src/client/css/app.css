@@ -146,6 +146,11 @@ button:hover:not(:disabled) {
     mask-image: url('/icons/trash.svg');
 }
 
+.icon-clone {
+    -webkit-mask-image: url('/icons/clone.svg');
+    mask-image: url('/icons/clone.svg');
+}
+
 .icon-move-up {
     -webkit-mask-image: url('/icons/move-up.svg');
     mask-image: url('/icons/move-up.svg');
@@ -994,6 +999,18 @@ button.toggle-button[aria-pressed='true'] {
     background: linear-gradient(to right, var(--color-canvas-vignette), transparent 5px, transparent calc(100% - 5px), var(--color-canvas-vignette)),
         linear-gradient(to bottom, var(--color-canvas-vignette), transparent 5px, transparent calc(100% - 5px), var(--color-canvas-vignette));
     pointer-events: none;
+}
+
+.shape-actions {
+    position: absolute;
+    /* Over the canvas's own overlays (hints, zoom), so they stay usable at the canvas's edges. */
+    z-index: 2;
+    display: flex;
+    gap: var(--space-1);
+}
+
+.shape-actions[hidden] {
+    display: none;
 }
 
 .canvas-empty-state-container {

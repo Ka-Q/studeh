@@ -5,6 +5,7 @@ import {
     handlePoints,
     isRectEmpty,
     moveRect,
+    offsetCopyRect,
     rectFromPoints,
     rectsEqual,
     resizeRect,
@@ -14,8 +15,9 @@ import {
 } from '../shapes/rectangle';
 import type { RectangleShape } from '../../shared/types';
 import type { Mode } from '../document/state';
-import { isBlockedByInputOrDialog, isPrimaryModifierKey, isPrimaryModifierPressed, startDragSession } from '../dom';
+import { iconSpan, isBlockedByInputOrDialog, isPrimaryModifierKey, isPrimaryModifierPressed, startDragSession } from '../dom';
 import { registerShortcut, unregisterShortcut } from '../shortcutDispatch';
+import { shortcutHint } from '../shortcuts';
 import { imageAnalysis } from '../imageAnalysis/analysisClient';
 import { shapesInReadingOrder } from '../shapes/rectangle';
 
@@ -27,6 +29,7 @@ export interface ImageCanvasCallbacks {
     onSelectShape(shapeId: string | null): void;
     onUpdateShapeRect(shapeId: string, rect: Rect): void;
     onDeleteSelected(): void;
+    onCloneSelected(rect: Rect): void;
     onToggleVisibility(shapeId: string): void;
 }
 
@@ -52,6 +55,10 @@ const CLICK_DRAG_THRESHOLD_PX = 3;
 const FIT_VIEW_HORIZONTAL_PADDING_PX = 64;
 const HANDLE_HIT_RADIUS_PX = 6;
 const HANDLE_SIZE_PX = 8;
+// In screen pixels, so a clone sits visibly apart from its original at any zoom.
+const CLONE_OFFSET_PX = 12;
+const SHAPE_ACTIONS_GAP_PX = 8;
+const SHAPE_ACTIONS_EDGE_MARGIN_PX = 4;
 const UNSELECTED_STROKE_STYLE = 'rgba(37, 99, 235, 0.9)';
 const UNSELECTED_FILL_STYLE = 'rgba(37, 99, 235, 0.15)';
 const SELECTED_STROKE_STYLE = 'rgba(220, 38, 38, 0.95)';
@@ -113,6 +120,8 @@ export function mountImageCanvas(
     canvas.tabIndex = 0;
     const context = getContext2d(canvas);
     container.appendChild(canvas);
+    const shapeActions = buildShapeActions();
+    container.appendChild(shapeActions);
 
     let image: HTMLImageElement | null = null;
     let viewport: Viewport = { zoom: 1, panX: 0, panY: 0 };
@@ -201,7 +210,8 @@ export function mountImageCanvas(
     window.addEventListener('keydown', onPanModifierKeyDown);
     window.addEventListener('keyup', onPanModifierKeyUp);
     window.addEventListener('blur', onWindowBlur);
-    registerShortcut('deleteSelectedShape', deleteSelectedShape, canDeleteSelectedShape);
+    registerShortcut('deleteSelectedShape', deleteSelectedShape, canEditSelectedShape);
+    registerShortcut('cloneSelectedShape', cloneSelectedShape, canEditSelectedShape);
     registerShortcut('cycleFocusedShapeNext', () => cycleFocusedShape(1), () => canCycleFocusedShape(1));
     registerShortcut('cycleFocusedShapePrev', () => cycleFocusedShape(-1), () => canCycleFocusedShape(-1));
     registerShortcut('toggleFocusedShapeVisibility', toggleFocusedShapeVisibility, canToggleFocusedShapeVisibility);
@@ -215,6 +225,7 @@ export function mountImageCanvas(
 
     function draw(): void {
         context.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+        shapeActions.hidden = true;
         if (!image) {
             return;
         }
@@ -256,7 +267,46 @@ export function mountImageCanvas(
         const selectedRect = selectedShapeRect();
         if (selectedRect) {
             drawHandles(selectedRect);
+            placeShapeActions(selectedRect);
         }
+    }
+
+    function buildShapeActions(): HTMLDivElement {
+        const actions = document.createElement('div');
+        actions.className = 'shape-actions';
+        actions.hidden = true;
+        actions.append(
+            buildShapeActionButton('icon-clone', `Clone (${shortcutHint('cloneSelectedShape')})`, cloneSelectedShape),
+            buildShapeActionButton('icon-trash', `Delete (${shortcutHint('deleteSelectedShape')})`, deleteSelectedShape)
+        );
+        return actions;
+    }
+
+    function buildShapeActionButton(icon: string, hint: string, onClick: () => void): HTMLButtonElement {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'icon-button';
+        button.append(iconSpan(icon));
+        button.title = hint;
+        button.setAttribute('aria-label', hint);
+        // Keeps keyboard focus on the canvas, so its shortcuts keep working after a click.
+        button.addEventListener('mousedown', (event) => event.preventDefault());
+        button.addEventListener('click', onClick);
+        return button;
+    }
+
+    // Centred under the shape, or above it when only above has room; they leave the view with the shape.
+    function placeShapeActions(rect: Rect): void {
+        shapeActions.hidden = false;
+        const topLeft = imageToCanvas(viewport, { x: rect.x, y: rect.y });
+        const bottomRight = imageToCanvas(viewport, { x: rect.x + rect.width, y: rect.y + rect.height });
+        const height = shapeActions.offsetHeight;
+        const below = bottomRight.y + SHAPE_ACTIONS_GAP_PX;
+        const above = topLeft.y - SHAPE_ACTIONS_GAP_PX - height;
+        const fitsBelow = below + height <= canvas.clientHeight - SHAPE_ACTIONS_EDGE_MARGIN_PX;
+        const fitsAbove = above >= SHAPE_ACTIONS_EDGE_MARGIN_PX;
+        shapeActions.style.left = `${(topLeft.x + bottomRight.x - shapeActions.offsetWidth) / 2}px`;
+        shapeActions.style.top = `${!fitsBelow && fitsAbove ? above : below}px`;
     }
 
     function selectedShapeRect(): Rect | null {
@@ -626,12 +676,19 @@ export function mountImageCanvas(
         }
     }
 
-    function canDeleteSelectedShape(): boolean {
+    function canEditSelectedShape(): boolean {
         return mode === 'edit' && document.activeElement === canvas && selectedShapeId !== null;
     }
 
     function deleteSelectedShape(): void {
         callbacks.onDeleteSelected();
+    }
+
+    function cloneSelectedShape(): void {
+        const selectedShape = findShape(selectedShapeId);
+        if (selectedShape && image) {
+            callbacks.onCloneSelected(offsetCopyRect(selectedShape, CLONE_OFFSET_PX / viewport.zoom, imageBounds()));
+        }
     }
 
     // Recomputed only when the shapes or the page's numbering change: the shape array is replaced on every edit, never
@@ -773,10 +830,12 @@ export function mountImageCanvas(
             window.removeEventListener('keyup', onPanModifierKeyUp);
             window.removeEventListener('blur', onWindowBlur);
             unregisterShortcut('deleteSelectedShape');
+            unregisterShortcut('cloneSelectedShape');
             unregisterShortcut('cycleFocusedShapeNext');
             unregisterShortcut('cycleFocusedShapePrev');
             unregisterShortcut('toggleFocusedShapeVisibility');
             canvas.remove();
+            shapeActions.remove();
         }
     };
 }
