@@ -182,6 +182,7 @@ export function mountImageCanvas(
         imageAnalysis.analyse(image);
         refitViewport();
         draw();
+        canvas.dataset.image = 'loaded';
     }
 
     function refitViewport(): void {

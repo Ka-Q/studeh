@@ -39,7 +39,8 @@ export async function waitForNumbering(page: Page): Promise<void> {
 
 export async function assignActivePageImage(page: Page, filePath = SAMPLE_IMAGE_PATH): Promise<void> {
     await page.locator('#canvas-area input[type="file"]').first().setInputFiles(filePath);
-    await getCanvas(page).waitFor();
+    // Loaded, the image is fitted to the view, which changes the zoom.
+    await expect(getCanvas(page)).toHaveAttribute('data-image', 'loaded');
 }
 
 export async function addPageFromImages(page: Page, filePaths: string[] = [SAMPLE_IMAGE_PATH]): Promise<void> {
