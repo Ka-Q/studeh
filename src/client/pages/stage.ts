@@ -18,6 +18,7 @@ import { reportError } from '../errors';
 import { mountImageCanvas, type ImageCanvasHandle, type NumberingMode } from '../canvas/imageCanvas';
 import { initFullscreenControl, requestFullscreen } from '../canvas/fullscreen';
 import { initCanvasHints, type CanvasHintsHandle } from '../canvas/canvasHints';
+import { initCanvasPan, type CanvasPanHandle } from '../canvas/canvasPan';
 import { initCanvasZoom, type CanvasZoomHandle } from '../canvas/canvasZoom';
 import { initPageNavigator, type PageNavigatorHandle } from '../canvas/pageNavigator';
 import { initAnalysisStatus } from '../canvas/analysisStatus';
@@ -44,6 +45,7 @@ let dragOverlay: HTMLDivElement;
 let modeToggleHandle: ModeToggleHandle;
 let canvasHintsHandle: CanvasHintsHandle;
 let canvasZoomHandle: CanvasZoomHandle;
+let canvasPanHandle: CanvasPanHandle;
 let pageNavigatorHandle: PageNavigatorHandle;
 let mountedCanvas: MountedCanvas | null = null;
 let isFullscreen = false;
@@ -69,6 +71,7 @@ export function initStage(): void {
     canvasMount.append(canvasBody, dragOverlay, modeToggleHandle.button, overlayStack);
     container.append(controlsEl, canvasMount);
     canvasHintsHandle = initCanvasHints(overlayStack, getState().mode);
+    canvasPanHandle = initCanvasPan(overlayStack);
     canvasZoomHandle = initCanvasZoom(canvasMount);
     pageNavigatorHandle = initPageNavigator(canvasMount);
     initAnalysisStatus(canvasMount);
@@ -98,6 +101,10 @@ export function initStage(): void {
     registerShortcut('zoomOut', () => canvasZoomHandle.zoomOut(), hasReadyCanvas);
     registerShortcut('resetZoom', () => canvasZoomHandle.resetZoom(), hasReadyCanvas);
     registerShortcut('fitToView', () => canvasZoomHandle.fitToView(), hasReadyCanvas);
+    registerShortcut('panLeft', () => mountedCanvas!.handle.panByStep(-1, 0), hasReadyCanvas);
+    registerShortcut('panRight', () => mountedCanvas!.handle.panByStep(1, 0), hasReadyCanvas);
+    registerShortcut('panUp', () => mountedCanvas!.handle.panByStep(0, -1), hasReadyCanvas);
+    registerShortcut('panDown', () => mountedCanvas!.handle.panByStep(0, 1), hasReadyCanvas);
 
     subscribe(render);
     render();
@@ -424,12 +431,14 @@ function renderCanvas(documentId: string, page: Page): void {
         )
     };
     canvasZoomHandle.setSource(mountedCanvas.handle);
+    canvasPanHandle.setSource(mountedCanvas.handle);
 }
 
 function unmountCanvas(): void {
     mountedCanvas?.handle.destroy();
     mountedCanvas = null;
     canvasZoomHandle.setSource(null);
+    canvasPanHandle.setSource(null);
 }
 
 function toggleFullscreen(): void {

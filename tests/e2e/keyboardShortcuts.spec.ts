@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { addPage, assignActivePageImage, createDocument, dragOnCanvas, getCanvas, imageOnScreenRect, isShapeRevealed, resetZoomTo100, uniqueName, waitForNumbering } from './helpers';
 
-test('Ctrl+Up/Down reorders the active page; plain arrows only navigate', async ({ page }) => {
+test('Ctrl+Shift+Up/Down reorders the active page; Ctrl+arrows only navigate; plain arrows keep the page', async ({ page }) => {
     await page.goto('/');
     await createDocument(page, uniqueName('Reorder Doc'));
     await addPage(page);
@@ -14,15 +14,15 @@ test('Ctrl+Up/Down reorders the active page; plain arrows only navigate', async 
     await page.locator('.page-item').nth(1).locator('.page-thumb').click();
     await expect(page.locator('.page-item.active')).toHaveAttribute('data-page-id', ids[1]!);
 
-    await page.keyboard.press('Control+ArrowUp');
+    await page.keyboard.press('Control+Shift+ArrowUp');
     let order = await page.locator('.page-item').evaluateAll(function toIds(items) {
         return items.map(function id(item) { return item.getAttribute('data-page-id'); });
     });
     expect(order).toEqual([ids[1], ids[0], ids[2]]);
     await expect(page.locator('.page-item.active')).toHaveAttribute('data-page-id', ids[1]!);
 
-    await page.keyboard.press('Control+ArrowDown');
-    await page.keyboard.press('Control+ArrowDown');
+    await page.keyboard.press('Control+Shift+ArrowDown');
+    await page.keyboard.press('Control+Shift+ArrowDown');
     order = await page.locator('.page-item').evaluateAll(function toIds(items) {
         return items.map(function id(item) { return item.getAttribute('data-page-id'); });
     });
@@ -30,6 +30,9 @@ test('Ctrl+Up/Down reorders the active page; plain arrows only navigate', async 
     await expect(page.locator('.page-item.active')).toHaveAttribute('data-page-id', ids[1]!);
 
     await page.keyboard.press('ArrowUp');
+    await expect(page.locator('.page-item.active')).toHaveAttribute('data-page-id', ids[1]!);
+
+    await page.keyboard.press('Control+ArrowUp');
     order = await page.locator('.page-item').evaluateAll(function toIds(items) {
         return items.map(function id(item) { return item.getAttribute('data-page-id'); });
     });
@@ -294,7 +297,7 @@ test('navigating to an imageless page in fullscreen leaves no stale shape-focus 
     await page.locator('.fullscreen-close').waitFor({ state: 'visible' });
 
     await page.keyboard.press('Tab');
-    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Control+ArrowRight');
     await page.keyboard.press('Enter');
 
     await page.locator('.fullscreen-close').click();
@@ -308,7 +311,7 @@ test('navigating to an imageless page in fullscreen leaves no stale shape-focus 
     expect(await isShapeRevealed(page, shapeCenter)).toBe(false);
 });
 
-test('plain arrow-key page navigation still works in fullscreen', async ({ page }) => {
+test('Ctrl+arrow page navigation works in fullscreen', async ({ page }) => {
     await page.goto('/');
     await createDocument(page, uniqueName('Fullscreen Nav Doc'));
     await addPage(page);
@@ -323,9 +326,9 @@ test('plain arrow-key page navigation still works in fullscreen', async ({ page 
     await page.getByRole('button', { name: 'Fullscreen' }).click();
     await page.locator('.fullscreen-close').waitFor({ state: 'visible' });
 
-    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('Control+ArrowLeft');
     await expect(page.locator('.page-item.active')).toHaveAttribute('data-page-id', ids[0]!);
 
-    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Control+ArrowRight');
     await expect(page.locator('.page-item.active')).toHaveAttribute('data-page-id', ids[1]!);
 });

@@ -13,10 +13,6 @@ export function isPrimaryModifierPressed(event: MouseEvent | KeyboardEvent): boo
     return IS_MAC_PLATFORM ? event.metaKey : event.ctrlKey;
 }
 
-export function isPrimaryModifierKey(event: KeyboardEvent): boolean {
-    return event.key === (IS_MAC_PLATFORM ? 'Meta' : 'Control');
-}
-
 export function primaryModifierLabel(): 'Ctrl' | 'Cmd' {
     return IS_MAC_PLATFORM ? 'Cmd' : 'Ctrl';
 }

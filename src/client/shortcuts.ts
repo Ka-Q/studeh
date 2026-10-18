@@ -27,6 +27,10 @@ export type ShortcutId =
     | 'zoomOut'
     | 'resetZoom'
     | 'fitToView'
+    | 'panLeft'
+    | 'panRight'
+    | 'panUp'
+    | 'panDown'
     | 'deleteSelectedShape'
     | 'cloneSelectedShape'
     | 'cycleFocusedShapeNext'
@@ -62,14 +66,14 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutSpec> = {
     new: { label: 'New document', group: 'document', bindings: [{ key: 'd', modifier: Modifier.PRIMARY, displayKey: 'D' }], allowInFullscreen: false },
     browse: { label: 'Browse documents', group: 'document', bindings: [{ key: 'b', modifier: Modifier.PRIMARY, displayKey: 'B' }], allowInFullscreen: false },
     save: { label: 'Save document', group: 'document', bindings: [{ key: 's', modifier: Modifier.PRIMARY, displayKey: 'S' }], allowInFullscreen: false },
-    reorderPageUp: { label: 'Move page up', group: 'pages', bindings: [{ key: 'ArrowUp', modifier: Modifier.PRIMARY, displayKey: 'Up arrow' }], allowInFullscreen: false },
-    reorderPageDown: { label: 'Move page down', group: 'pages', bindings: [{ key: 'ArrowDown', modifier: Modifier.PRIMARY, displayKey: 'Down arrow' }], allowInFullscreen: false },
+    reorderPageUp: { label: 'Move page up', group: 'pages', bindings: [{ key: 'ArrowUp', modifier: Modifier.PRIMARY_SHIFT, displayKey: 'Up arrow' }], allowInFullscreen: false },
+    reorderPageDown: { label: 'Move page down', group: 'pages', bindings: [{ key: 'ArrowDown', modifier: Modifier.PRIMARY_SHIFT, displayKey: 'Down arrow' }], allowInFullscreen: false },
     selectPreviousPage: {
         label: 'Previous page',
         group: 'pages',
         bindings: [
-            { key: 'ArrowUp', modifier: Modifier.NONE, displayKey: 'Up arrow' },
-            { key: 'ArrowLeft', modifier: Modifier.NONE, displayKey: 'Left arrow' }
+            { key: 'ArrowUp', modifier: Modifier.PRIMARY, displayKey: 'Up arrow' },
+            { key: 'ArrowLeft', modifier: Modifier.PRIMARY, displayKey: 'Left arrow' }
         ],
         allowInFullscreen: true
     },
@@ -77,8 +81,8 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutSpec> = {
         label: 'Next page',
         group: 'pages',
         bindings: [
-            { key: 'ArrowDown', modifier: Modifier.NONE, displayKey: 'Down arrow' },
-            { key: 'ArrowRight', modifier: Modifier.NONE, displayKey: 'Right arrow' }
+            { key: 'ArrowDown', modifier: Modifier.PRIMARY, displayKey: 'Down arrow' },
+            { key: 'ArrowRight', modifier: Modifier.PRIMARY, displayKey: 'Right arrow' }
         ],
         allowInFullscreen: true
     },
@@ -101,6 +105,10 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutSpec> = {
     zoomOut: { label: 'Zoom out', group: 'canvas', bindings: [{ key: '-', modifier: Modifier.ANY, displayKey: '-' }], allowInFullscreen: true },
     resetZoom: { label: 'Reset zoom to 100%', group: 'canvas', bindings: [{ key: '0', modifier: Modifier.ANY, displayKey: '0' }], allowInFullscreen: true },
     fitToView: { label: 'Fit image to view', group: 'canvas', bindings: [{ key: '=', modifier: Modifier.ANY, displayKey: '=' }], allowInFullscreen: true },
+    panLeft: { label: 'Pan left', group: 'canvas', bindings: [{ key: 'ArrowLeft', modifier: Modifier.NONE, displayKey: 'Left arrow' }], allowInFullscreen: true },
+    panRight: { label: 'Pan right', group: 'canvas', bindings: [{ key: 'ArrowRight', modifier: Modifier.NONE, displayKey: 'Right arrow' }], allowInFullscreen: true },
+    panUp: { label: 'Pan up', group: 'canvas', bindings: [{ key: 'ArrowUp', modifier: Modifier.NONE, displayKey: 'Up arrow' }], allowInFullscreen: true },
+    panDown: { label: 'Pan down', group: 'canvas', bindings: [{ key: 'ArrowDown', modifier: Modifier.NONE, displayKey: 'Down arrow' }], allowInFullscreen: true },
     deleteSelectedShape: {
         label: 'Delete selected shape (Edit mode)',
         group: 'canvas',

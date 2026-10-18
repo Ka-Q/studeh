@@ -236,6 +236,11 @@ button:hover:not(:disabled) {
     mask-image: url('/icons/reset.svg');
 }
 
+.icon-hand {
+    -webkit-mask-image: url('/icons/hand.svg');
+    mask-image: url('/icons/hand.svg');
+}
+
 .icon-plus {
     -webkit-mask-image: url('/icons/plus.svg');
     mask-image: url('/icons/plus.svg');
@@ -1171,8 +1176,9 @@ button.toggle-button[aria-pressed='true'] {
     bottom: var(--space-2);
     z-index: 1;
     display: flex;
-    flex-direction: column;
+    /* The pan pad in the bottom-right corner, the shortcut hints beside it. */
     align-items: flex-end;
+    justify-content: flex-end;
     gap: var(--space-2);
     pointer-events: none;
 }
@@ -1230,6 +1236,117 @@ button.toggle-button[aria-pressed='true'] {
     font-variant-numeric: tabular-nums;
 }
 
+.canvas-pan {
+    order: 3;
+    position: relative;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    /* Clips the arrows' wedges, their hover tint and their hit areas to the circle. */
+    clip-path: circle(50%);
+    background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+    backdrop-filter: blur(8px);
+    color: var(--color-text);
+}
+
+.canvas-pan[hidden] {
+    display: none;
+}
+
+/* Each arrow takes the whole quarter of the circle it points into, split along the diagonals. */
+.canvas-pan-button {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    padding: 5px;
+    border: none;
+    border-radius: 0;
+    background: none;
+}
+
+.canvas-pan-button:hover:not(:disabled),
+.canvas-pan-knob:hover,
+.canvas-pan-knob.dragging {
+    /* Stronger than the usual hover colour, which barely differs from the pad's own background. */
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
+}
+
+.canvas-pan-button:focus-visible {
+    outline: none;
+    background: color-mix(in srgb, var(--color-focus-ring) 30%, transparent);
+}
+
+.canvas-pan-up {
+    clip-path: polygon(0 0, 100% 0, 50% 50%);
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.canvas-pan-right {
+    clip-path: polygon(100% 0, 100% 100%, 50% 50%);
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.canvas-pan-down {
+    clip-path: polygon(0 100%, 100% 100%, 50% 50%);
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.canvas-pan-left {
+    clip-path: polygon(0 0, 0 100%, 50% 50%);
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.canvas-pan-up .icon {
+    transform: rotate(-90deg);
+}
+
+.canvas-pan-left .icon {
+    transform: rotate(180deg);
+}
+
+.canvas-pan-down .icon {
+    transform: rotate(90deg);
+}
+
+/* The middle circle, over the wedges, takes the drag. */
+.canvas-pan-knob {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    cursor: grab;
+}
+
+.canvas-pan-knob.dragging {
+    cursor: grabbing;
+}
+
+.canvas-pan-knob.dragging .icon {
+    -webkit-mask-image: url('/icons/hand-closed.svg');
+    mask-image: url('/icons/hand-closed.svg');
+}
+
+/* Let go, the hand eases back to the middle. */
+.canvas-pan-knob:not(.dragging) .icon {
+    transition: transform 0.15s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .canvas-pan-knob:not(.dragging) .icon {
+        transition: none;
+    }
+}
+
 .canvas-hints {
     order: 2;
     display: flex;
@@ -1245,7 +1362,7 @@ button.toggle-button[aria-pressed='true'] {
 }
 
 .canvas-hints:not(.collapsed) {
-    align-self: stretch;
+    flex: 1;
 }
 
 .canvas-hints-rows {
@@ -1277,7 +1394,7 @@ button.toggle-button[aria-pressed='true'] {
 }
 
 .canvas-hints.collapsed {
-    /* Matches the zoom pane's own rendered width so the two independent overlays still line up. */
+    /* As wide as the zoom pane, so the corner overlays read as one set. */
     width: 32px;
     padding: var(--space-1);
     justify-content: center;

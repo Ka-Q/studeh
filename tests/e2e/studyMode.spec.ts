@@ -114,9 +114,9 @@ test('in study mode the cursor is a pointer over a shape and default elsewhere, 
     await page.mouse.move(imageRect.left + 200, imageRect.top + 200);
     await expect(canvas).toHaveCSS('cursor', 'default');
 
-    await page.keyboard.down('Control');
+    await page.keyboard.down('Shift');
     await expect(canvas).toHaveCSS('cursor', 'grab');
-    await page.keyboard.up('Control');
+    await page.keyboard.up('Shift');
     await expect(canvas).toHaveCSS('cursor', 'default');
 });
 

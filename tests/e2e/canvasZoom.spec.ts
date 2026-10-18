@@ -126,9 +126,9 @@ test('fit to view resets both zoom and pan back to the pristine just-opened view
     // Drift away from the pristine view: zoom in, then pan.
     await zoomInButton(page).click();
     await zoomInButton(page).click();
-    await page.keyboard.down('Control');
+    await page.keyboard.down('Shift');
     await dragOnCanvas(page, probePoint, { x: probePoint.x - 70, y: probePoint.y - 50 });
-    await page.keyboard.up('Control');
+    await page.keyboard.up('Shift');
     await expect(percent).not.toHaveText(pristinePercent ?? '');
 
     await fitButton(page).click();

@@ -8,8 +8,8 @@ test('shortcutHint formats a single binding without a separator', function () {
 });
 
 test('shortcutHint joins multiple bindings with " / "', function () {
-    assert.equal(shortcutHint('selectPreviousPage'), 'Up arrow / Left arrow');
-    assert.equal(shortcutHint('selectNextPage'), 'Down arrow / Right arrow');
+    assert.equal(shortcutHint('selectPreviousPage'), 'Ctrl+Up arrow / Ctrl+Left arrow');
+    assert.equal(shortcutHint('selectNextPage'), 'Ctrl+Down arrow / Ctrl+Right arrow');
 });
 
 test('shortcutHint formats the zoom shortcuts', function () {

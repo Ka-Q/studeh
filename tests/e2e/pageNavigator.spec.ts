@@ -39,7 +39,7 @@ test('the page navigator rail shows only in fullscreen, tracks the active page, 
     await expect(page.locator('.page-navigator-item.active')).toHaveAttribute('data-page-id', ids[1]!);
     await expect(page.locator('.page-item.active')).toHaveAttribute('data-page-id', ids[1]!);
 
-    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Control+ArrowRight');
     await expect(counter).toHaveText('3/3');
     await expect(nextButton).toBeDisabled();
 
@@ -82,7 +82,7 @@ test('the page navigator auto-scrolls the active thumbnail into view when naviga
     expect(await isFirstItemVisible()).toBe(false);
 
     for (let i = 0; i < 14; i++) {
-        await page.keyboard.press('ArrowLeft');
+        await page.keyboard.press('Control+ArrowLeft');
     }
     await expect(page.locator('.page-navigator-counter')).toHaveText('1/15');
     await expect(page.locator('.page-navigator-item.active')).toHaveAttribute('data-page-id', ids[0]!);

@@ -24,7 +24,7 @@ import {
 } from '../shapes/rectangle';
 import type { RectangleShape } from '../../shared/types';
 import type { Mode } from '../document/state';
-import { iconSpan, isBlockedByInputOrDialog, isPrimaryModifierKey, isPrimaryModifierPressed, startDragSession } from '../dom';
+import { iconSpan, isBlockedByInputOrDialog, startDragSession } from '../dom';
 import { registerShortcut, unregisterShortcut } from '../shortcutDispatch';
 import { shortcutHint } from '../shortcuts';
 import { imageAnalysis, type AnalysedShape } from '../imageAnalysis/analysisClient';
@@ -53,6 +53,10 @@ export interface ImageCanvasHandle {
     isReady(): boolean;
     getZoom(): number;
     setZoom(zoom: number): void;
+    // Moves the image by the screen distance, as dragging it would.
+    panBy(dx: number, dy: number): void;
+    // Moves the view a step towards x/y (-1, 0 or 1 each), as scrolling would.
+    panByStep(x: number, y: number): void;
     fitToView(): void;
     onViewportChange(callback: () => void): () => void;
 }
@@ -61,6 +65,8 @@ const MIDDLE_MOUSE_BUTTON = 1;
 const LEFT_MOUSE_BUTTON = 0;
 const ZOOM_STEP_PER_WHEEL_TICK = 1.1;
 const CLICK_DRAG_THRESHOLD_PX = 3;
+// A keyboard pan step, as a share of the canvas along the axis: key-repeat glides, a single press stays fine-grained.
+const PAN_STEP_RATIO = 0.1;
 const FIT_VIEW_HORIZONTAL_PADDING_PX = 64;
 const HANDLE_HIT_RADIUS_PX = 6;
 const HANDLE_SIZE_PX = 8;
@@ -204,6 +210,12 @@ export function mountImageCanvas(
         }
     }
 
+    function panBy(dx: number, dy: number): void {
+        viewport = panViewport(viewport, dx, dy);
+        draw();
+        notifyViewportChange();
+    }
+
     function applyZoom(targetZoom: number): void {
         if (!image) {
             return;
@@ -223,7 +235,6 @@ export function mountImageCanvas(
     canvas.addEventListener('wheel', onWheel, { passive: false });
     canvas.addEventListener('mousedown', onMouseDown);
     canvas.addEventListener('mousemove', onHoverMove);
-    canvas.addEventListener('contextmenu', onContextMenu);
     canvas.addEventListener('blur', onCanvasBlur);
     window.addEventListener('keydown', onPanModifierKeyDown);
     window.addEventListener('keyup', onPanModifierKeyUp);
@@ -511,7 +522,7 @@ export function mountImageCanvas(
         if (!image) {
             return;
         }
-        if (event.button === MIDDLE_MOUSE_BUTTON || (event.button === LEFT_MOUSE_BUTTON && isPrimaryModifierPressed(event))) {
+        if (event.button === MIDDLE_MOUSE_BUTTON || (event.button === LEFT_MOUSE_BUTTON && event.shiftKey)) {
             startPanning(event);
             return;
         }
@@ -549,7 +560,7 @@ export function mountImageCanvas(
 
     function onHoverMove(event: MouseEvent): void {
         lastHoverPoint = toCanvasPoint(event);
-        isPanModifierPressed = isPrimaryModifierPressed(event);
+        isPanModifierPressed = event.shiftKey;
         if (isHoverCursorSuppressed()) {
             return;
         }
@@ -560,14 +571,8 @@ export function mountImageCanvas(
         return !image || Boolean(activeDrag) || Boolean(creatingRect) || Boolean(stopPanning);
     }
 
-    function onContextMenu(event: MouseEvent): void {
-        if (isPrimaryModifierPressed(event)) {
-            event.preventDefault();
-        }
-    }
-
     function onPanModifierKeyDown(event: KeyboardEvent): void {
-        if (!isPrimaryModifierKey(event) || isPanModifierPressed || isBlockedByInputOrDialog()) {
+        if (event.key !== 'Shift' || isPanModifierPressed || isBlockedByInputOrDialog()) {
             return;
         }
         isPanModifierPressed = true;
@@ -575,7 +580,7 @@ export function mountImageCanvas(
     }
 
     function onPanModifierKeyUp(event: KeyboardEvent): void {
-        if (!isPrimaryModifierKey(event)) {
+        if (event.key !== 'Shift') {
             return;
         }
         isPanModifierPressed = false;
@@ -917,6 +922,10 @@ export function mountImageCanvas(
         setZoom(zoom: number): void {
             applyZoom(zoom);
         },
+        panBy,
+        panByStep(x: number, y: number): void {
+            panBy(-x * canvas.clientWidth * PAN_STEP_RATIO, -y * canvas.clientHeight * PAN_STEP_RATIO);
+        },
         fitToView(): void {
             refitViewport();
             draw();
@@ -938,7 +947,6 @@ export function mountImageCanvas(
             canvas.removeEventListener('wheel', onWheel);
             canvas.removeEventListener('mousedown', onMouseDown);
             canvas.removeEventListener('mousemove', onHoverMove);
-            canvas.removeEventListener('contextmenu', onContextMenu);
             canvas.removeEventListener('blur', onCanvasBlur);
             window.removeEventListener('keydown', onPanModifierKeyDown);
             window.removeEventListener('keyup', onPanModifierKeyUp);
