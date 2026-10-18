@@ -6,7 +6,8 @@ export type Mode = 'edit' | 'study';
 export interface AppState {
     document: DocumentManifest | null;
     activePageId: string | null;
-    selectedShapeId: string | null;
+    // The shape selected last, which has the handles and buttons, is the last.
+    selectedShapeIds: readonly string[];
     dirty: boolean;
     mode: Mode;
     revealedShapeIds: ReadonlySet<string>;
@@ -17,7 +18,7 @@ type Listener = (state: AppState) => void;
 const state: AppState = {
     document: null,
     activePageId: null,
-    selectedShapeId: null,
+    selectedShapeIds: [],
     dirty: false,
     mode: 'edit',
     revealedShapeIds: new Set()
@@ -25,10 +26,10 @@ const state: AppState = {
 
 const listeners = new Set<Listener>();
 let lastSavedDocument: DocumentManifest | null = null;
-// Shapes selected one after another before the current one, most recent last: deleting the selected shape selects the
-// latest of them still on the page. Clearing the selection starts it over.
-let selectionHistory: string[] = [];
-let lastNotifiedSelectedShapeId: string | null = null;
+// The selections made one after another before the current one, most recent last: deleting the selected shapes selects
+// the latest of them with shapes still on the page. Clearing the selection starts it over.
+let selectionHistory: (readonly string[])[] = [];
+let lastNotifiedSelectedShapeIds: readonly string[] = [];
 
 export function getState(): AppState {
     return state;
@@ -42,7 +43,7 @@ export function setDocument(document: DocumentManifest | null): void {
     replaceDocument(document);
     lastSavedDocument = state.document;
     state.activePageId = document?.pages[0]?.id ?? null;
-    state.selectedShapeId = null;
+    state.selectedShapeIds = [];
     state.dirty = false;
     state.mode = 'edit';
     state.revealedShapeIds = new Set();
@@ -61,7 +62,7 @@ export function setActivePage(pageId: string): void {
         return;
     }
     state.activePageId = pageId;
-    state.selectedShapeId = null;
+    state.selectedShapeIds = [];
     notify();
 }
 
@@ -109,7 +110,7 @@ export function deletePage(pageId: string): void {
     if (state.activePageId === pageId) {
         state.activePageId = pickActivePageIdAfterDeletion(pages, new Set([pageId]), pageId, remaining);
     }
-    state.selectedShapeId = null;
+    state.selectedShapeIds = [];
     notify();
 }
 
@@ -144,7 +145,7 @@ export function deletePages(pageIds: string[]): void {
     if (state.activePageId && idsToDelete.has(state.activePageId)) {
         state.activePageId = pickActivePageIdAfterDeletion(pages, idsToDelete, state.activePageId, remaining);
     }
-    state.selectedShapeId = null;
+    state.selectedShapeIds = [];
     notify();
 }
 
@@ -158,7 +159,7 @@ export function setPageImage(pageId: string, image: PageImage): void {
 }
 
 export function addShape(pageId: string, rect: Rect): void {
-    insertShape(pageId, {
+    insertShapes(pageId, [{
         id: generateId('shape'),
         type: 'rectangle',
         x: rect.x,
@@ -166,34 +167,40 @@ export function addShape(pageId: string, rect: Rect): void {
         width: rect.width,
         height: rect.height,
         visible: false
-    });
+    }]);
 }
 
-// The copy keeps every property of the selected shape but its id and place, and becomes the selected shape.
-export function cloneSelectedShape(rect: Rect): void {
+// Each copy keeps every property of its original but its id and place, shifted by dx/dy; the copies become the selection.
+export function cloneSelectedShapes(dx: number, dy: number): void {
     const page = getActivePage();
-    const original = page?.shapes.find(function isSelected(shape) {
-        return shape.id === state.selectedShapeId;
+    if (!page) {
+        return;
+    }
+    const byId = new Map(page.shapes.map((shape) => [shape.id, shape]));
+    const copies = state.selectedShapeIds.filter((id) => byId.has(id)).map(function copyOf(id) {
+        const original = byId.get(id)!;
+        return { ...original, id: generateId('shape'), x: original.x + dx, y: original.y + dy };
     });
-    if (page && original) {
-        insertShape(page.id, { ...original, id: generateId('shape'), x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+    if (copies.length > 0) {
+        insertShapes(page.id, copies);
     }
 }
 
-function insertShape(pageId: string, shape: RectangleShape): void {
-    if (!updatePageShapes(pageId, function addShapeToPage(shapes) {
-        return [...shapes, shape];
+function insertShapes(pageId: string, newShapes: RectangleShape[]): void {
+    if (!updatePageShapes(pageId, function addShapesToPage(shapes) {
+        return [...shapes, ...newShapes];
     })) {
         return;
     }
-    state.selectedShapeId = shape.id;
+    state.selectedShapeIds = newShapes.map((shape) => shape.id);
     notify();
 }
 
-export function updateShapeRect(pageId: string, shapeId: string, rect: RotatedRect): void {
-    if (!updatePageShapes(pageId, function applyRect(shapes) {
+export function updateShapeRects(pageId: string, rects: ReadonlyMap<string, RotatedRect>): void {
+    if (!updatePageShapes(pageId, function applyRects(shapes) {
         return shapes.map(function updateShapeIfTarget(shape) {
-            return shape.id === shapeId ? withRect(shape, rect) : shape;
+            const rect = rects.get(shape.id);
+            return rect ? withRect(shape, rect) : shape;
         });
     })) {
         return;
@@ -212,7 +219,7 @@ function withRect(shape: RectangleShape, rect: RotatedRect): RectangleShape {
 
 export function setMode(mode: Mode): void {
     state.mode = mode;
-    state.selectedShapeId = null;
+    state.selectedShapeIds = [];
     if (mode === 'study') {
         state.revealedShapeIds = new Set();
     }
@@ -247,33 +254,38 @@ export function setPageShapesVisibility(pageId: string, visible: boolean): void 
     notify();
 }
 
-export function selectShape(shapeId: string | null): void {
-    state.selectedShapeId = shapeId;
+export function selectShapes(shapeIds: readonly string[]): void {
+    state.selectedShapeIds = shapeIds;
     notify();
 }
 
-export function deleteSelectedShape(): void {
-    if (!state.activePageId || !state.selectedShapeId) {
+export function deleteSelectedShapes(): void {
+    if (!state.activePageId || state.selectedShapeIds.length === 0) {
         return;
     }
-    const shapeId = state.selectedShapeId;
-    const updated = updatePageShapes(state.activePageId, function removeShape(shapes) {
-        return shapes.filter(function isNotTarget(shape) {
-            return shape.id !== shapeId;
+    const selected = new Set(state.selectedShapeIds);
+    const updated = updatePageShapes(state.activePageId, function removeSelected(shapes) {
+        return shapes.filter(function isNotSelected(shape) {
+            return !selected.has(shape.id);
         });
     });
     if (!updated) {
         return;
     }
-    state.selectedShapeId = latestPreviouslySelectedShapeId(getActivePage()!.shapes);
+    state.selectedShapeIds = latestPreviousSelection(getActivePage()!.shapes);
     notify();
 }
 
-function latestPreviouslySelectedShapeId(shapes: RectangleShape[]): string | null {
+// Of the latest earlier selection with shapes still on the page, those shapes.
+function latestPreviousSelection(shapes: RectangleShape[]): string[] {
     const ids = new Set(shapes.map((shape) => shape.id));
-    return [...selectionHistory].reverse().find(function isOnPage(shapeId) {
-        return ids.has(shapeId);
-    }) ?? null;
+    for (const selection of [...selectionHistory].reverse()) {
+        const onPage = selection.filter((shapeId) => ids.has(shapeId));
+        if (onPage.length > 0) {
+            return onPage;
+        }
+    }
+    return [];
 }
 
 export function renameDocument(name: string): void {
@@ -337,14 +349,19 @@ function pickActivePageIdAfterDeletion(
     return remaining[0]?.id ?? null;
 }
 
-function trackSelectionChange(previousShapeId: string | null, shapeId: string | null): void {
-    if (!shapeId) {
+function trackSelectionChange(previous: readonly string[], next: readonly string[]): void {
+    if (next.length === 0) {
         selectionHistory = [];
-    } else if (previousShapeId) {
-        selectionHistory = [...selectionHistory.filter(function isNotPrevious(id) {
-            return id !== previousShapeId;
-        }), previousShapeId];
+    } else if (previous.length > 0) {
+        selectionHistory = [...selectionHistory.filter(function isNotPrevious(selection) {
+            return !haveSameIds(selection, previous);
+        }), previous];
     }
+}
+
+function haveSameIds(a: readonly string[], b: readonly string[]): boolean {
+    const bIds = new Set(b);
+    return a.length === bIds.size && a.every((id) => bIds.has(id));
 }
 
 function generateId(prefix: string): string {
@@ -390,9 +407,12 @@ function deepEqual(a: unknown, b: unknown): boolean {
 }
 
 function notify(): void {
-    if (state.selectedShapeId !== lastNotifiedSelectedShapeId) {
-        trackSelectionChange(lastNotifiedSelectedShapeId, state.selectedShapeId);
-        lastNotifiedSelectedShapeId = state.selectedShapeId;
+    const { selectedShapeIds } = state;
+    const isSelectionChanged = selectedShapeIds.length !== lastNotifiedSelectedShapeIds.length ||
+        selectedShapeIds.some((id, index) => id !== lastNotifiedSelectedShapeIds[index]);
+    if (isSelectionChanged) {
+        trackSelectionChange(lastNotifiedSelectedShapeIds, selectedShapeIds);
+        lastNotifiedSelectedShapeIds = selectedShapeIds;
     }
     for (const listener of listeners) {
         listener(state);

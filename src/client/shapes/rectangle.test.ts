@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     boundingRect,
+    boundingRectOfAll,
     clampMoveToBounds,
     clampRectToBounds,
     hitTestRectangle,
@@ -9,12 +10,15 @@ import {
     offsetCopyRect,
     rectFromPoints,
     rectCorners,
+    rectsIntersect,
     resizeRect,
     rotatedHandleDirection,
     rotationTowards,
     shapesInReadingOrder,
     topmostShapeAt,
-    type Rect
+    turnRect,
+    type Rect,
+    type RotatedRect
 } from './rectangle';
 import type { RectangleShape } from '../../shared/types';
 
@@ -142,6 +146,27 @@ test('rotationTowards turns the rect\'s top towards the point, snapping to the s
     assert.equal(rotationTowards(center, { x: -10, y: 0 }), 270);
     assert.equal(rotationTowards(center, { x: 10, y: -8 }, 45), 45);
     assert.equal(rotationTowards(center, { x: -1, y: -10 }, 45), 0);
+});
+
+test('turnRect adds the degrees to the rect\'s rotation, kept within a full turn', function () {
+    assert.equal(turnRect({ x: 0, y: 0, width: 10, height: 10, rotation: 300 }, 90).rotation, 30);
+    assert.equal(turnRect<RotatedRect>({ x: 0, y: 0, width: 10, height: 10 }, -90).rotation, 270);
+});
+
+test('boundingRectOfAll covers every rect, rotated ones by their corners', function () {
+    const box = boundingRectOfAll([{ x: 0, y: 0, width: 10, height: 10 }, { x: 20, y: 10, width: 20, height: 10, rotation: 90 }]);
+
+    assert.deepEqual(box, { x: 0, y: 0, width: 35, height: 25 });
+});
+
+test('rectsIntersect finds overlap and touching, but not a gap a rotated rect\'s bounding box would hide', function () {
+    const marquee = { x: 0, y: 0, width: 10, height: 10 };
+
+    assert.equal(rectsIntersect(marquee, { x: 5, y: 5, width: 10, height: 10 }), true);
+    assert.equal(rectsIntersect(marquee, { x: 10, y: 0, width: 5, height: 5 }), true);
+    assert.equal(rectsIntersect(marquee, { x: 11, y: 0, width: 5, height: 5 }), false);
+    // A diamond whose bounding box (8.8..17.2) overlaps the marquee's corner, while its left tip stays clear of it.
+    assert.equal(rectsIntersect(marquee, { x: 10, y: 10, width: 6, height: 6, rotation: 45 }), false);
 });
 
 test('rotatedHandleDirection gives the page direction a handle points in once rotated', function () {

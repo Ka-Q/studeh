@@ -1,6 +1,7 @@
 import { canvasToImage, fitViewport, imageToCanvas, panViewport, zoomAtCanvasPoint, zoomToLevelAtCanvasPoint, type Point, type Size, type Viewport } from './viewport';
 import {
     boundingRect,
+    boundingRectOfAll,
     clampMoveToBounds,
     clampRectToBounds,
     handlePoint,
@@ -12,19 +13,21 @@ import {
     rectCorners,
     rectFromPoints,
     rectsEqual,
+    rectsIntersect,
     resizeRect,
     rotatedHandleDirection,
     rotationHandlePoint,
     rotationOf,
     rotationTowards,
     topmostShapeAt,
+    turnRect,
     type Rect,
     type ResizeHandle,
     type RotatedRect
 } from '../shapes/rectangle';
 import type { RectangleShape } from '../../shared/types';
 import type { Mode } from '../document/state';
-import { iconSpan, isBlockedByInputOrDialog, startDragSession } from '../dom';
+import { iconSpan, isBlockedByInputOrDialog, isPrimaryModifierPressed, startDragSession } from '../dom';
 import { registerShortcut, unregisterShortcut } from '../shortcutDispatch';
 import { shortcutHint } from '../shortcuts';
 import { imageAnalysis, type AnalysedShape } from '../imageAnalysis/analysisClient';
@@ -35,19 +38,31 @@ export type NumberingMode = 'smart' | 'rows';
 
 export interface ImageCanvasCallbacks {
     onCreateShape(rect: Rect): void;
-    onSelectShape(shapeId: string | null): void;
-    onUpdateShapeRect(shapeId: string, rect: RotatedRect): void;
+    onSelectShapes(shapeIds: readonly string[]): void;
+    onUpdateShapeRects(rects: ReadonlyMap<string, RotatedRect>): void;
     onDeleteSelected(): void;
-    onCloneSelected(rect: Rect): void;
+    // The copies go this far from the selected shapes.
+    onCloneSelected(dx: number, dy: number): void;
     onToggleVisibility(shapeId: string): void;
 }
 
-type ActiveDrag =
-    | { kind: 'move' | 'rotate'; shapeId: string; original: RotatedRect; startCanvasPoint: Point; current: RotatedRect }
-    | { kind: 'resize'; shapeId: string; handle: ResizeHandle; original: RotatedRect; startCanvasPoint: Point; current: RotatedRect };
+interface ActiveDrag {
+    kind: 'move' | 'rotate' | 'resize';
+    // The shape dragged, or whose handle is.
+    shapeId: string;
+    originals: ReadonlyMap<string, RotatedRect>;
+    startCanvasPoint: Point;
+    current: ReadonlyMap<string, RotatedRect>;
+}
+
+// An area dragged out on the canvas, in canvas coordinates.
+interface DraggedArea {
+    start: Point;
+    current: Point;
+}
 
 export interface ImageCanvasHandle {
-    update(shapes: RectangleShape[], selectedShapeId: string | null, mode: Mode, numbering: NumberingMode, showNumbers: boolean, revealedShapeIds: ReadonlySet<string>): void;
+    update(shapes: RectangleShape[], selectedShapeIds: readonly string[], mode: Mode, numbering: NumberingMode, showNumbers: boolean, revealedShapeIds: ReadonlySet<string>): void;
     setFullscreen(isFullscreen: boolean): void;
     destroy(): void;
     isReady(): boolean;
@@ -119,6 +134,7 @@ const unselectedStyle: RectStyle = { fill: UNSELECTED_FILL_STYLE, stroke: UNSELE
 const selectedStyle: RectStyle = { fill: SELECTED_FILL_STYLE, stroke: SELECTED_STROKE_STYLE, lineWidth: 2, isCased: true };
 const occlusionStyle: RectStyle = { fill: OCCLUSION_FILL_STYLE, stroke: OCCLUSION_STROKE_STYLE, lineWidth: 2 };
 const revealedStyle: RectStyle = { fill: REVEALED_FILL_STYLE, stroke: REVEALED_STROKE_STYLE, lineWidth: 3 };
+const marqueeStyle: RectStyle = { fill: null, stroke: SELECTED_STROKE_STYLE, lineWidth: 1 };
 const handleCursors: Record<ResizeHandle, string> = {
     n: 'ns-resize',
     s: 'ns-resize',
@@ -134,7 +150,7 @@ export function mountImageCanvas(
     container: HTMLElement,
     imageUrl: string,
     initialShapes: RectangleShape[],
-    initialSelectedShapeId: string | null,
+    initialSelectedShapeIds: readonly string[],
     initialMode: Mode,
     initialNumbering: NumberingMode,
     initialShowNumbers: boolean,
@@ -157,7 +173,7 @@ export function mountImageCanvas(
     const elementSizes = new Map<HTMLElement, Size>();
     let viewport: Viewport = { zoom: 1, panX: 0, panY: 0 };
     let shapes = initialShapes;
-    let selectedShapeId = initialSelectedShapeId;
+    let selectedShapeIds = initialSelectedShapeIds;
     let mode = initialMode;
     let numbering = initialNumbering;
     let showNumbers = initialShowNumbers;
@@ -169,7 +185,8 @@ export function mountImageCanvas(
     let numbersArrivedAt: number | null = null;
     let drawFrame: number | null = null;
     let stopPanning: (() => void) | null = null;
-    let creatingRect: { start: Point; current: Point } | null = null;
+    let creatingRect: DraggedArea | null = null;
+    let selectingArea: DraggedArea | null = null;
     let activeDrag: ActiveDrag | null = null;
     let isPanModifierPressed = false;
     let lastHoverPoint: Point | null = null;
@@ -248,8 +265,9 @@ export function mountImageCanvas(
     window.addEventListener('keydown', onPanModifierKeyDown);
     window.addEventListener('keyup', onPanModifierKeyUp);
     window.addEventListener('blur', onWindowBlur);
-    registerShortcut('deleteSelectedShape', deleteSelectedShape, canEditSelectedShape);
-    registerShortcut('cloneSelectedShape', cloneSelectedShape, canEditSelectedShape);
+    registerShortcut('deleteSelectedShape', deleteSelectedShapes, canEditSelectedShapes);
+    registerShortcut('cloneSelectedShape', cloneSelectedShapes, canEditSelectedShapes);
+    registerShortcut('clearShapeSelection', () => callbacks.onSelectShapes([]), canEditSelectedShapes);
     registerShortcut('cycleFocusedShapeNext', () => cycleFocusedShape(1), () => canCycleFocusedShape(1));
     registerShortcut('cycleFocusedShapePrev', () => cycleFocusedShape(-1), () => canCycleFocusedShape(-1));
     registerShortcut('toggleFocusedShapeVisibility', toggleFocusedShapeVisibility, canToggleFocusedShapeVisibility);
@@ -291,12 +309,15 @@ export function mountImageCanvas(
             }
             return;
         }
+        const highlightedIds = new Set(creatingRect ? [] : [...selectedShapeIds, ...shapeIdsTouchedBy(selectingArea)]);
         for (const shape of shapes) {
-            const rect = activeDrag?.shapeId === shape.id ? activeDrag.current : shape;
-            drawRect(rect, shape.id === selectedShapeId && !creatingRect ? selectedStyle : unselectedStyle, false);
+            drawRect(activeDrag?.current.get(shape.id) ?? shape, highlightedIds.has(shape.id) ? selectedStyle : unselectedStyle, false);
         }
         if (creatingRect) {
             drawRect(rectFromPoints(creatingRect.start, creatingRect.current), unselectedStyle, true);
+        }
+        if (selectingArea) {
+            drawRect(rectFromPoints(selectingArea.start, selectingArea.current), marqueeStyle, true);
         }
         const selectedRect = selectedShapeRect();
         if (selectedRect) {
@@ -344,8 +365,8 @@ export function mountImageCanvas(
         actions.style.color = SELECTED_STROKE_STYLE;
         actions.hidden = true;
         actions.append(
-            buildShapeActionButton('icon-clone', `Clone (${shortcutHint('cloneSelectedShape')})`, cloneSelectedShape),
-            buildShapeActionButton('icon-trash', `Delete (${shortcutHint('deleteSelectedShape')})`, deleteSelectedShape)
+            buildShapeActionButton('icon-clone', `Clone (${shortcutHint('cloneSelectedShape')})`, cloneSelectedShapes),
+            buildShapeActionButton('icon-trash', `Delete (${shortcutHint('deleteSelectedShape')})`, deleteSelectedShapes)
         );
         return actions;
     }
@@ -379,7 +400,7 @@ export function mountImageCanvas(
         button.addEventListener('mousedown', (event) => {
             // Keeps keyboard focus on the canvas, so its shortcuts keep working after a rotation.
             event.preventDefault();
-            const selectedShape = findShape(selectedShapeId);
+            const selectedShape = lastSelectedShape();
             if (event.button === LEFT_MOUSE_BUTTON && selectedShape) {
                 startRotating(selectedShape, toCanvasPoint(event));
             }
@@ -433,16 +454,17 @@ export function mountImageCanvas(
             center.y + height / 2 <= canvas.clientHeight - SHAPE_ACTIONS_EDGE_MARGIN_PX;
     }
 
+    // The shape selected last: it alone has the handles and buttons.
+    function lastSelectedShape(): RectangleShape | null {
+        return findShape(selectedShapeIds[selectedShapeIds.length - 1] ?? null);
+    }
+
     function selectedShapeRect(): RotatedRect | null {
-        if (!selectedShapeId || creatingRect) {
+        const shape = lastSelectedShape();
+        if (!shape || creatingRect) {
             return null;
         }
-        if (activeDrag?.shapeId === selectedShapeId) {
-            return activeDrag.current;
-        }
-        return shapes.find(function isSelected(shape) {
-            return shape.id === selectedShapeId;
-        }) ?? null;
+        return activeDrag?.current.get(shape.id) ?? shape;
     }
 
     function drawEditModeHatch(): void {
@@ -589,7 +611,12 @@ export function mountImageCanvas(
             return;
         }
 
-        const selectedShape = findShape(selectedShapeId);
+        if (isPrimaryModifierPressed(event)) {
+            startSelecting(canvasPoint);
+            return;
+        }
+
+        const selectedShape = lastSelectedShape();
         const handle = selectedShape ? handleAtCanvasPoint(selectedShape, canvasPoint) : null;
         if (selectedShape && handle) {
             startResizing(selectedShape, handle, canvasPoint);
@@ -598,8 +625,12 @@ export function mountImageCanvas(
 
         const hitShape = topmostShapeAt(canvasToImage(viewport, canvasPoint), shapes);
         if (hitShape) {
-            callbacks.onSelectShape(hitShape.id);
-            startMoving(hitShape, canvasPoint);
+            // Dragging one of the selected shapes moves them all.
+            const isSelected = selectedShapeIds.includes(hitShape.id);
+            if (!isSelected) {
+                callbacks.onSelectShapes([hitShape.id]);
+            }
+            startMoving(hitShape.id, isSelected ? selectedShapeIds : [hitShape.id], canvasPoint);
             return;
         }
 
@@ -617,7 +648,7 @@ export function mountImageCanvas(
     }
 
     function isHoverCursorSuppressed(): boolean {
-        return !image || Boolean(activeDrag) || Boolean(creatingRect) || Boolean(stopPanning);
+        return !image || Boolean(activeDrag) || Boolean(creatingRect) || Boolean(selectingArea) || Boolean(stopPanning);
     }
 
     function onPanModifierKeyDown(event: KeyboardEvent): void {
@@ -662,7 +693,7 @@ export function mountImageCanvas(
             return;
         }
 
-        const selectedShape = findShape(selectedShapeId);
+        const selectedShape = lastSelectedShape();
         const handle = selectedShape ? handleAtCanvasPoint(selectedShape, canvasPoint) : null;
         if (selectedShape && handle) {
             canvas.style.cursor = handleCursors[rotatedHandleDirection(handle, rotationOf(selectedShape))];
@@ -706,12 +737,23 @@ export function mountImageCanvas(
         return { x: shape.x, y: shape.y, width: shape.width, height: shape.height, rotation: rotationOf(shape) };
     }
 
-    function startMoving(shape: RectangleShape, startCanvasPoint: Point): void {
-        const original = rectOf(shape);
+    function rectsOf(shapeIds: readonly string[]): Map<string, RotatedRect> {
+        return new Map(shapes.filter((shape) => shapeIds.includes(shape.id)).map((shape) => [shape.id, rectOf(shape)]));
+    }
+
+    function mapRects(rects: ReadonlyMap<string, RotatedRect>, transform: (rect: RotatedRect) => RotatedRect): Map<string, RotatedRect> {
+        return new Map([...rects].map(([shapeId, rect]) => [shapeId, transform(rect)]));
+    }
+
+    // The shapes move as one, kept to the image together.
+    function startMoving(shapeId: string, shapeIds: readonly string[], startCanvasPoint: Point): void {
+        const originals = rectsOf(shapeIds);
+        const box = boundingRectOfAll([...originals.values()]);
         startRectDrag(
-            { kind: 'move', shapeId: shape.id, original, startCanvasPoint, current: original },
+            { kind: 'move', shapeId, originals, startCanvasPoint, current: originals },
             function computeNext(delta) {
-                return clampMoveToBounds(moveRect(original, delta.x, delta.y), imageBounds());
+                const moved = clampMoveToBounds(moveRect(box, delta.x, delta.y), imageBounds());
+                return mapRects(originals, (rect) => moveRect(rect, moved.x - box.x, moved.y - box.y));
             }
         );
     }
@@ -721,28 +763,33 @@ export function mountImageCanvas(
     function startResizing(shape: RectangleShape, handle: ResizeHandle, startCanvasPoint: Point): void {
         const original = rectOf(shape);
         startRectDrag(
-            { kind: 'resize', shapeId: shape.id, handle, original, startCanvasPoint, current: original },
+            { kind: 'resize', shapeId: shape.id, originals: new Map([[shape.id, original]]), startCanvasPoint, current: new Map([[shape.id, original]]) },
             function computeNext(delta) {
                 const resized = resizeRect(original, handle, delta.x, delta.y);
-                return original.rotation ? resized : clampRectToBounds(resized, imageBounds());
+                return new Map([[shape.id, original.rotation ? resized : clampRectToBounds(resized, imageBounds())]]);
             }
         );
     }
 
+    // The other selected shapes turn as much as this one, each about its own centre.
     function startRotating(shape: RectangleShape, startCanvasPoint: Point): void {
         const original = rectOf(shape);
         const center = rectCenter(original);
+        const originals = rectsOf(selectedShapeIds);
         canvas.style.cursor = 'grabbing';
         startRectDrag(
-            { kind: 'rotate', shapeId: shape.id, original, startCanvasPoint, current: original },
+            { kind: 'rotate', shapeId: shape.id, originals, startCanvasPoint, current: originals },
             function computeNext(_delta, moveEvent) {
                 const pointer = canvasToImage(viewport, toCanvasPoint(moveEvent));
-                return { ...original, rotation: rotationTowards(center, pointer, moveEvent.shiftKey ? ROTATION_SNAP_DEGREES : undefined) };
+                const rotation = rotationTowards(center, pointer, moveEvent.shiftKey ? ROTATION_SNAP_DEGREES : undefined);
+                const turned = mapRects(originals, (rect) => turnRect(rect, rotation - rotationOf(original)));
+                // Exactly, so a turn back to upright leaves no rounding error behind.
+                return turned.set(shape.id, { ...original, rotation });
             }
         );
     }
 
-    function startRectDrag(drag: ActiveDrag, computeNext: (delta: Point, moveEvent: MouseEvent) => RotatedRect): void {
+    function startRectDrag(drag: ActiveDrag, computeNext: (delta: Point, moveEvent: MouseEvent) => ReadonlyMap<string, RotatedRect>): void {
         activeDrag = drag;
         draw();
 
@@ -761,10 +808,14 @@ export function mountImageCanvas(
         if (!activeDrag) {
             return;
         }
-        const { shapeId, original, current } = activeDrag;
+        const { kind, shapeId, originals, current } = activeDrag;
         activeDrag = null;
-        if (!rectsEqual(original, current)) {
-            callbacks.onUpdateShapeRect(shapeId, current);
+        const changed = new Map([...current].filter(([id, rect]) => !rectsEqual(originals.get(id)!, rect)));
+        if (changed.size > 0) {
+            callbacks.onUpdateShapeRects(changed);
+        } else if (kind === 'move' && originals.size > 1) {
+            // A click on one of several selected shapes selects it alone.
+            callbacks.onSelectShapes([shapeId]);
         }
         draw();
     }
@@ -818,12 +869,11 @@ export function mountImageCanvas(
         const rect = creatingRect;
         creatingRect = null;
         if (!rect || !image) {
-            callbacks.onSelectShape(null);
+            callbacks.onSelectShapes([]);
             return;
         }
-        const dragDistance = Math.hypot(rect.current.x - rect.start.x, rect.current.y - rect.start.y);
-        if (dragDistance < CLICK_DRAG_THRESHOLD_PX) {
-            callbacks.onSelectShape(null);
+        if (!isDrag(rect)) {
+            callbacks.onSelectShapes([]);
             draw();
             return;
         }
@@ -833,24 +883,75 @@ export function mountImageCanvas(
         );
         draw();
         if (isRectEmpty(imageRect)) {
-            callbacks.onSelectShape(null);
+            callbacks.onSelectShapes([]);
         } else {
             callbacks.onCreateShape(imageRect);
         }
     }
 
-    function canEditSelectedShape(): boolean {
-        return mode === 'edit' && document.activeElement === canvas && selectedShapeId !== null;
+    function isDrag(area: DraggedArea): boolean {
+        return Math.hypot(area.current.x - area.start.x, area.current.y - area.start.y) >= CLICK_DRAG_THRESHOLD_PX;
     }
 
-    function deleteSelectedShape(): void {
+    function startSelecting(startCanvasPoint: Point): void {
+        selectingArea = { start: startCanvasPoint, current: startCanvasPoint };
+        draw();
+
+        startDragSession(function onMouseMove(moveEvent) {
+            if (!selectingArea) {
+                return;
+            }
+            selectingArea = { start: selectingArea.start, current: toCanvasPoint(moveEvent) };
+            draw();
+        }, finishSelecting);
+    }
+
+    // A click adds the shape under it to the selection, or takes it out; a drag adds the shapes it touches.
+    function finishSelecting(): void {
+        const area = selectingArea;
+        selectingArea = null;
+        draw();
+        if (!area) {
+            return;
+        }
+        if (isDrag(area)) {
+            const added = shapeIdsTouchedBy(area).filter((id) => !selectedShapeIds.includes(id));
+            if (added.length > 0) {
+                callbacks.onSelectShapes([...selectedShapeIds, ...added]);
+            }
+            return;
+        }
+        const hitShape = topmostShapeAt(canvasToImage(viewport, area.start), shapes);
+        if (hitShape) {
+            callbacks.onSelectShapes(selectedShapeIds.includes(hitShape.id)
+                ? selectedShapeIds.filter((id) => id !== hitShape.id)
+                : [...selectedShapeIds, hitShape.id]);
+        }
+    }
+
+    function shapeIdsTouchedBy(area: DraggedArea | null): string[] {
+        if (!area || !isDrag(area)) {
+            return [];
+        }
+        const marquee = rectFromPoints(canvasToImage(viewport, area.start), canvasToImage(viewport, area.current));
+        return shapes.filter((shape) => rectsIntersect(marquee, shape)).map((shape) => shape.id);
+    }
+
+    function canEditSelectedShapes(): boolean {
+        return mode === 'edit' && document.activeElement === canvas && selectedShapeIds.length > 0;
+    }
+
+    function deleteSelectedShapes(): void {
         callbacks.onDeleteSelected();
     }
 
-    function cloneSelectedShape(): void {
-        const selectedShape = findShape(selectedShapeId);
-        if (selectedShape && image) {
-            callbacks.onCloneSelected(offsetCopyRect(selectedShape, CLONE_OFFSET_PX / viewport.zoom, imageBounds()));
+    // The copies keep their places to each other, offset together.
+    function cloneSelectedShapes(): void {
+        const selected = [...rectsOf(selectedShapeIds).values()];
+        if (selected.length > 0 && image) {
+            const box = boundingRectOfAll(selected);
+            const copyBox = offsetCopyRect(box, CLONE_OFFSET_PX / viewport.zoom, imageBounds());
+            callbacks.onCloneSelected(copyBox.x - box.x, copyBox.y - box.y);
         }
     }
 
@@ -947,9 +1048,9 @@ export function mountImageCanvas(
     }
 
     return {
-        update(nextShapes: RectangleShape[], nextSelectedShapeId: string | null, nextMode: Mode, nextNumbering: NumberingMode, nextShowNumbers: boolean, nextRevealedShapeIds: ReadonlySet<string>): void {
+        update(nextShapes: RectangleShape[], nextSelectedShapeIds: readonly string[], nextMode: Mode, nextNumbering: NumberingMode, nextShowNumbers: boolean, nextRevealedShapeIds: ReadonlySet<string>): void {
             shapes = nextShapes;
-            selectedShapeId = nextSelectedShapeId;
+            selectedShapeIds = nextSelectedShapeIds;
             if (mode !== nextMode) {
                 canvas.style.cursor = 'default';
                 focusedShapeId = null;
@@ -1008,6 +1109,7 @@ export function mountImageCanvas(
             window.removeEventListener('blur', onWindowBlur);
             unregisterShortcut('deleteSelectedShape');
             unregisterShortcut('cloneSelectedShape');
+            unregisterShortcut('clearShapeSelection');
             unregisterShortcut('cycleFocusedShapeNext');
             unregisterShortcut('cycleFocusedShapePrev');
             unregisterShortcut('toggleFocusedShapeVisibility');

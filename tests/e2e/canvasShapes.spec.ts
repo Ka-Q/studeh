@@ -214,3 +214,104 @@ test('transparent areas of a page image show as white', async ({ page }) => {
         return Array.from(pixel);
     }, center)).toEqual([255, 255, 255, 255]);
 });
+
+test('Ctrl+clicking shapes adds them to the selection or takes them out, and X deletes every selected shape', async ({ page }) => {
+    await page.goto('/');
+    const docId = await createDocument(page, uniqueName('Multi Select Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+    const imageRect = await imageOnScreenRect(page);
+
+    for (const left of [10, 60, 110]) {
+        await dragOnCanvas(page, { x: imageRect.left + left, y: imageRect.top + 10 }, { x: imageRect.left + left + 40, y: imageRect.top + 50 });
+    }
+    await page.keyboard.down('ControlOrMeta');
+    for (const left of [30, 80, 130]) {
+        await page.mouse.click(imageRect.left + left, imageRect.top + 30);
+    }
+    await page.keyboard.up('ControlOrMeta');
+    await page.keyboard.press('x');
+
+    await saveDocument(page);
+    let manifest = await fetchManifest(page, docId);
+    expect((manifest.pages[0].shapes as unknown as { x: number }[]).map((shape) => shape.x)).toEqual([110]);
+
+    // The selection before the deleted one held the third shape too: it is what is selected now.
+    await getCanvas(page).focus();
+    await page.keyboard.press('x');
+    await saveDocument(page);
+    manifest = await fetchManifest(page, docId);
+    expect(manifest.pages[0].shapes).toHaveLength(0);
+});
+
+test('Ctrl+dragging selects the shapes it touches; dragging one moves them all and C clones them all', async ({ page }) => {
+    await page.goto('/');
+    const docId = await createDocument(page, uniqueName('Marquee Select Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+    const imageRect = await imageOnScreenRect(page);
+
+    for (const left of [10, 60, 110]) {
+        await dragOnCanvas(page, { x: imageRect.left + left, y: imageRect.top + 10 }, { x: imageRect.left + left + 40, y: imageRect.top + 50 });
+    }
+    await page.mouse.click(imageRect.left + 200, imageRect.top + 150);
+    await page.keyboard.down('ControlOrMeta');
+    await dragOnCanvas(page, { x: imageRect.left + 5, y: imageRect.top + 30 }, { x: imageRect.left + 70, y: imageRect.top + 60 });
+    await page.keyboard.up('ControlOrMeta');
+    await dragOnCanvas(page, { x: imageRect.left + 30, y: imageRect.top + 30 }, { x: imageRect.left + 30, y: imageRect.top + 80 });
+    await page.keyboard.press('c');
+
+    await saveDocument(page);
+    const manifest = await fetchManifest(page, docId);
+    const shapes = manifest.pages[0].shapes as unknown as { x: number; y: number }[];
+
+    expect(shapes.map((shape) => [shape.x, shape.y])).toEqual([[10, 60], [60, 60], [110, 10], [22, 72], [72, 72]]);
+});
+
+test('rotating one of several selected shapes turns each about its own centre; a click on one then selects it alone', async ({ page }) => {
+    await page.goto('/');
+    const docId = await createDocument(page, uniqueName('Multi Rotate Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+    const imageRect = await imageOnScreenRect(page);
+
+    await dragOnCanvas(page, { x: imageRect.left + 20, y: imageRect.top + 70 }, { x: imageRect.left + 60, y: imageRect.top + 90 });
+    await dragOnCanvas(page, { x: imageRect.left + 100, y: imageRect.top + 70 }, { x: imageRect.left + 140, y: imageRect.top + 90 });
+    await page.keyboard.down('ControlOrMeta');
+    await page.mouse.click(imageRect.left + 40, imageRect.top + 80);
+    await page.keyboard.up('ControlOrMeta');
+    // The first shape, selected last, has the rotation handle: 24 px above its top edge's middle.
+    await page.keyboard.down('Shift');
+    await dragOnCanvas(page, { x: imageRect.left + 40, y: imageRect.top + 46 }, { x: imageRect.left + 100, y: imageRect.top + 80 });
+    await page.keyboard.up('Shift');
+    await page.mouse.click(imageRect.left + 40, imageRect.top + 80);
+    await page.keyboard.press('x');
+
+    await saveDocument(page);
+    const manifest = await fetchManifest(page, docId);
+    const shapes = manifest.pages[0].shapes as unknown as { x: number; y: number; width: number; height: number; rotation?: number }[];
+
+    expect(shapes).toHaveLength(1);
+    expect([shapes[0].x, shapes[0].y, shapes[0].width, shapes[0].height, shapes[0].rotation]).toEqual([100, 70, 40, 20, 90]);
+});
+
+test('Escape unselects every selected shape', async ({ page }) => {
+    await page.goto('/');
+    const docId = await createDocument(page, uniqueName('Escape Unselect Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+    const imageRect = await imageOnScreenRect(page);
+
+    await dragOnCanvas(page, { x: imageRect.left + 10, y: imageRect.top + 10 }, { x: imageRect.left + 50, y: imageRect.top + 50 });
+    await dragOnCanvas(page, { x: imageRect.left + 60, y: imageRect.top + 10 }, { x: imageRect.left + 100, y: imageRect.top + 50 });
+    await page.keyboard.down('ControlOrMeta');
+    await page.mouse.click(imageRect.left + 30, imageRect.top + 30);
+    await page.keyboard.up('ControlOrMeta');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.shape-actions')).toBeHidden();
+    await page.keyboard.press('x');
+
+    await saveDocument(page);
+    const manifest = await fetchManifest(page, docId);
+    expect(manifest.pages[0].shapes).toHaveLength(2);
+});

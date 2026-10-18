@@ -81,6 +81,10 @@ export function boundingRect(rect: RotatedRect): Rect {
     return boundingRectOfPoints(rectCorners(rect));
 }
 
+export function boundingRectOfAll(rects: RotatedRect[]): Rect {
+    return boundingRectOfPoints(rects.flatMap((rect) => rectCorners(rect)));
+}
+
 function boundingRectOfPoints(points: Point[]): Rect {
     const xs = points.map((point) => point.x);
     const ys = points.map((point) => point.y);
@@ -194,13 +198,39 @@ function normalizeRect(rect: Rect): Rect {
 export function rotationTowards(center: Point, point: Point, snapStep?: number): number {
     const degrees = Math.atan2(point.x - center.x, center.y - point.y) * 180 / Math.PI;
     const snapped = snapStep ? Math.round(degrees / snapStep) * snapStep : degrees;
-    return (snapped % FULL_TURN_DEGREES + FULL_TURN_DEGREES) % FULL_TURN_DEGREES;
+    return normalizedDegrees(snapped);
+}
+
+// The rect turned about its centre by the degrees, clockwise.
+export function turnRect<T extends RotatedRect>(rect: T, degrees: number): T {
+    return { ...rect, rotation: normalizedDegrees(rotationOf(rect) + degrees) };
+}
+
+function normalizedDegrees(degrees: number): number {
+    return (degrees % FULL_TURN_DEGREES + FULL_TURN_DEGREES) % FULL_TURN_DEGREES;
 }
 
 export function hitTestRectangle(point: Point, shape: RotatedRect): boolean {
     const local = rotatePoint(point, rectCenter(shape), -rotationOf(shape));
     return local.x >= shape.x && local.x <= shape.x + shape.width &&
         local.y >= shape.y && local.y <= shape.y + shape.height;
+}
+
+// Touching counts: the rects overlap unless an axis along one of their sides separates them.
+export function rectsIntersect(a: RotatedRect, b: RotatedRect): boolean {
+    const cornersA = rectCorners(a);
+    const cornersB = rectCorners(b);
+    return [rotationOf(a), rotationOf(b)].every(function overlapsAlongSides(rotation) {
+        const radians = rotation * Math.PI / 180;
+        const sideAxes = [{ x: Math.cos(radians), y: Math.sin(radians) }, { x: -Math.sin(radians), y: Math.cos(radians) }];
+        return sideAxes.every((axis) => projectionsOverlap(cornersA, cornersB, axis));
+    });
+}
+
+function projectionsOverlap(a: Point[], b: Point[], axis: Point): boolean {
+    const projectedA = a.map((point) => point.x * axis.x + point.y * axis.y);
+    const projectedB = b.map((point) => point.x * axis.x + point.y * axis.y);
+    return Math.min(...projectedA) <= Math.max(...projectedB) && Math.min(...projectedB) <= Math.max(...projectedA);
 }
 
 export function topmostShapeAt(point: Point, shapes: RectangleShape[]): RectangleShape | null {

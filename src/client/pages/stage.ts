@@ -1,15 +1,15 @@
 import {
     addShape,
-    cloneSelectedShape,
-    deleteSelectedShape,
+    cloneSelectedShapes,
+    deleteSelectedShapes,
     getActivePage,
     getState,
-    selectShape,
+    selectShapes,
     setPageImage,
     setPageShapesVisibility,
     subscribe,
     toggleShapeVisibility,
-    updateShapeRect
+    updateShapeRects
 } from '../document/state';
 import { pageImageUrl, uploadPageImage } from '../document/api';
 import type { Page } from '../../shared/types';
@@ -378,7 +378,7 @@ function createImageFileInput(documentId: string, pageId: string): HTMLInputElem
 }
 
 function renderCanvas(documentId: string, page: Page): void {
-    const { selectedShapeId, mode, revealedShapeIds } = getState();
+    const { selectedShapeIds, mode, revealedShapeIds } = getState();
     canvasHintsHandle.setMode(mode);
 
     if (!page.image) {
@@ -389,7 +389,7 @@ function renderCanvas(documentId: string, page: Page): void {
     }
 
     if (mountedCanvas?.pageId === page.id && mountedCanvas.imageFile === page.image.file) {
-        mountedCanvas.handle.update(page.shapes, selectedShapeId, mode, numbering, showNumbers, revealedShapeIds);
+        mountedCanvas.handle.update(page.shapes, selectedShapeIds, mode, numbering, showNumbers, revealedShapeIds);
         return;
     }
 
@@ -402,7 +402,7 @@ function renderCanvas(documentId: string, page: Page): void {
             canvasBody,
             pageImageUrl(documentId, page.image),
             page.shapes,
-            selectedShapeId,
+            selectedShapeIds,
             mode,
             numbering,
             showNumbers,
@@ -412,17 +412,17 @@ function renderCanvas(documentId: string, page: Page): void {
                 onCreateShape(rect) {
                     addShape(page.id, rect);
                 },
-                onSelectShape(shapeId) {
-                    selectShape(shapeId);
+                onSelectShapes(shapeIds) {
+                    selectShapes(shapeIds);
                 },
-                onUpdateShapeRect(shapeId, rect) {
-                    updateShapeRect(page.id, shapeId, rect);
+                onUpdateShapeRects(rects) {
+                    updateShapeRects(page.id, rects);
                 },
                 onDeleteSelected() {
-                    deleteSelectedShape();
+                    deleteSelectedShapes();
                 },
-                onCloneSelected(rect) {
-                    cloneSelectedShape(rect);
+                onCloneSelected(dx, dy) {
+                    cloneSelectedShapes(dx, dy);
                 },
                 onToggleVisibility(shapeId) {
                     toggleShapeVisibility(shapeId);

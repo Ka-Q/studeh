@@ -1,5 +1,5 @@
 import type { Mode } from '../document/state';
-import { iconSpan } from '../dom';
+import { iconSpan, primaryModifierLabel } from '../dom';
 import { registerShortcut } from '../shortcutDispatch';
 import { shortcutHint } from '../shortcuts';
 
@@ -22,7 +22,8 @@ const HINTS: Record<Mode, HintRow[]> = {
     edit: [
         { label: 'Pan', keys: panHint() },
         { label: 'Zoom', keys: 'Scroll' },
-        { label: 'Draw', keys: 'Left drag' }
+        { label: 'Draw', keys: 'Left drag' },
+        { label: 'Select more', keys: `${primaryModifierLabel()}+click / ${primaryModifierLabel()}+drag` }
     ],
     study: [
         { label: 'Pan', keys: panHint() },

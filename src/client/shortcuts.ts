@@ -33,6 +33,7 @@ export type ShortcutId =
     | 'panDown'
     | 'deleteSelectedShape'
     | 'cloneSelectedShape'
+    | 'clearShapeSelection'
     | 'cycleFocusedShapeNext'
     | 'cycleFocusedShapePrev'
     | 'toggleFocusedShapeVisibility';
@@ -110,7 +111,7 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutSpec> = {
     panUp: { label: 'Pan up', group: 'canvas', bindings: [{ key: 'ArrowUp', modifier: Modifier.NONE, displayKey: 'Up arrow' }], allowInFullscreen: true },
     panDown: { label: 'Pan down', group: 'canvas', bindings: [{ key: 'ArrowDown', modifier: Modifier.NONE, displayKey: 'Down arrow' }], allowInFullscreen: true },
     deleteSelectedShape: {
-        label: 'Delete selected shape (Edit mode)',
+        label: 'Delete selected shapes (Edit mode)',
         group: 'canvas',
         bindings: [
             { key: 'x', modifier: Modifier.NONE, displayKey: 'X' },
@@ -119,7 +120,8 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutSpec> = {
         ],
         allowInFullscreen: false
     },
-    cloneSelectedShape: { label: 'Clone selected shape (Edit mode)', group: 'canvas', bindings: [{ key: 'c', modifier: Modifier.NONE, displayKey: 'C' }], allowInFullscreen: false },
+    cloneSelectedShape: { label: 'Clone selected shapes (Edit mode)', group: 'canvas', bindings: [{ key: 'c', modifier: Modifier.NONE, displayKey: 'C' }], allowInFullscreen: false },
+    clearShapeSelection: { label: 'Unselect all shapes (Edit mode)', group: 'canvas', bindings: [{ key: 'Escape', modifier: Modifier.NONE, displayKey: 'Esc' }], allowInFullscreen: false },
     cycleFocusedShapeNext: { label: 'Cycle focused shape (Study mode)', group: 'canvas', bindings: [{ key: 'Tab', modifier: Modifier.NONE, displayKey: 'Tab' }], allowInFullscreen: true },
     cycleFocusedShapePrev: { label: 'Cycle focused shape backward (Study mode)', group: 'canvas', bindings: [{ key: 'Tab', modifier: Modifier.SHIFT, displayKey: 'Tab' }], allowInFullscreen: true },
     toggleFocusedShapeVisibility: {

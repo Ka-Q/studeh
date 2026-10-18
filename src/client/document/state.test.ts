@@ -9,18 +9,19 @@ import { test } from 'node:test';
 };
 
 const {
+    cloneSelectedShapes,
     deletePages,
-    deleteSelectedShape,
+    deleteSelectedShapes,
     getState,
     markClean,
     renameDocument,
     renamePage,
-    selectShape,
+    selectShapes,
     setActivePage,
     setDocument,
     setPageImage,
     subscribe,
-    updateShapeRect
+    updateShapeRects
 } = await import('./state');
 
 function fixtureDocument(pageIds: string[]) {
@@ -58,31 +59,54 @@ function fixtureDocumentWithShapes(shapeIds: string[]) {
     return document;
 }
 
-test('deleteSelectedShape selects the shape selected before it, going back as shapes are deleted', function () {
+test('deleteSelectedShapes selects the shape selected before it, going back as shapes are deleted', function () {
     setDocument(fixtureDocumentWithShapes(['a', 'b', 'c']));
-    selectShape('a');
-    selectShape('b');
-    selectShape('c');
+    selectShapes(['a']);
+    selectShapes(['b']);
+    selectShapes(['c']);
 
-    deleteSelectedShape();
-    assert.equal(getState().selectedShapeId, 'b');
+    deleteSelectedShapes();
+    assert.deepEqual(getState().selectedShapeIds, ['b']);
 
-    deleteSelectedShape();
-    assert.equal(getState().selectedShapeId, 'a');
+    deleteSelectedShapes();
+    assert.deepEqual(getState().selectedShapeIds, ['a']);
 
-    deleteSelectedShape();
-    assert.equal(getState().selectedShapeId, null);
+    deleteSelectedShapes();
+    assert.deepEqual(getState().selectedShapeIds, []);
 });
 
-test('deleteSelectedShape selects nothing when the selection was cleared before the deleted shape was selected', function () {
+test('deleteSelectedShapes selects nothing when the selection was cleared before the deleted shape was selected', function () {
     setDocument(fixtureDocumentWithShapes(['a', 'b']));
-    selectShape('a');
-    selectShape(null);
-    selectShape('b');
+    selectShapes(['a']);
+    selectShapes([]);
+    selectShapes(['b']);
 
-    deleteSelectedShape();
+    deleteSelectedShapes();
 
-    assert.equal(getState().selectedShapeId, null);
+    assert.deepEqual(getState().selectedShapeIds, []);
+});
+
+test('deleteSelectedShapes deletes every selected shape, then selects what of the selection before is left', function () {
+    setDocument(fixtureDocumentWithShapes(['a', 'b', 'c', 'd']));
+    selectShapes(['a', 'b']);
+    selectShapes(['b', 'c', 'd']);
+
+    deleteSelectedShapes();
+
+    assert.deepEqual(getState().document?.pages[0].shapes.map((shape) => shape.id), ['a']);
+    assert.deepEqual(getState().selectedShapeIds, ['a']);
+});
+
+test('cloneSelectedShapes copies every selected shape, shifted, and selects the copies in the same order', function () {
+    setDocument(fixtureDocumentWithShapes(['a', 'b']));
+    selectShapes(['b', 'a']);
+
+    cloneSelectedShapes(5, 7);
+
+    const shapes = getState().document!.pages[0].shapes;
+    assert.equal(shapes.length, 4);
+    assert.deepEqual(getState().selectedShapeIds, [shapes[2].id, shapes[3].id]);
+    assert.deepEqual([shapes[2].x, shapes[2].y], [15, 17]);
 });
 
 test('deletePages falls back to the nearest remaining sibling when the active page is deleted', function () {
@@ -107,7 +131,7 @@ test('deletePages sets activePageId to null when no pages remain', function () {
 test('setActivePage is a no-op when called with the already-active page id', function () {
     setDocument(fixtureDocument(['page-1', 'page-2']));
     setActivePage('page-1');
-    selectShape('shape-1');
+    selectShapes(['shape-1']);
 
     let notifyCount = 0;
     subscribe(function onNotify() {
@@ -117,13 +141,13 @@ test('setActivePage is a no-op when called with the already-active page id', fun
     setActivePage('page-1');
 
     assert.equal(notifyCount, 0);
-    assert.equal(getState().selectedShapeId, 'shape-1');
+    assert.deepEqual(getState().selectedShapeIds, ['shape-1']);
 });
 
-test('updateShapeRect does not mark the document dirty when the rect is unchanged', function () {
+test('updateShapeRects does not mark the document dirty when the rect is unchanged', function () {
     setDocument(fixtureDocumentWithShape());
 
-    updateShapeRect('page-1', 'shape-1', { x: 10, y: 10, width: 20, height: 20 });
+    updateShapeRects('page-1', new Map([['shape-1', { x: 10, y: 10, width: 20, height: 20 }]]));
 
     assert.equal(getState().dirty, false);
 });
@@ -131,7 +155,7 @@ test('updateShapeRect does not mark the document dirty when the rect is unchange
 test('updateShapeRect marks the document dirty when the rect actually changes', function () {
     setDocument(fixtureDocumentWithShape());
 
-    updateShapeRect('page-1', 'shape-1', { x: 15, y: 10, width: 20, height: 20 });
+    updateShapeRects('page-1', new Map([['shape-1', { x: 15, y: 10, width: 20, height: 20 }]]));
 
     assert.equal(getState().dirty, true);
     assert.equal(getState().document?.pages[0].shapes[0].x, 15);
@@ -140,10 +164,10 @@ test('updateShapeRect marks the document dirty when the rect actually changes', 
 test('updateShapeRect stores a rotation, and leaves none on a shape turned back to 0', function () {
     setDocument(fixtureDocumentWithShape());
 
-    updateShapeRect('page-1', 'shape-1', { x: 10, y: 10, width: 20, height: 20, rotation: 45 });
+    updateShapeRects('page-1', new Map([['shape-1', { x: 10, y: 10, width: 20, height: 20, rotation: 45 }]]));
     assert.equal(getState().document?.pages[0].shapes[0].rotation, 45);
 
-    updateShapeRect('page-1', 'shape-1', { x: 10, y: 10, width: 20, height: 20, rotation: 0 });
+    updateShapeRects('page-1', new Map([['shape-1', { x: 10, y: 10, width: 20, height: 20, rotation: 0 }]]));
     assert.equal('rotation' in getState().document!.pages[0].shapes[0], false);
     assert.equal(getState().dirty, false);
 });
@@ -214,10 +238,10 @@ test('renaming the document away and back to its saved name across two separate 
 test('moving a shape away and back across two separate calls leaves the document clean', function () {
     setDocument(fixtureDocumentWithShape());
 
-    updateShapeRect('page-1', 'shape-1', { x: 50, y: 50, width: 20, height: 20 });
+    updateShapeRects('page-1', new Map([['shape-1', { x: 50, y: 50, width: 20, height: 20 }]]));
     assert.equal(getState().dirty, true);
 
-    updateShapeRect('page-1', 'shape-1', { x: 10, y: 10, width: 20, height: 20 });
+    updateShapeRects('page-1', new Map([['shape-1', { x: 10, y: 10, width: 20, height: 20 }]]));
 
     assert.equal(getState().dirty, false);
 });
