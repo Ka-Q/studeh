@@ -104,6 +104,8 @@ const SHAPE_NUMBER_FADE_MS = 250;
 const IMAGE_BACKDROP_STYLE = 'rgb(255, 255, 255)';
 // Past this size (device pixels per side) the page isn't kept scaled to the zoom; it is drawn from the image itself.
 const MAX_SCALED_IMAGE_SIDE_PX = 4096;
+// How long the zoom holds still before the page's copy at it is made.
+const ZOOM_SETTLE_MS = 150;
 const EDIT_MODE_HATCH_SPACING_PX = 256;
 const EDIT_MODE_HATCH_LINE_WIDTH_PX = 1;
 const EDIT_MODE_HATCH_LINE_COLOR = 'rgba(106, 106, 106, 0.2)';
@@ -151,6 +153,7 @@ export function mountImageCanvas(
     let image: HTMLImageElement | null = null;
     let scaledImage: HTMLCanvasElement | null = null;
     let lastDrawnZoom: number | null = null;
+    let zoomSettleTimer: ReturnType<typeof setTimeout> | undefined;
     const elementSizes = new Map<HTMLElement, Size>();
     let viewport: Viewport = { zoom: 1, panX: 0, panY: 0 };
     let shapes = initialShapes;
@@ -305,7 +308,8 @@ export function mountImageCanvas(
 
     // Drawn from a copy already scaled to the zoom, at a whole device pixel, so a pan frame is a plain pixel copy rather
     // than a resampling of the whole image (slow where the browser draws canvases without the GPU, as Firefox on Linux).
-    // The copy is made once the zoom holds still for a frame: while it keeps changing, each copy would be used once.
+    // The copy is made once the zoom holds still: while it keeps changing, each copy would be used once. It is made then
+    // rather than on the next pan, whose first frame would otherwise wait for it.
     function drawPageImage(source: HTMLImageElement): void {
         const devicePixelRatio = window.devicePixelRatio || 1;
         const width = Math.max(1, Math.round(source.naturalWidth * viewport.zoom * devicePixelRatio));
@@ -313,7 +317,12 @@ export function mountImageCanvas(
         const isZoomChanging = viewport.zoom !== lastDrawnZoom;
         lastDrawnZoom = viewport.zoom;
         if (scaledImage?.width !== width || scaledImage.height !== height) {
-            if (isZoomChanging || width > MAX_SCALED_IMAGE_SIDE_PX || height > MAX_SCALED_IMAGE_SIDE_PX) {
+            const isTooLarge = width > MAX_SCALED_IMAGE_SIDE_PX || height > MAX_SCALED_IMAGE_SIDE_PX;
+            if (isZoomChanging || isTooLarge) {
+                if (!isTooLarge) {
+                    clearTimeout(zoomSettleTimer);
+                    zoomSettleTimer = setTimeout(drawNextFrame, ZOOM_SETTLE_MS);
+                }
                 const imageWidth = source.naturalWidth * viewport.zoom;
                 const imageHeight = source.naturalHeight * viewport.zoom;
                 context.fillStyle = IMAGE_BACKDROP_STYLE;
@@ -985,6 +994,7 @@ export function mountImageCanvas(
             if (drawFrame !== null) {
                 cancelAnimationFrame(drawFrame);
             }
+            clearTimeout(zoomSettleTimer);
             stopPanning?.();
             resizeObserver.disconnect();
             loadedImage.removeEventListener('load', onImageLoad);
