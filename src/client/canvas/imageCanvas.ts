@@ -102,6 +102,8 @@ const SHAPE_NUMBER_TEXT_STYLE = 'rgb(255, 255, 255)';
 const SHAPE_NUMBER_FADE_MS = 250;
 // Transparent areas of an image show as white, the usual backdrop for diagrams.
 const IMAGE_BACKDROP_STYLE = 'rgb(255, 255, 255)';
+// Past this size (device pixels per side) the page isn't kept scaled to the zoom; it is drawn from the image itself.
+const MAX_SCALED_IMAGE_SIDE_PX = 4096;
 const EDIT_MODE_HATCH_SPACING_PX = 256;
 const EDIT_MODE_HATCH_LINE_WIDTH_PX = 1;
 const EDIT_MODE_HATCH_LINE_COLOR = 'rgba(106, 106, 106, 0.2)';
@@ -147,6 +149,9 @@ export function mountImageCanvas(
     container.append(shapeActions, rotationHandle);
 
     let image: HTMLImageElement | null = null;
+    let scaledImage: HTMLCanvasElement | null = null;
+    let lastDrawnZoom: number | null = null;
+    const elementSizes = new Map<HTMLElement, Size>();
     let viewport: Viewport = { zoom: 1, panX: 0, panY: 0 };
     let shapes = initialShapes;
     let selectedShapeId = initialSelectedShapeId;
@@ -157,9 +162,9 @@ export function mountImageCanvas(
     let revealedShapeIds = initialRevealedShapeIds;
     let focusedShapeId: string | null = null;
     let tabOrderCache: { shapes: RectangleShape[]; numbering: NumberingMode; ordered: RectangleShape[]; isFinal: boolean } | null = null;
-    // When the image analysis's order arrived while the page was shown, and the frame drawing its fade, if any.
+    // When the image analysis's order arrived while the page was shown.
     let numbersArrivedAt: number | null = null;
-    let fadeFrame: number | null = null;
+    let drawFrame: number | null = null;
     let stopPanning: (() => void) | null = null;
     let creatingRect: { start: Point; current: Point } | null = null;
     let activeDrag: ActiveDrag | null = null;
@@ -262,11 +267,7 @@ export function mountImageCanvas(
         if (mode === 'edit') {
             drawEditModeHatch();
         }
-        const imageWidth = image.naturalWidth * viewport.zoom;
-        const imageHeight = image.naturalHeight * viewport.zoom;
-        context.fillStyle = IMAGE_BACKDROP_STYLE;
-        context.fillRect(viewport.panX, viewport.panY, imageWidth, imageHeight);
-        context.drawImage(image, viewport.panX, viewport.panY, imageWidth, imageHeight);
+        drawPageImage(image);
         if (mode === 'study') {
             for (const shape of shapes) {
                 drawRect(shape, revealedShapeIds.has(shape.id) ? revealedStyle : occlusionStyle, false);
@@ -299,6 +300,32 @@ export function mountImageCanvas(
             drawHandles(selectedRect);
             placeShapeActions(selectedRect);
         }
+    }
+
+    // Drawn from a copy already scaled to the zoom, at a whole device pixel, so a pan frame is a plain pixel copy rather
+    // than a resampling of the whole image (slow where the browser draws canvases without the GPU, as Firefox on Linux).
+    // The copy is made once the zoom holds still for a frame: while it keeps changing, each copy would be used once.
+    function drawPageImage(source: HTMLImageElement): void {
+        const devicePixelRatio = window.devicePixelRatio || 1;
+        const width = Math.max(1, Math.round(source.naturalWidth * viewport.zoom * devicePixelRatio));
+        const height = Math.max(1, Math.round(source.naturalHeight * viewport.zoom * devicePixelRatio));
+        const isZoomChanging = viewport.zoom !== lastDrawnZoom;
+        lastDrawnZoom = viewport.zoom;
+        if (scaledImage?.width !== width || scaledImage.height !== height) {
+            if (isZoomChanging || width > MAX_SCALED_IMAGE_SIDE_PX || height > MAX_SCALED_IMAGE_SIDE_PX) {
+                const imageWidth = source.naturalWidth * viewport.zoom;
+                const imageHeight = source.naturalHeight * viewport.zoom;
+                context.fillStyle = IMAGE_BACKDROP_STYLE;
+                context.fillRect(viewport.panX, viewport.panY, imageWidth, imageHeight);
+                context.drawImage(source, viewport.panX, viewport.panY, imageWidth, imageHeight);
+                return;
+            }
+            scaledImage = scaleImage(source, width, height);
+        }
+        context.save();
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.drawImage(scaledImage, Math.round(viewport.panX * devicePixelRatio), Math.round(viewport.panY * devicePixelRatio));
+        context.restore();
     }
 
     function buildShapeActions(): HTMLDivElement {
@@ -353,8 +380,9 @@ export function mountImageCanvas(
     function placeRotationHandle(rect: RotatedRect): void {
         rotationHandle.hidden = false;
         const center = rotationHandleOnCanvas(rect);
-        rotationHandle.style.left = `${center.x - rotationHandle.offsetWidth / 2}px`;
-        rotationHandle.style.top = `${center.y - rotationHandle.offsetHeight / 2}px`;
+        const { width, height } = sizeOf(rotationHandle);
+        rotationHandle.style.left = `${center.x - width / 2}px`;
+        rotationHandle.style.top = `${center.y - height / 2}px`;
         rotationHandle.style.transform = `rotate(${rotationOf(rect)}deg)`;
     }
 
@@ -363,8 +391,7 @@ export function mountImageCanvas(
     // with the shape.
     function placeShapeActions(rect: RotatedRect): void {
         shapeActions.hidden = false;
-        const width = shapeActions.offsetWidth;
-        const height = shapeActions.offsetHeight;
+        const { width, height } = sizeOf(shapeActions);
         const radians = rotationOf(rect) * Math.PI / 180;
         const down = { x: -Math.sin(radians), y: Math.cos(radians) };
         // From the buttons' centre to past their far side, along the shape's down direction.
@@ -372,11 +399,23 @@ export function mountImageCanvas(
         const bottomMiddle = imageToCanvas(viewport, handlePoint(rect, 's'));
         const rotationHandleCenter = rotationHandleOnCanvas(rect);
         const below = { x: bottomMiddle.x + down.x * reach, y: bottomMiddle.y + down.y * reach };
-        const aboveDistance = rotationHandle.offsetHeight / 2 + reach;
+        const aboveDistance = sizeOf(rotationHandle).height / 2 + reach;
         const above = { x: rotationHandleCenter.x - down.x * aboveDistance, y: rotationHandleCenter.y - down.y * aboveDistance };
         const center = !fitsInCanvasHeight(below, height) && fitsInCanvasHeight(above, height) ? above : below;
         shapeActions.style.left = `${center.x - width / 2}px`;
         shapeActions.style.top = `${center.y - height / 2}px`;
+    }
+
+    // Measured once shown: reading an element's size on every frame would lay the page out on every frame.
+    function sizeOf(element: HTMLElement): Size {
+        let size = elementSizes.get(element);
+        if (!size) {
+            size = { width: element.offsetWidth, height: element.offsetHeight };
+            if (size.width > 0) {
+                elementSizes.set(element, size);
+            }
+        }
+        return size;
     }
 
     function fitsInCanvasHeight(center: Point, height: number): boolean {
@@ -514,7 +553,7 @@ export function mountImageCanvas(
         event.preventDefault();
         const zoomFactor = event.deltaY < 0 ? ZOOM_STEP_PER_WHEEL_TICK : 1 / ZOOM_STEP_PER_WHEEL_TICK;
         viewport = zoomAtCanvasPoint(viewport, toCanvasPoint(event), zoomFactor);
-        draw();
+        drawNextFrame();
         notifyViewportChange();
     }
 
@@ -836,12 +875,17 @@ export function mountImageCanvas(
             numbersArrivedAt = null;
             return 1;
         }
-        fadeFrame ??= requestAnimationFrame(() => {
-            fadeFrame = null;
-            draw();
-        });
+        drawNextFrame();
         const progress = elapsed / SHAPE_NUMBER_FADE_MS;
         return 1 - (1 - progress) ** 2;
+    }
+
+    // Once however often it is asked for before the frame: wheel events, unlike mouse moves, can come several a frame.
+    function drawNextFrame(): void {
+        drawFrame ??= requestAnimationFrame(() => {
+            drawFrame = null;
+            draw();
+        });
     }
 
     function hasShapeKeyboardFocus(): boolean {
@@ -937,8 +981,8 @@ export function mountImageCanvas(
             };
         },
         destroy(): void {
-            if (fadeFrame !== null) {
-                cancelAnimationFrame(fadeFrame);
+            if (drawFrame !== null) {
+                cancelAnimationFrame(drawFrame);
             }
             stopPanning?.();
             resizeObserver.disconnect();
@@ -970,8 +1014,21 @@ function cycleFocusedShapeIndex(current: number | null, direction: 1 | -1, lengt
     return (current + direction + length) % length;
 }
 
-function getContext2d(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
-    const context = canvas.getContext('2d');
+// The image at the given size on its backdrop.
+function scaleImage(source: HTMLImageElement, width: number, height: number): HTMLCanvasElement {
+    const scaled = document.createElement('canvas');
+    scaled.width = width;
+    scaled.height = height;
+    // Opaque, so drawing it is a plain copy rather than a blend.
+    const context = getContext2d(scaled, { alpha: false });
+    context.fillStyle = IMAGE_BACKDROP_STYLE;
+    context.fillRect(0, 0, width, height);
+    context.drawImage(source, 0, 0, width, height);
+    return scaled;
+}
+
+function getContext2d(canvas: HTMLCanvasElement, settings?: CanvasRenderingContext2DSettings): CanvasRenderingContext2D {
+    const context = canvas.getContext('2d', settings);
     if (!context) {
         throw new Error('Canvas 2D context is not available');
     }
