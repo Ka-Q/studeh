@@ -69,12 +69,9 @@ const REVEALED_FILL_STYLE = 'rgba(242, 242, 242, 0.05)';
 const REVEALED_STROKE_STYLE = 'rgb(68, 202, 31)';
 const FOCUS_OUTLINE_STYLE = 'rgb(37, 99, 235)';
 const FOCUS_OUTLINE_PADDING_PX = 4;
-const SHAPE_NUMBER_FONT_SIZE_PX = 11;
+const SHAPE_NUMBER_FONT = 'bold 11px system-ui, sans-serif';
 const SHAPE_NUMBER_SIZE_PX = 16;
 const SHAPE_NUMBER_PADDING_PX = 4;
-// Zoomed out, the numbers shrink with the shapes, all to one size so they never cover more than this share of a
-// typical (median) shape's shorter side.
-const SHAPE_NUMBER_MAX_SHAPE_SHARE = 0.8;
 const SHAPE_NUMBER_BACKGROUND_STYLE = 'rgba(17, 24, 39, 0.8)';
 const SHAPE_NUMBER_TEXT_STYLE = 'rgb(255, 255, 255)';
 // Numbers given by the image analysis after the page is shown fade in over this long, rather than popping in.
@@ -246,12 +243,11 @@ export function mountImageCanvas(
             }
             const ordered = shapesInTabOrder();
             if (showNumbers && tabOrderCache!.isFinal) {
-                const size = shapeNumberSize();
                 const opacity = shapeNumberOpacity();
                 for (const [index, shape] of ordered.entries()) {
                     // A revealed shape's number would cover the answer.
                     if (!revealedShapeIds.has(shape.id)) {
-                        drawShapeNumber(shape, index + 1, size, opacity);
+                        drawShapeNumber(shape, index + 1, opacity);
                     }
                 }
             }
@@ -390,26 +386,19 @@ export function mountImageCanvas(
         context.restore();
     }
 
-    function shapeNumberSize(): number {
-        const shorterSides = shapes.map((shape) => Math.min(shape.width, shape.height)).sort((a, b) => a - b);
-        const medianShorterSide = shorterSides[Math.floor(shorterSides.length / 2)] ?? 0;
-        return Math.min(SHAPE_NUMBER_SIZE_PX, medianShorterSide * viewport.zoom * SHAPE_NUMBER_MAX_SHAPE_SHARE);
-    }
-
-    function drawShapeNumber(rect: Rect, shapeNumber: number, size: number, opacity: number): void {
-        const scale = size / SHAPE_NUMBER_SIZE_PX;
+    function drawShapeNumber(rect: Rect, shapeNumber: number, opacity: number): void {
         const topLeft = imageToCanvas(viewport, { x: rect.x, y: rect.y });
         const text = String(shapeNumber);
         context.save();
         context.globalAlpha = opacity;
-        context.font = `bold ${SHAPE_NUMBER_FONT_SIZE_PX * scale}px system-ui, sans-serif`;
-        const width = Math.max(size, context.measureText(text).width + SHAPE_NUMBER_PADDING_PX * scale * 2);
+        context.font = SHAPE_NUMBER_FONT;
+        const width = Math.max(SHAPE_NUMBER_SIZE_PX, context.measureText(text).width + SHAPE_NUMBER_PADDING_PX * 2);
         context.fillStyle = SHAPE_NUMBER_BACKGROUND_STYLE;
-        context.fillRect(topLeft.x, topLeft.y, width, size);
+        context.fillRect(topLeft.x, topLeft.y, width, SHAPE_NUMBER_SIZE_PX);
         context.fillStyle = SHAPE_NUMBER_TEXT_STYLE;
         context.textAlign = 'center';
         context.textBaseline = 'middle';
-        context.fillText(text, topLeft.x + width / 2, topLeft.y + size / 2);
+        context.fillText(text, topLeft.x + width / 2, topLeft.y + SHAPE_NUMBER_SIZE_PX / 2);
         context.restore();
     }
 
