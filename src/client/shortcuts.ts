@@ -105,6 +105,7 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutSpec> = {
         label: 'Delete selected shape (Edit mode)',
         group: 'canvas',
         bindings: [
+            { key: 'x', modifier: Modifier.NONE, displayKey: 'X' },
             { key: 'Delete', modifier: Modifier.NONE, displayKey: 'Delete' },
             { key: 'Backspace', modifier: Modifier.NONE, displayKey: 'Backspace' }
         ],

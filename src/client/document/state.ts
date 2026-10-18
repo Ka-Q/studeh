@@ -25,6 +25,10 @@ const state: AppState = {
 
 const listeners = new Set<Listener>();
 let lastSavedDocument: DocumentManifest | null = null;
+// Shapes selected one after another before the current one, most recent last: deleting the selected shape selects the
+// latest of them still on the page. Clearing the selection starts it over.
+let selectionHistory: string[] = [];
+let lastNotifiedSelectedShapeId: string | null = null;
 
 export function getState(): AppState {
     return state;
@@ -261,8 +265,15 @@ export function deleteSelectedShape(): void {
     if (!updated) {
         return;
     }
-    state.selectedShapeId = null;
+    state.selectedShapeId = latestPreviouslySelectedShapeId(getActivePage()!.shapes);
     notify();
+}
+
+function latestPreviouslySelectedShapeId(shapes: RectangleShape[]): string | null {
+    const ids = new Set(shapes.map((shape) => shape.id));
+    return [...selectionHistory].reverse().find(function isOnPage(shapeId) {
+        return ids.has(shapeId);
+    }) ?? null;
 }
 
 export function renameDocument(name: string): void {
@@ -326,6 +337,16 @@ function pickActivePageIdAfterDeletion(
     return remaining[0]?.id ?? null;
 }
 
+function trackSelectionChange(previousShapeId: string | null, shapeId: string | null): void {
+    if (!shapeId) {
+        selectionHistory = [];
+    } else if (previousShapeId) {
+        selectionHistory = [...selectionHistory.filter(function isNotPrevious(id) {
+            return id !== previousShapeId;
+        }), previousShapeId];
+    }
+}
+
 function generateId(prefix: string): string {
     return `${prefix}-${crypto.randomUUID().replace(/-/g, '')}`;
 }
@@ -369,6 +390,10 @@ function deepEqual(a: unknown, b: unknown): boolean {
 }
 
 function notify(): void {
+    if (state.selectedShapeId !== lastNotifiedSelectedShapeId) {
+        trackSelectionChange(lastNotifiedSelectedShapeId, state.selectedShapeId);
+        lastNotifiedSelectedShapeId = state.selectedShapeId;
+    }
     for (const listener of listeners) {
         listener(state);
     }

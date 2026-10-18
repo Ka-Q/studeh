@@ -276,7 +276,7 @@ export function mountImageCanvas(
         }
         for (const shape of shapes) {
             const rect = activeDrag?.shapeId === shape.id ? activeDrag.current : shape;
-            drawRect(rect, shape.id === selectedShapeId ? selectedStyle : unselectedStyle, false);
+            drawRect(rect, shape.id === selectedShapeId && !creatingRect ? selectedStyle : unselectedStyle, false);
         }
         if (creatingRect) {
             drawRect(rectFromPoints(creatingRect.start, creatingRect.current), unselectedStyle, true);
@@ -542,7 +542,7 @@ export function mountImageCanvas(
             return;
         }
 
-        callbacks.onSelectShape(null);
+        // The selection is kept until the drag ends, so the shape drawn follows it in the selection history.
         startCreating(canvasPoint);
     }
 
@@ -763,7 +763,7 @@ export function mountImageCanvas(
         const rect = creatingRect;
         creatingRect = null;
         if (!rect || !image) {
-            draw();
+            callbacks.onSelectShape(null);
             return;
         }
         const dragDistance = Math.hypot(rect.current.x - rect.start.x, rect.current.y - rect.start.y);
@@ -777,7 +777,9 @@ export function mountImageCanvas(
             { width: image.naturalWidth, height: image.naturalHeight }
         );
         draw();
-        if (!isRectEmpty(imageRect)) {
+        if (isRectEmpty(imageRect)) {
+            callbacks.onSelectShape(null);
+        } else {
             callbacks.onCreateShape(imageRect);
         }
     }

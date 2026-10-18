@@ -10,6 +10,7 @@ import { test } from 'node:test';
 
 const {
     deletePages,
+    deleteSelectedShape,
     getState,
     markClean,
     renameDocument,
@@ -48,6 +49,41 @@ function fixtureDocumentWithShape() {
         }]
     };
 }
+
+function fixtureDocumentWithShapes(shapeIds: string[]) {
+    const document = fixtureDocumentWithShape();
+    document.pages[0].shapes = shapeIds.map(function toShape(id) {
+        return { ...document.pages[0].shapes[0], id };
+    });
+    return document;
+}
+
+test('deleteSelectedShape selects the shape selected before it, going back as shapes are deleted', function () {
+    setDocument(fixtureDocumentWithShapes(['a', 'b', 'c']));
+    selectShape('a');
+    selectShape('b');
+    selectShape('c');
+
+    deleteSelectedShape();
+    assert.equal(getState().selectedShapeId, 'b');
+
+    deleteSelectedShape();
+    assert.equal(getState().selectedShapeId, 'a');
+
+    deleteSelectedShape();
+    assert.equal(getState().selectedShapeId, null);
+});
+
+test('deleteSelectedShape selects nothing when the selection was cleared before the deleted shape was selected', function () {
+    setDocument(fixtureDocumentWithShapes(['a', 'b']));
+    selectShape('a');
+    selectShape(null);
+    selectShape('b');
+
+    deleteSelectedShape();
+
+    assert.equal(getState().selectedShapeId, null);
+});
 
 test('deletePages falls back to the nearest remaining sibling when the active page is deleted', function () {
     setDocument(fixtureDocument(['page-1', 'page-2', 'page-3']));

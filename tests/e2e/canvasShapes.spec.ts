@@ -48,7 +48,7 @@ test('clicking the topmost of two overlapping shapes selects it, not the one und
     expect(shapes[0].x).toBeCloseTo(20, 0);
 });
 
-test('the buttons under a selected shape clone it (as does C) and delete it', async ({ page }) => {
+test('the buttons under a selected shape clone it (as does C) and delete it (as does X), selecting the shape selected before', async ({ page }) => {
     await page.goto('/');
     const docId = await createDocument(page, uniqueName('Clone Delete Doc'));
     await addPage(page);
@@ -60,13 +60,34 @@ test('the buttons under a selected shape clone it (as does C) and delete it', as
     await page.keyboard.press('c');
     await page.keyboard.press('c');
     await page.locator('.shape-actions button[aria-label^="Delete"]').click();
+    await page.keyboard.press('x');
 
     await saveDocument(page);
     const manifest = await fetchManifest(page, docId);
     const shapes = manifest.pages[0].shapes as unknown as { x: number; y: number; width: number; height: number }[];
 
-    expect(shapes.map((shape) => [shape.x, shape.y, shape.width, shape.height])).toEqual([[20, 20, 80, 80], [32, 32, 80, 80], [44, 44, 80, 80]]);
-    await expect(page.locator('.shape-actions')).toBeHidden();
+    // X only deletes a selected shape: the third clone going too shows the delete before it selected that clone.
+    expect(shapes.map((shape) => [shape.x, shape.y, shape.width, shape.height])).toEqual([[20, 20, 80, 80], [32, 32, 80, 80]]);
+});
+
+test('deleting a newly drawn shape selects the shape selected before it was drawn', async ({ page }) => {
+    await page.goto('/');
+    const docId = await createDocument(page, uniqueName('Delete Drawn Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+    const imageRect = await imageOnScreenRect(page);
+
+    await dragOnCanvas(page, { x: imageRect.left + 20, y: imageRect.top + 20 }, { x: imageRect.left + 60, y: imageRect.top + 60 });
+    await dragOnCanvas(page, { x: imageRect.left + 100, y: imageRect.top + 20 }, { x: imageRect.left + 140, y: imageRect.top + 60 });
+    await dragOnCanvas(page, { x: imageRect.left + 180, y: imageRect.top + 20 }, { x: imageRect.left + 220, y: imageRect.top + 60 });
+    await page.keyboard.press('x');
+    await page.keyboard.press('x');
+
+    await saveDocument(page);
+    const manifest = await fetchManifest(page, docId);
+    const shapes = manifest.pages[0].shapes as unknown as { x: number }[];
+
+    expect(shapes.map((shape) => shape.x)).toEqual([20]);
 });
 
 test('dragging a selected shape by its body moves it without changing its size', async ({ page }) => {
