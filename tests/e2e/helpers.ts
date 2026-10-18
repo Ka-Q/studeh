@@ -5,6 +5,7 @@ import { expect, type Page } from '@playwright/test';
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
 export const SAMPLE_IMAGE_PATH = path.join(currentDir, 'fixtures', 'sample.png');
+export const TRANSPARENT_IMAGE_PATH = path.join(currentDir, 'fixtures', 'transparent.png');
 export const SAMPLE_IMAGE_SIZE = { width: 240, height: 180 };
 
 export function uniqueName(label: string): string {

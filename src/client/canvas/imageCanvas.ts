@@ -72,6 +72,8 @@ const SHAPE_NUMBER_BACKGROUND_STYLE = 'rgba(17, 24, 39, 0.8)';
 const SHAPE_NUMBER_TEXT_STYLE = 'rgb(255, 255, 255)';
 // Numbers given by the image analysis after the page is shown fade in over this long, rather than popping in.
 const SHAPE_NUMBER_FADE_MS = 250;
+// Transparent areas of an image show as white, the usual backdrop for diagrams.
+const IMAGE_BACKDROP_STYLE = 'rgb(255, 255, 255)';
 const EDIT_MODE_HATCH_SPACING_PX = 256;
 const EDIT_MODE_HATCH_LINE_WIDTH_PX = 1;
 const EDIT_MODE_HATCH_LINE_COLOR = 'rgba(106, 106, 106, 0.2)';
@@ -219,13 +221,11 @@ export function mountImageCanvas(
         if (mode === 'edit') {
             drawEditModeHatch();
         }
-        context.drawImage(
-            image,
-            viewport.panX,
-            viewport.panY,
-            image.naturalWidth * viewport.zoom,
-            image.naturalHeight * viewport.zoom
-        );
+        const imageWidth = image.naturalWidth * viewport.zoom;
+        const imageHeight = image.naturalHeight * viewport.zoom;
+        context.fillStyle = IMAGE_BACKDROP_STYLE;
+        context.fillRect(viewport.panX, viewport.panY, imageWidth, imageHeight);
+        context.drawImage(image, viewport.panX, viewport.panY, imageWidth, imageHeight);
         if (mode === 'study') {
             for (const shape of shapes) {
                 drawRect(shape, revealedShapeIds.has(shape.id) ? revealedStyle : occlusionStyle, false);

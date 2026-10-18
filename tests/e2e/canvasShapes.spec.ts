@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { clampRectToBounds, handlePoints, resizeRect, type ResizeHandle } from '../../src/client/shapes/rectangle';
-import { addPage, assignActivePageImage, createDocument, dragOnCanvas, fetchManifest, imageOnScreenRect, saveDocument, uniqueName } from './helpers';
+import { addPage, assignActivePageImage, createDocument, dragOnCanvas, fetchManifest, getCanvas, imageOnScreenRect, saveDocument, TRANSPARENT_IMAGE_PATH, uniqueName } from './helpers';
 
 test('drag-creating a rectangle in edit mode clamps it to the image bounds', async ({ page }) => {
     await page.goto('/');
@@ -132,4 +132,20 @@ test('resizing a selected shape from each of its 8 handles updates the correspon
         expect(shape.width, `handle ${handle} width`).toBeCloseTo(expected.width, 0);
         expect(shape.height, `handle ${handle} height`).toBeCloseTo(expected.height, 0);
     });
+});
+
+test('transparent areas of a page image show as white', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('Transparent Image Doc'));
+    await addPage(page);
+    await assignActivePageImage(page, TRANSPARENT_IMAGE_PATH);
+    const imageRect = await imageOnScreenRect(page);
+    const center = { x: imageRect.left + imageRect.width / 2, y: imageRect.top + imageRect.height / 2 };
+
+    await expect.poll(() => getCanvas(page).evaluate(function readPixel(canvas: HTMLCanvasElement, target: { x: number; y: number }) {
+        const rect = canvas.getBoundingClientRect();
+        const scale = canvas.width / rect.width;
+        const pixel = canvas.getContext('2d')!.getImageData(Math.round((target.x - rect.left) * scale), Math.round((target.y - rect.top) * scale), 1, 1).data;
+        return Array.from(pixel);
+    }, center)).toEqual([255, 255, 255, 255]);
 });
