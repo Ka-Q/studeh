@@ -6,9 +6,9 @@ import {
     getActivePage,
     getState,
     movePage,
+    newPageId,
     renamePage,
     setActivePage,
-    setPageImage,
     subscribe
 } from '../document/state';
 import type { Page } from '../../shared/types';
@@ -184,17 +184,14 @@ function createImagesFileInput(): HTMLInputElement {
 async function createPagesFromImages(documentId: string, files: File[]): Promise<void> {
     let createdCount = 0;
     for (const file of files) {
-        const doc = getState().document;
-        const page = doc && addPage(`Page ${doc.pages.length + 1}`);
-        if (!page) {
-            continue;
-        }
+        const pageId = newPageId();
         try {
-            const image = await uploadPageImage(documentId, page.id, file);
-            setPageImage(page.id, image);
-            createdCount += 1;
+            const image = await uploadPageImage(documentId, pageId, file);
+            const doc = getState().document;
+            if (doc?.id === documentId && addPage(`Page ${doc.pages.length + 1}`, image, pageId)) {
+                createdCount += 1;
+            }
         } catch (error) {
-            deletePage(page.id);
             reportError('add page from image', error);
         }
     }

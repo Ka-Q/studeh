@@ -15,6 +15,14 @@ export interface AppState {
 
 type Listener = (state: AppState) => void;
 
+// A document the undo or redo history goes back to, and the page its change was made on (null: the whole document's).
+interface HistoryEntry {
+    document: DocumentManifest;
+    pageId: string | null;
+}
+
+const HISTORY_LIMIT = 200;
+
 const state: AppState = {
     document: null,
     activePageId: null,
@@ -26,6 +34,8 @@ const state: AppState = {
 
 const listeners = new Set<Listener>();
 let lastSavedDocument: DocumentManifest | null = null;
+const undoHistory: HistoryEntry[] = [];
+const redoHistory: HistoryEntry[] = [];
 // The selections made one after another before the current one, most recent last: deleting the selected shapes selects
 // the latest of them with shapes still on the page. Clearing the selection starts it over.
 let selectionHistory: (readonly string[])[] = [];
@@ -42,6 +52,8 @@ export function subscribe(listener: Listener): void {
 export function setDocument(document: DocumentManifest | null): void {
     replaceDocument(document);
     lastSavedDocument = state.document;
+    undoHistory.length = 0;
+    redoHistory.length = 0;
     state.activePageId = document?.pages[0]?.id ?? null;
     state.selectedShapeIds = [];
     state.dirty = false;
@@ -73,17 +85,16 @@ export function getActivePage(): Page | null {
     return findPage(state.activePageId);
 }
 
-export function addPage(name: string): Page | null {
+export function newPageId(): string {
+    return generateId('page');
+}
+
+export function addPage(name: string, image: PageImage | null = null, id = newPageId()): Page | null {
     if (!state.document) {
         return null;
     }
-    const page: Page = {
-        id: generateId('page'),
-        name,
-        image: null,
-        shapes: []
-    };
-    replaceDocument({ ...state.document, pages: [...state.document.pages, page] });
+    const page: Page = { id, name, image, shapes: [] };
+    commitDocument({ ...state.document, pages: [...state.document.pages, page] }, page.id);
     state.activePageId = page.id;
     notify();
     return page;
@@ -106,7 +117,7 @@ export function deletePage(pageId: string): void {
     const remaining = pages.filter(function isNotTarget(page) {
         return page.id !== pageId;
     });
-    replaceDocument({ ...state.document, pages: remaining });
+    commitDocument({ ...state.document, pages: remaining }, pageId);
     if (state.activePageId === pageId) {
         state.activePageId = pickActivePageIdAfterDeletion(pages, new Set([pageId]), pageId, remaining);
     }
@@ -128,7 +139,7 @@ export function movePage(pageId: string, direction: -1 | 1): void {
     }
     const reordered = [...pages];
     [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
-    replaceDocument({ ...state.document, pages: reordered });
+    commitDocument({ ...state.document, pages: reordered }, pageId);
     notify();
 }
 
@@ -141,7 +152,7 @@ export function deletePages(pageIds: string[]): void {
     const remaining = pages.filter(function isNotTarget(page) {
         return !idsToDelete.has(page.id);
     });
-    replaceDocument({ ...state.document, pages: remaining });
+    commitDocument({ ...state.document, pages: remaining }, state.activePageId);
     if (state.activePageId && idsToDelete.has(state.activePageId)) {
         state.activePageId = pickActivePageIdAfterDeletion(pages, idsToDelete, state.activePageId, remaining);
     }
@@ -292,8 +303,63 @@ export function renameDocument(name: string): void {
     if (!state.document) {
         return;
     }
-    replaceDocument({ ...state.document, name });
+    commitDocument({ ...state.document, name }, null);
     notify();
+}
+
+export function canUndo(): boolean {
+    return undoHistory.length > 0;
+}
+
+export function canRedo(): boolean {
+    return redoHistory.length > 0;
+}
+
+export function undo(): void {
+    stepHistory(undoHistory, redoHistory);
+}
+
+export function redo(): void {
+    stepHistory(redoHistory, undoHistory);
+}
+
+// Goes to the page the change was made on; in Edit mode the shapes the step brought back or changed there are selected.
+function stepHistory(from: HistoryEntry[], to: HistoryEntry[]): void {
+    const entry = from.pop();
+    const previous = state.document;
+    if (!entry || !previous) {
+        return;
+    }
+    to.push({ document: previous, pageId: entry.pageId });
+    replaceDocument(entry.document);
+    state.activePageId = activePageIdAfterStep(previous, entry.pageId);
+    state.selectedShapeIds = state.mode === 'edit' ? shapeIdsChangedOnPage(previous, state.activePageId) : [];
+    notify();
+}
+
+function activePageIdAfterStep(previous: DocumentManifest, changedPageId: string | null): string | null {
+    for (const pageId of [changedPageId, state.activePageId]) {
+        if (pageId && findPage(pageId)) {
+            return pageId;
+        }
+    }
+    const remaining = state.document!.pages;
+    if (!state.activePageId) {
+        return remaining[0]?.id ?? null;
+    }
+    const removedIds = new Set(previous.pages.map((page) => page.id).filter((pageId) => !findPage(pageId)));
+    return pickActivePageIdAfterDeletion(previous.pages, removedIds, state.activePageId, remaining);
+}
+
+// Shapes are frozen and shared between documents, so a shape not in the previous document is one the step changed.
+function shapeIdsChangedOnPage(previous: DocumentManifest, pageId: string | null): string[] {
+    const page = pageId ? findPage(pageId) : null;
+    const previousPage = previous.pages.find((candidate) => candidate.id === pageId);
+    if (!page || !previousPage) {
+        return [];
+    }
+    const previousShapes = new Set(previousPage.shapes);
+    return page.shapes.filter((shape) => !previousShapes.has(shape)).map((shape) => shape.id);
 }
 
 export function documentUrlPath(document: DocumentManifest | null): string {
@@ -317,12 +383,12 @@ function updatePage(pageId: string, updater: (page: Page) => Page): boolean {
     if (!state.document || !findPage(pageId)) {
         return false;
     }
-    replaceDocument({
+    commitDocument({
         ...state.document,
         pages: state.document.pages.map(function updateIfTarget(page) {
             return page.id === pageId ? updater(page) : page;
         })
-    });
+    }, pageId);
     return true;
 }
 
@@ -366,6 +432,20 @@ function haveSameIds(a: readonly string[], b: readonly string[]): boolean {
 
 function generateId(prefix: string): string {
     return `${prefix}-${crypto.randomUUID().replace(/-/g, '')}`;
+}
+
+// An edit: the document before it goes on the undo history, unless nothing changed.
+function commitDocument(document: DocumentManifest, pageId: string | null): void {
+    const previous = state.document;
+    if (!previous || deepEqual(document, previous)) {
+        return;
+    }
+    undoHistory.push({ document: previous, pageId });
+    if (undoHistory.length > HISTORY_LIMIT) {
+        undoHistory.shift();
+    }
+    redoHistory.length = 0;
+    replaceDocument(document);
 }
 
 function replaceDocument(document: DocumentManifest | null): void {

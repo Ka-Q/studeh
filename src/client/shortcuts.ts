@@ -4,6 +4,8 @@ export type ShortcutId =
     | 'new'
     | 'browse'
     | 'save'
+    | 'undo'
+    | 'redo'
     | 'reorderPageUp'
     | 'reorderPageDown'
     | 'selectPreviousPage'
@@ -67,6 +69,16 @@ export const SHORTCUTS: Record<ShortcutId, ShortcutSpec> = {
     new: { label: 'New document', group: 'document', bindings: [{ key: 'd', modifier: Modifier.PRIMARY, displayKey: 'D' }], allowInFullscreen: false },
     browse: { label: 'Browse documents', group: 'document', bindings: [{ key: 'b', modifier: Modifier.PRIMARY, displayKey: 'B' }], allowInFullscreen: false },
     save: { label: 'Save document', group: 'document', bindings: [{ key: 's', modifier: Modifier.PRIMARY, displayKey: 'S' }], allowInFullscreen: false },
+    undo: { label: 'Undo', group: 'document', bindings: [{ key: 'z', modifier: Modifier.PRIMARY, displayKey: 'Z' }], allowInFullscreen: false },
+    redo: {
+        label: 'Redo',
+        group: 'document',
+        bindings: [
+            { key: 'z', modifier: Modifier.PRIMARY_SHIFT, displayKey: 'Z' },
+            { key: 'y', modifier: Modifier.PRIMARY, displayKey: 'Y' }
+        ],
+        allowInFullscreen: false
+    },
     reorderPageUp: { label: 'Move page up', group: 'pages', bindings: [{ key: 'ArrowUp', modifier: Modifier.PRIMARY_SHIFT, displayKey: 'Up arrow' }], allowInFullscreen: false },
     reorderPageDown: { label: 'Move page down', group: 'pages', bindings: [{ key: 'ArrowDown', modifier: Modifier.PRIMARY_SHIFT, displayKey: 'Down arrow' }], allowInFullscreen: false },
     selectPreviousPage: {

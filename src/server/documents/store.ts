@@ -55,6 +55,13 @@ export async function writeManifest(id: string, manifest: DocumentManifest): Pro
 
     await fs.mkdir(imagesDir(id), { recursive: true });
     await fs.writeFile(manifestPath(id), JSON.stringify(manifest, null, 2), 'utf-8');
+    return manifest;
+}
+
+// Images are pruned when a document is opened, not when saved: the editor's undo history may still bring back a page
+// or image the saved manifest no longer references.
+export async function openManifest(id: string): Promise<DocumentManifest> {
+    const manifest = await readManifest(id);
     await pruneUnreferencedImages(id, manifest);
     return manifest;
 }

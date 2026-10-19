@@ -1,5 +1,5 @@
 import { createDocument, saveDocument } from './api';
-import { getState, markClean, renameDocument, setDocument, subscribe } from './state';
+import { canRedo, canUndo, getState, markClean, redo, renameDocument, setDocument, subscribe, undo } from './state';
 import { confirmDiscardIfDirty } from './discardGuard';
 import { browseDialog } from './browseDialog';
 import { newDocumentDialog } from '../dialogs/newDocumentDialog';
@@ -19,6 +19,8 @@ export function initToolbar(): void {
     const newButton = requireElement('btn-new');
     const browseButton = requireElement('btn-browse');
     const saveButton = requireElement('btn-save');
+    const undoButton = requireElement('btn-undo');
+    const redoButton = requireElement('btn-redo');
     saveStatusEl = requireElement('save-status');
     const renameButton = requireElement('btn-rename-document');
     titleEl = requireElement('doc-title');
@@ -26,25 +28,37 @@ export function initToolbar(): void {
     newButton.title = `New (${shortcutHint('new')})`;
     browseButton.title = `Browse (${shortcutHint('browse')})`;
     saveButton.title = `Save (${shortcutHint('save')})`;
+    labelIconButton(undoButton, `Undo (${shortcutHint('undo')})`);
+    labelIconButton(redoButton, `Redo (${shortcutHint('redo')})`);
     const renameHint = `Rename document (${shortcutHint('renameDocument')})`;
-    renameButton.title = renameHint;
-    renameButton.setAttribute('aria-label', renameHint);
+    labelIconButton(renameButton, renameHint);
 
     newButton.addEventListener('click', onNew);
     browseButton.addEventListener('click', browseDialog);
     saveButton.addEventListener('click', onSave);
+    undoButton.addEventListener('click', undo);
+    redoButton.addEventListener('click', redo);
     renameButton.addEventListener('click', onRenameDocument);
     titleEl.addEventListener('dblclick', onRenameDocument);
     registerShortcut('renameDocument', onRenameDocument);
+    registerShortcut('undo', undo);
+    registerShortcut('redo', redo);
 
     subscribe(function renderOnChange(state) {
         titleEl.textContent = state.document?.name ?? 'No document open';
         titleEl.title = state.document?.name ?? '';
         saveButton.toggleAttribute('disabled', !state.document);
         saveButton.classList.toggle('dirty', state.dirty);
+        undoButton.toggleAttribute('disabled', !canUndo());
+        redoButton.toggleAttribute('disabled', !canRedo());
         renameButton.hidden = !state.document;
         updateSaveStatus(state.dirty);
     });
+}
+
+function labelIconButton(button: HTMLElement, label: string): void {
+    button.title = label;
+    button.setAttribute('aria-label', label);
 }
 
 function updateSaveStatus(dirty: boolean): void {

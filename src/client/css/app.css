@@ -136,6 +136,16 @@ button:hover:not(:disabled) {
     mask-image: url('/icons/save.svg');
 }
 
+.icon-undo {
+    -webkit-mask-image: url('/icons/undo.svg');
+    mask-image: url('/icons/undo.svg');
+}
+
+.icon-redo {
+    -webkit-mask-image: url('/icons/redo.svg');
+    mask-image: url('/icons/redo.svg');
+}
+
 .icon-rename {
     -webkit-mask-image: url('/icons/rename.svg');
     mask-image: url('/icons/rename.svg');

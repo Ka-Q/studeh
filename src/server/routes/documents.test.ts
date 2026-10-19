@@ -361,7 +361,7 @@ test('Re-uploading writes a new uniquely-named file rather than overwriting the 
     await fs.access(path.join(documentsDir, doc.id, secondUpload.file));
 });
 
-test('Saving prunes image files no longer referenced by the manifest', async function () {
+test('Saving keeps, and opening prunes, image files no longer referenced by the manifest', async function () {
     const doc = await createDocument();
     await putDocument(doc.id, manifestOf(doc, [validPage()]));
     const fileA = await (await fetch(`${baseUrl}/api/documents/${doc.id}/pages/page-1/image`, {
@@ -377,12 +377,14 @@ test('Saving prunes image files no longer referenced by the manifest', async fun
         body: Buffer.from('image-b')
     })).json();
     await putDocument(doc.id, manifestOf(doc, [validPage({ image: fileB })]));
+    await fs.access(path.join(documentsDir, doc.id, fileA.file));
 
+    await getDocument(doc.id);
     await assert.rejects(fs.access(path.join(documentsDir, doc.id, fileA.file)));
     await fs.access(path.join(documentsDir, doc.id, fileB.file));
 });
 
-test('Discarding an uploaded-but-unsaved image leaves the old manifest reference and file intact', async function () {
+test('Discarding an uploaded-but-unsaved image leaves the old manifest reference and file intact, the new file pruned', async function () {
     const doc = await createDocument();
     await putDocument(doc.id, manifestOf(doc, [validPage()]));
     const fileA = await (await fetch(`${baseUrl}/api/documents/${doc.id}/pages/page-1/image`, {
@@ -401,5 +403,5 @@ test('Discarding an uploaded-but-unsaved image leaves the old manifest reference
     const { body } = await getDocument(doc.id) as { body: CreatedDocument & { pages: { image: { file: string } }[] } };
     assert.equal(body.pages[0].image.file, fileA.file);
     await fs.access(path.join(documentsDir, doc.id, fileA.file));
-    await fs.access(path.join(documentsDir, doc.id, fileB.file));
+    await assert.rejects(fs.access(path.join(documentsDir, doc.id, fileB.file)));
 });

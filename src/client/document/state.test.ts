@@ -9,18 +9,25 @@ import { test } from 'node:test';
 };
 
 const {
+    addPage,
+    canRedo,
+    canUndo,
     cloneSelectedShapes,
+    deletePage,
     deletePages,
     deleteSelectedShapes,
     getState,
     markClean,
+    redo,
     renameDocument,
     renamePage,
     selectShapes,
     setActivePage,
     setDocument,
+    setMode,
     setPageImage,
     subscribe,
+    undo,
     updateShapeRects
 } = await import('./state');
 
@@ -266,4 +273,101 @@ test('markClean leaves the document dirty if it has changed since the given docu
     markClean(savedDocument);
 
     assert.equal(getState().dirty, true);
+});
+
+test('undo and redo step through edits, and back to the saved document is clean again', function () {
+    setDocument(fixtureDocument(['page-1']));
+    renamePage('page-1', 'First');
+    renamePage('page-1', 'Second');
+
+    undo();
+    assert.equal(getState().document!.pages[0].name, 'First');
+    undo();
+    assert.equal(getState().document!.pages[0].name, 'page-1');
+    assert.equal(getState().dirty, false);
+    assert.equal(canUndo(), false);
+
+    redo();
+    redo();
+    assert.equal(getState().document!.pages[0].name, 'Second');
+    assert.equal(getState().dirty, true);
+    assert.equal(canRedo(), false);
+});
+
+test('an edit after undo drops the redo history, and an edit changing nothing adds no step', function () {
+    setDocument(fixtureDocument(['page-1']));
+    renamePage('page-1', 'First');
+    undo();
+    renamePage('page-1', 'page-1');
+    assert.equal(canRedo(), true);
+
+    renamePage('page-1', 'Other');
+
+    assert.equal(canRedo(), false);
+    undo();
+    assert.equal(canUndo(), false);
+});
+
+test('opening a document clears the history', function () {
+    setDocument(fixtureDocument(['page-1']));
+    renamePage('page-1', 'First');
+    undo();
+
+    setDocument(fixtureDocument(['page-1']));
+
+    assert.equal(canUndo(), false);
+    assert.equal(canRedo(), false);
+});
+
+test('undo goes to the page the edit was made on; a document rename stays on the current page', function () {
+    setDocument(fixtureDocument(['page-1', 'page-2']));
+    renamePage('page-1', 'Renamed');
+    renameDocument('New name');
+    setActivePage('page-2');
+
+    undo();
+    assert.equal(getState().activePageId, 'page-2');
+
+    undo();
+    assert.equal(getState().activePageId, 'page-1');
+});
+
+test('undoing a page delete brings the page back and goes to it; redo goes to the page before it', function () {
+    setDocument(fixtureDocument(['page-1', 'page-2', 'page-3']));
+    setActivePage('page-2');
+    deletePage('page-2');
+
+    undo();
+    assert.deepEqual(getState().document!.pages.map((page) => page.id), ['page-1', 'page-2', 'page-3']);
+    assert.equal(getState().activePageId, 'page-2');
+
+    redo();
+    assert.equal(getState().activePageId, 'page-1');
+});
+
+test('undoing an added page goes to the page before it', function () {
+    setDocument(fixtureDocument(['page-1']));
+    const page = addPage('Page 2', { mimeType: 'image/png', file: 'images/b.png' })!;
+    assert.equal(getState().activePageId, page.id);
+
+    undo();
+
+    assert.equal(getState().document!.pages.length, 1);
+    assert.equal(getState().activePageId, 'page-1');
+});
+
+test('undo in Edit mode selects the shapes it brought back or changed; in Study mode nothing', function () {
+    setDocument(fixtureDocumentWithShapes(['a', 'b', 'c']));
+    selectShapes(['a', 'b']);
+    deleteSelectedShapes();
+    selectShapes([]);
+
+    undo();
+    assert.deepEqual(getState().selectedShapeIds, ['a', 'b']);
+
+    updateShapeRects('page-1', new Map([['c', { x: 50, y: 50, width: 20, height: 20 }]]));
+    setMode('study');
+    undo();
+    assert.deepEqual(getState().selectedShapeIds, []);
+    assert.equal(getState().document!.pages[0].shapes[2].x, 10);
 });
