@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { addPage, createDocument, uniqueName } from './helpers';
+import { addPage, createDocument, fetchManifest, uniqueName } from './helpers';
 
 test('deleting a document via the Browse dialog removes it from the list and the server', async ({ page }) => {
     await page.goto('/');
@@ -136,4 +136,51 @@ test('confirmDiscardIfDirty is awaited by New, Browse-row switching, and browser
     await page.locator('#btn-cancel-confirm').click();
     await expect(page.locator('#doc-title')).toHaveText(nameB);
     await expect(page).toHaveURL(new RegExp(`/${docBId}$`));
+});
+
+test('leaving the page asks first only while there are unsaved changes', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('Unload Guard Doc'));
+    const dialogTypes: string[] = [];
+    page.on('dialog', (dialog) => {
+        dialogTypes.push(dialog.type());
+        void dialog.accept();
+    });
+
+    await page.reload();
+    expect(dialogTypes).toEqual([]);
+
+    await addPage(page);
+    await expect(page.locator('#save-status')).toHaveText('Unsaved changes');
+    await page.reload();
+    expect(dialogTypes).toEqual(['beforeunload']);
+});
+
+test('reloading from the keyboard with unsaved changes asks in the app\'s dialog: cancel, discard or save', async ({ page }) => {
+    await page.goto('/');
+    const docId = await createDocument(page, uniqueName('Reload Dialog Doc'));
+    const nativeDialogs: string[] = [];
+    page.on('dialog', (dialog) => {
+        nativeDialogs.push(dialog.type());
+        void dialog.accept();
+    });
+    const alternativeButton = page.locator('#btn-confirm-alternative');
+
+    await addPage(page);
+    await page.keyboard.press('F5');
+    await expect(page.locator('#confirm-dialog')).toBeVisible();
+    await page.locator('#btn-cancel-confirm').click();
+    await expect(page.locator('.page-item')).toHaveCount(1);
+
+    await page.keyboard.press('ControlOrMeta+r');
+    await Promise.all([page.waitForEvent('load'), alternativeButton.click()]);
+    await expect(page.locator('#doc-title')).not.toHaveText('No document open');
+    await expect(page.locator('.page-item')).toHaveCount(0);
+
+    await addPage(page);
+    await page.keyboard.press('F5');
+    await Promise.all([page.waitForEvent('load'), page.locator('#btn-confirm-delete').click()]);
+    await expect(page.locator('.page-item')).toHaveCount(1);
+    expect((await fetchManifest(page, docId)).pages).toHaveLength(1);
+    expect(nativeDialogs).toEqual([]);
 });
