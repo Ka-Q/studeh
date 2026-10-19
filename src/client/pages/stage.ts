@@ -1,5 +1,7 @@
 import {
     addShape,
+    addShapes,
+    clearPageShapes,
     cloneSelectedShapes,
     deleteSelectedShapes,
     getActivePage,
@@ -22,6 +24,7 @@ import { initCanvasPan, type CanvasPanHandle } from '../canvas/canvasPan';
 import { initCanvasZoom, type CanvasZoomHandle } from '../canvas/canvasZoom';
 import { initPageNavigator, type PageNavigatorHandle } from '../canvas/pageNavigator';
 import { initAnalysisStatus } from '../canvas/analysisStatus';
+import { imageAnalysis } from '../imageAnalysis/analysisClient';
 import { confirmDialog } from '../dialogs/confirmDialog';
 import { createModeToggle, type ModeToggleHandle } from '../modes/modeToggle';
 import { browseDialog } from '../document/browseDialog';
@@ -52,6 +55,8 @@ let isFullscreen = false;
 // Numbering preferences for every page, kept in this browser like the theme.
 let numbering: NumberingMode = localStorage.getItem(NUMBERING_STORAGE_KEY) === 'rows' ? 'rows' : 'smart';
 let showNumbers = localStorage.getItem(SHOW_NUMBERS_STORAGE_KEY) !== 'false';
+// Pages whose labels auto-occlusion is looking for.
+const detectingPageIds = new Set<string>();
 
 export function initStage(): void {
     const container = requireElement('canvas-area');
@@ -246,6 +251,9 @@ function renderControls(documentId: string, page: Page): void {
         replaceButton.addEventListener('click', () => input.click());
 
         leftGroup.append(replaceButton, input);
+        if (page.image) {
+            leftGroup.append(buildAutoOccludeButton(documentId, page), buildClearOcclusionsButton(page));
+        }
     }
 
     controlsEl.append(leftGroup);
@@ -253,6 +261,67 @@ function renderControls(documentId: string, page: Page): void {
     if (!isEditMode()) {
         controlsEl.append(buildStudyControls(page));
     }
+}
+
+function buildAutoOccludeButton(documentId: string, page: Page): HTMLElement {
+    const isDetecting = detectingPageIds.has(page.id);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'stage-controls-fixed';
+    button.disabled = isDetecting;
+    button.title = 'Cover the labels in the image with occlusions';
+    button.append(iconSpan('icon-auto-occlude'), document.createTextNode(isDetecting ? 'Detecting…' : 'Auto-occlude'));
+    button.addEventListener('click', () => void autoOcclude(documentId, page));
+    return button;
+}
+
+function buildClearOcclusionsButton(page: Page): HTMLElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'stage-controls-fixed';
+    button.disabled = page.shapes.length === 0;
+    button.append(iconSpan('icon-clear-occlusions'), document.createTextNode('Clear occlusions'));
+    button.addEventListener('click', async () => {
+        const confirmed = await confirmDialog({
+            title: 'Clear occlusions?',
+            message: 'Remove all occlusions from this page?',
+            confirmLabel: 'Clear',
+            confirmIcon: 'icon-clear-occlusions'
+        });
+        if (confirmed) {
+            clearPageShapes(page.id);
+        }
+    });
+    return button;
+}
+
+// The page's occlusions are replaced by boxes over its labels, found in the analysis worker; they are added to the page
+// detection started for, unless its image was replaced meanwhile.
+async function autoOcclude(documentId: string, page: Page): Promise<void> {
+    const image = page.image;
+    if (!image) {
+        return;
+    }
+    const confirmed = await confirmDialog({
+        title: 'Auto-occlude?',
+        message: 'This action will replace all pre-existing occlusions from the page. Do you want to continue?',
+        confirmLabel: 'Auto-occlude',
+        confirmIcon: 'icon-auto-occlude'
+    });
+    if (!confirmed) {
+        return;
+    }
+    clearPageShapes(page.id);
+    detectingPageIds.add(page.id);
+    render();
+    imageAnalysis.labelBoxesOf(new URL(pageImageUrl(documentId, image), document.baseURI).href, (boxes) => {
+        detectingPageIds.delete(page.id);
+        const current = getState().document?.pages.find((candidate) => candidate.id === page.id);
+        if (current?.image?.file === image.file) {
+            addShapes(page.id, boxes);
+        }
+        render();
+    });
 }
 
 const numberingOptions: { mode: NumberingMode; icon: string; hint: string }[] = [

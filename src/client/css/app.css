@@ -176,6 +176,16 @@ button:hover:not(:disabled) {
     mask-image: url('/icons/image-placeholder.svg');
 }
 
+.icon-auto-occlude {
+    -webkit-mask-image: url('/icons/auto-occlude.svg');
+    mask-image: url('/icons/auto-occlude.svg');
+}
+
+.icon-clear-occlusions {
+    -webkit-mask-image: url('/icons/clear-occlusions.svg');
+    mask-image: url('/icons/clear-occlusions.svg');
+}
+
 .icon-chevron-left {
     -webkit-mask-image: url('/icons/chevron-left.svg');
     mask-image: url('/icons/chevron-left.svg');

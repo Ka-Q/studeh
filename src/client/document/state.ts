@@ -170,15 +170,28 @@ export function setPageImage(pageId: string, image: PageImage): void {
 }
 
 export function addShape(pageId: string, rect: Rect): void {
-    insertShapes(pageId, [{
-        id: generateId('shape'),
-        type: 'rectangle',
-        x: rect.x,
-        y: rect.y,
-        width: rect.width,
-        height: rect.height,
-        visible: false
-    }]);
+    insertShapes(pageId, [newShapeOf(rect)]);
+}
+
+// Shapes added in one go (auto-occlusion's): the selection stays as it is, as they may land on a page not shown.
+export function addShapes(pageId: string, rects: RotatedRect[]): void {
+    if (rects.length > 0 && updatePageShapes(pageId, (shapes) => [...shapes, ...rects.map(newShapeOf)])) {
+        notify();
+    }
+}
+
+function newShapeOf(rect: RotatedRect): RectangleShape {
+    return withRect({ id: generateId('shape'), type: 'rectangle', x: rect.x, y: rect.y, width: rect.width, height: rect.height, visible: false }, rect);
+}
+
+export function clearPageShapes(pageId: string): void {
+    if (!updatePageShapes(pageId, () => [])) {
+        return;
+    }
+    if (pageId === state.activePageId) {
+        state.selectedShapeIds = [];
+    }
+    notify();
 }
 
 // Each copy keeps every property of its original but its id and place, shifted by dx/dy; the copies become the selection.
