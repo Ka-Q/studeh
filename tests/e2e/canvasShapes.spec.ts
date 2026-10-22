@@ -347,9 +347,16 @@ test('the Colour button colours the selected shapes from a typed value or a rece
     await page.getByLabel('Recent colour #ff0010').click();
     await page.keyboard.press('Escape');
 
+    await dragOnCanvas(page, { x: imageRect.left + 120, y: imageRect.top + 20 }, { x: imageRect.left + 200, y: imageRect.top + 100 });
+    await page.locator('.shape-actions button[aria-label="Colour"]').click();
+    await hexField.fill('#00aa00');
+    await hexField.press('Enter');
+    await page.getByLabel('Default colour').click();
+    await page.keyboard.press('Escape');
+
     await saveDocument(page);
     const manifest = await fetchManifest(page, docId);
     const shapes = manifest.pages[0].shapes as unknown as { color?: string }[];
 
-    expect(shapes.map((shape) => shape.color)).toEqual(['#ff0010']);
+    expect(shapes.map((shape) => shape.color)).toEqual(['#ff0010', undefined]);
 });

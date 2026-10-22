@@ -46,7 +46,8 @@ export interface ImageCanvasCallbacks {
     // The copies go this far from the selected shapes.
     onCloneSelected(dx: number, dy: number): void;
     onToggleVisibility(shapeId: string): void;
-    onColorSelected(color: string): void;
+    // A null colour means the default look.
+    onColorSelected(color: string | null): void;
 }
 
 interface ActiveDrag {
@@ -107,8 +108,8 @@ const SELECTION_CASING_STYLE = 'rgba(255, 255, 255, 0.9)';
 const DARK_SELECTION_CASING_STYLE = 'rgba(15, 35, 80, 0.85)';
 const SELECTION_CASING_PX = 1;
 const SELECTED_LINE_WIDTH_PX = 3;
-const HANDLE_SHADOW_STYLE = 'rgba(15, 35, 80, 0.4)';
 const OCCLUSION_LINE_WIDTH_PX = 3;
+const HANDLE_SHADOW_STYLE = 'rgba(15, 35, 80, 0.4)';
 const HANDLE_FILL_STYLE = 'rgb(255, 255, 255)';
 const OCCLUSION_FILL_STYLE = 'rgb(121, 122, 123)';
 const OCCLUSION_STROKE_STYLE = 'rgb(213, 35, 35)';
@@ -137,9 +138,9 @@ interface RectStyle {
     stroke: string;
     lineWidth: number;
     isCased?: boolean;
-    casing?: string;
     // Drawn inside the shape's edge instead of centred on it, so a thick line doesn't grow outwards over the page.
     isInset?: boolean;
+    casing?: string;
 }
 const unselectedStyle: RectStyle = { fill: UNSELECTED_FILL_STYLE, stroke: UNSELECTED_STROKE_STYLE, lineWidth: 2 };
 const selectedStyle: RectStyle = { fill: SELECTED_FILL_STYLE, stroke: SELECTED_STROKE_STYLE, lineWidth: SELECTED_LINE_WIDTH_PX, isCased: true };

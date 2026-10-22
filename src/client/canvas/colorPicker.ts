@@ -1,4 +1,5 @@
 import { hexToHsv, hiddenFillOf, hsvToHex, parseColor, type Hsv } from '../shapes/shapeColor';
+import { iconSpan } from '../dom';
 import { loadRecentColors, rememberColor } from '../shapes/recentColors';
 
 export interface ColorPicker {
@@ -14,7 +15,7 @@ const MAX_HUE = 360;
 
 // Colours join the recent ones when the picker closes, so trying colours doesn't push the others out.
 // The colour is applied when a drag ends, a recent colour is clicked or a typed one is entered, so each is one undo step.
-export function buildColorPicker(onPick: (color: string) => void): ColorPicker {
+export function buildColorPicker(onPick: (color: string | null) => void): ColorPicker {
     let hsv: Hsv = hexToHsv(DEFAULT_COLOR);
     let pickedColor: string | null = null;
 
@@ -26,6 +27,20 @@ export function buildColorPicker(onPick: (color: string) => void): ColorPicker {
 
     const recents = document.createElement('div');
     recents.className = 'color-picker-recents';
+    const clearButton = document.createElement('button');
+    clearButton.type = 'button';
+    clearButton.className = 'icon-button color-picker-clear';
+    clearButton.append(iconSpan('icon-reset'));
+    clearButton.title = 'Default colour';
+    clearButton.setAttribute('aria-label', 'Default colour');
+    clearButton.addEventListener('click', () => {
+        // A cleared colour is not one to remember.
+        pickedColor = null;
+        onPick(null);
+    });
+    const topRow = document.createElement('div');
+    topRow.className = 'color-picker-top-row';
+    topRow.append(recents, clearButton);
 
     const square = document.createElement('div');
     square.className = 'color-picker-square';
@@ -60,7 +75,7 @@ export function buildColorPicker(onPick: (color: string) => void): ColorPicker {
     hexRow.className = 'color-picker-hex-row';
     hexRow.append(preview, hexField);
 
-    element.append(recents, square, hueSlider, hexRow, error);
+    element.append(topRow, square, hueSlider, hexRow, error);
 
     function showHsl(): void {
         square.style.setProperty('--picker-hue', String(hsv.hue));
@@ -96,7 +111,6 @@ export function buildColorPicker(onPick: (color: string) => void): ColorPicker {
             swatch.addEventListener('click', () => pickTyped(color));
             return swatch;
         }));
-        recents.hidden = recents.childElementCount === 0;
     }
 
     function pick(color: string): void {

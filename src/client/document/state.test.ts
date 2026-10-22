@@ -130,6 +130,16 @@ test('setSelectedShapesColor colours only the selected shapes, as one undoable s
     assert.equal(getState().document!.pages[0].shapes[1].color, undefined);
 });
 
+test('setSelectedShapesColor with null puts the selected shapes back to the default look', function () {
+    setDocument(fixtureDocumentWithShapes(['a']));
+    selectShapes(['a']);
+    setSelectedShapesColor('#112233');
+
+    setSelectedShapesColor(null);
+
+    assert.equal('color' in getState().document!.pages[0].shapes[0], false);
+});
+
 test('deletePages falls back to the nearest remaining sibling when the active page is deleted', function () {
     setDocument(fixtureDocument(['page-1', 'page-2', 'page-3']));
     setActivePage('page-2');

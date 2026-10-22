@@ -1148,6 +1148,13 @@ button.stage-controls-fixed:hover:not(:disabled),
     bottom: calc(100% + var(--space-2));
 }
 
+.color-picker-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 28px;
+}
+
 .color-picker-recents {
     display: flex;
     gap: var(--space-1);

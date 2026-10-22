@@ -210,14 +210,21 @@ export function cloneSelectedShapes(dx: number, dy: number): void {
     }
 }
 
-export function setSelectedShapesColor(color: string): void {
+// A null colour puts the selected shapes back to the default look.
+export function setSelectedShapesColor(color: string | null): void {
     const page = getActivePage();
     if (!page) {
         return;
     }
     const selected = new Set(state.selectedShapeIds);
     if (updatePageShapes(page.id, function applyColor(shapes) {
-        return shapes.map((shape) => selected.has(shape.id) ? { ...shape, color } : shape);
+        return shapes.map(function colorIfSelected(shape) {
+            if (!selected.has(shape.id)) {
+                return shape;
+            }
+            const { color: _previous, ...uncolored } = shape;
+            return color ? { ...uncolored, color } : uncolored;
+        });
     })) {
         notify();
     }
