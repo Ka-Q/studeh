@@ -108,6 +108,7 @@ const DARK_SELECTION_CASING_STYLE = 'rgba(15, 35, 80, 0.85)';
 const SELECTION_CASING_PX = 1;
 const SELECTED_LINE_WIDTH_PX = 3;
 const HANDLE_SHADOW_STYLE = 'rgba(15, 35, 80, 0.4)';
+const OCCLUSION_LINE_WIDTH_PX = 3;
 const HANDLE_FILL_STYLE = 'rgb(255, 255, 255)';
 const OCCLUSION_FILL_STYLE = 'rgb(121, 122, 123)';
 const OCCLUSION_STROKE_STYLE = 'rgb(213, 35, 35)';
@@ -137,10 +138,12 @@ interface RectStyle {
     lineWidth: number;
     isCased?: boolean;
     casing?: string;
+    // Drawn inside the shape's edge instead of centred on it, so a thick line doesn't grow outwards over the page.
+    isInset?: boolean;
 }
 const unselectedStyle: RectStyle = { fill: UNSELECTED_FILL_STYLE, stroke: UNSELECTED_STROKE_STYLE, lineWidth: 2 };
 const selectedStyle: RectStyle = { fill: SELECTED_FILL_STYLE, stroke: SELECTED_STROKE_STYLE, lineWidth: SELECTED_LINE_WIDTH_PX, isCased: true };
-const occlusionStyle: RectStyle = { fill: OCCLUSION_FILL_STYLE, stroke: OCCLUSION_STROKE_STYLE, lineWidth: 2 };
+const occlusionStyle: RectStyle = { fill: OCCLUSION_FILL_STYLE, stroke: OCCLUSION_STROKE_STYLE, lineWidth: OCCLUSION_LINE_WIDTH_PX, isInset: true };
 const revealedStyle: RectStyle = { fill: REVEALED_FILL_STYLE, stroke: REVEALED_STROKE_STYLE, lineWidth: 3 };
 const CUSTOM_UNSELECTED_FILL_ALPHA = 0.15;
 const CUSTOM_SELECTED_FILL_ALPHA = 0.5;
@@ -166,7 +169,7 @@ function studyStyleOf(shape: RectangleShape, isRevealed: boolean): RectStyle {
     }
     return isRevealed
         ? { fill: null, stroke: color, lineWidth: revealedStyle.lineWidth }
-        : { fill: hiddenFillOf(color), stroke: color, lineWidth: occlusionStyle.lineWidth };
+        : { fill: hiddenFillOf(color), stroke: color, lineWidth: occlusionStyle.lineWidth, isInset: true };
 }
 
 const handleCursors: Record<ResizeHandle, string> = {
@@ -609,7 +612,8 @@ export function mountImageCanvas(
                 context.strokeRect(-width / 2, -height / 2, width, height);
                 context.restore();
             }
-            context.strokeRect(-width / 2, -height / 2, width, height);
+            const inset = style.isInset ? style.lineWidth / 2 : 0;
+            context.strokeRect(-width / 2 + inset, -height / 2 + inset, width - inset * 2, height - inset * 2);
         }
         context.restore();
     }
