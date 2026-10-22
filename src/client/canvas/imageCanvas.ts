@@ -218,7 +218,9 @@ export function mountImageCanvas(
     let showNumbers = initialShowNumbers;
     let isFullscreen = initialIsFullscreen;
     let revealedShapeIds = initialRevealedShapeIds;
+    // Where Tab carries on from. Only a keyboard move to it draws the focus ring, not a click.
     let focusedShapeId: string | null = null;
+    let isFocusRingShown = false;
     let tabOrderCache: { shapes: RectangleShape[]; numbering: NumberingMode; ordered: RectangleShape[]; isFinal: boolean } | null = null;
     // When the image analysis's order arrived while the page was shown.
     let numbersArrivedAt: number | null = null;
@@ -335,7 +337,7 @@ export function mountImageCanvas(
         if (mode === 'study') {
             for (const shape of shapes) {
                 drawRect(shape, studyStyleOf(shape, revealedShapeIds.has(shape.id)), false);
-                if (shape.id === focusedShapeId) {
+                if (isFocusRingShown && shape.id === focusedShapeId) {
                     drawFocusOutline(shape);
                 }
             }
@@ -689,6 +691,8 @@ export function mountImageCanvas(
         if (mode === 'study') {
             const hitShape = topmostShapeAt(canvasToImage(viewport, canvasPoint), shapes);
             if (hitShape) {
+                focusedShapeId = hitShape.id;
+                isFocusRingShown = false;
                 callbacks.onToggleVisibility(hitShape.id);
             }
             return;
@@ -1107,11 +1111,12 @@ export function mountImageCanvas(
         const currentIndex = focusedShapeIndex(ordered);
         const nextIndex = cycleFocusedShapeIndex(currentIndex === -1 ? null : currentIndex, direction, ordered.length);
         focusedShapeId = ordered[nextIndex].id;
+        isFocusRingShown = true;
         draw();
     }
 
     function canToggleFocusedShapeVisibility(): boolean {
-        return hasShapeKeyboardFocus() && focusedShapeId !== null;
+        return hasShapeKeyboardFocus() && focusedShapeId !== null && isFocusRingShown;
     }
 
     function onCanvasBlur(): void {

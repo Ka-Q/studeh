@@ -332,3 +332,25 @@ test('Ctrl+arrow page navigation works in fullscreen', async ({ page }) => {
     await page.keyboard.press('Control+ArrowRight');
     await expect(page.locator('.page-item.active')).toHaveAttribute('data-page-id', ids[1]!);
 });
+
+test('in study mode Tab carries on from the shape last clicked', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('Click Then Tab Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+    const imageRect = await imageOnScreenRect(page);
+    const shapeOneCenter = { x: imageRect.left + 40, y: imageRect.top + 35 };
+    const shapeTwoCenter = { x: imageRect.left + 40, y: imageRect.top + 135 };
+    await dragOnCanvas(page, { x: imageRect.left + 20, y: imageRect.top + 20 }, { x: imageRect.left + 60, y: imageRect.top + 50 });
+    await dragOnCanvas(page, { x: imageRect.left + 20, y: imageRect.top + 120 }, { x: imageRect.left + 60, y: imageRect.top + 150 });
+    await page.locator('.canvas-mode-toggle').click();
+    await page.locator('.canvas-mode-toggle').blur();
+    await waitForNumbering(page);
+
+    await page.mouse.click(shapeOneCenter.x, shapeOneCenter.y);
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Space');
+
+    expect(await isShapeRevealed(page, shapeOneCenter)).toBe(true);
+    expect(await isShapeRevealed(page, shapeTwoCenter)).toBe(true);
+});
