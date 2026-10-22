@@ -86,12 +86,13 @@ const CLICK_DRAG_THRESHOLD_PX = 3;
 // A keyboard pan step, as a share of the canvas along the axis: key-repeat glides, a single press stays fine-grained.
 const PAN_STEP_RATIO = 0.1;
 const FIT_VIEW_HORIZONTAL_PADDING_PX = 64;
-const HANDLE_HIT_RADIUS_PX = 6;
-const HANDLE_SIZE_PX = 8;
+const HANDLE_HIT_RADIUS_PX = 8;
+const HANDLE_RADIUS_PX = 5;
+const HANDLE_RING_PX = 1.5;
 // From the shape's top edge to the rotation handle's centre.
-const ROTATION_HANDLE_OFFSET_PX = 24;
-// The radius the rotation handle's icon (mode-toggle at 22px) draws its arrows round.
-const ROTATION_HANDLE_ICON_RADIUS_PX = 8;
+const ROTATION_HANDLE_OFFSET_PX = 30;
+// The radius of the rotation handle's round button (the CSS's, 22px across).
+const ROTATION_HANDLE_RADIUS_PX = 11;
 const ROTATION_SNAP_DEGREES = 45;
 // In screen pixels, so a clone sits visibly apart from its original at any zoom.
 const CLONE_OFFSET_PX = 12;
@@ -101,10 +102,13 @@ const UNSELECTED_STROKE_STYLE = 'rgba(37, 99, 235, 0.62)';
 const UNSELECTED_FILL_STYLE = 'rgba(37, 99, 235, 0.1)';
 const SELECTED_STROKE_STYLE = 'rgba(37, 99, 235, 0.95)';
 const SELECTED_FILL_STYLE = 'rgba(37, 99, 235, 0.2)';
-// A dark blue edge round the selection's outline, handles and icons (the icons' is in the CSS), so they show on dark or
-// busy images too.
-const SELECTION_CASING_STYLE = 'rgba(15, 35, 80, 0.85)';
+// An edge round the selection's outline, so it shows on dark or busy images too: white, or dark for a light custom colour.
+const SELECTION_CASING_STYLE = 'rgba(255, 255, 255, 0.9)';
+const DARK_SELECTION_CASING_STYLE = 'rgba(15, 35, 80, 0.85)';
 const SELECTION_CASING_PX = 1;
+const HANDLE_SHADOW_STYLE = 'rgba(15, 35, 80, 0.4)';
+const HANDLE_FILL_STYLE = 'rgb(255, 255, 255)';
+const GROUP_OUTLINE_PADDING_PX = 4;
 const OCCLUSION_FILL_STYLE = 'rgb(121, 122, 123)';
 const OCCLUSION_STROKE_STYLE = 'rgb(213, 35, 35)';
 const REVEALED_FILL_STYLE = 'rgba(242, 242, 242, 0.05)';
@@ -140,10 +144,13 @@ const occlusionStyle: RectStyle = { fill: OCCLUSION_FILL_STYLE, stroke: OCCLUSIO
 const revealedStyle: RectStyle = { fill: REVEALED_FILL_STYLE, stroke: REVEALED_STROKE_STYLE, lineWidth: 3 };
 const CUSTOM_UNSELECTED_FILL_ALPHA = 0.15;
 const CUSTOM_SELECTED_FILL_ALPHA = 0.3;
-const LIGHT_SELECTION_CASING_STYLE = 'rgba(255, 255, 255, 0.9)';
 const marqueeStyle: RectStyle = { fill: null, stroke: SELECTED_STROKE_STYLE, lineWidth: 1 };
-function editStyleOf(shape: RectangleShape, isSelected: boolean): RectStyle {
+// Of several selected shapes, all but the one with the handles are drawn lighter.
+function editStyleOf(shape: RectangleShape, isSelected: boolean, isSecondary: boolean): RectStyle {
     const { color } = shape;
+    if (isSecondary) {
+        return { fill: color ? colorWithAlpha(color, CUSTOM_SELECTED_FILL_ALPHA) : SELECTED_FILL_STYLE, stroke: color ?? SELECTED_STROKE_STYLE, lineWidth: 1 };
+    }
     if (!color) {
         return isSelected ? selectedStyle : unselectedStyle;
     }
@@ -152,7 +159,7 @@ function editStyleOf(shape: RectangleShape, isSelected: boolean): RectStyle {
         stroke: color,
         lineWidth: 2,
         isCased: isSelected,
-        casing: isLightColor(color) ? undefined : LIGHT_SELECTION_CASING_STYLE
+        casing: isLightColor(color) ? DARK_SELECTION_CASING_STYLE : undefined
     };
 }
 
@@ -345,8 +352,13 @@ export function mountImageCanvas(
             return;
         }
         const highlightedIds = new Set(creatingRect ? [] : [...selectedShapeIds, ...shapeIdsTouchedBy(selectingArea)]);
+        const isGroup = highlightedIds.size > 1;
+        const primaryId = selectedShapeIds[selectedShapeIds.length - 1];
         for (const shape of shapes) {
-            drawRect(activeDrag?.current.get(shape.id) ?? shape, editStyleOf(shape, highlightedIds.has(shape.id)), false);
+            drawRect(activeDrag?.current.get(shape.id) ?? shape, editStyleOf(shape, highlightedIds.has(shape.id), isGroup && shape.id !== primaryId), false);
+        }
+        if (isGroup) {
+            drawGroupOutline(shapes.filter((shape) => highlightedIds.has(shape.id)).map((shape) => activeDrag?.current.get(shape.id) ?? shape));
         }
         if (creatingRect) {
             drawRect(rectFromPoints(creatingRect.start, creatingRect.current), unselectedStyle, true);
@@ -397,7 +409,6 @@ export function mountImageCanvas(
     function buildShapeActions(): HTMLDivElement {
         const actions = document.createElement('div');
         actions.className = 'shape-actions';
-        actions.style.color = SELECTED_STROKE_STYLE;
         actions.hidden = true;
         colorPicker = buildColorPicker((color) => callbacks.onColorSelected(color));
         colorPicker.element.addEventListener('keydown', (event) => {
@@ -460,8 +471,6 @@ export function mountImageCanvas(
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'icon-button shape-rotation-handle';
-        // Drawn in the selected shape's border colour, as if part of its outline.
-        button.style.color = SELECTED_STROKE_STYLE;
         button.hidden = true;
         button.tabIndex = -1;
         button.append(iconSpan('icon-mode-toggle'));
@@ -558,26 +567,53 @@ export function mountImageCanvas(
         context.restore();
     }
 
+    // The rotation handle's stem and the resize handles: white circles ringed in the selection colour.
     function drawHandles(rect: RotatedRect): void {
         const topMiddle = imageToCanvas(viewport, rotationHandlePoint(rect, 0));
-        // Ends at the icon's arrows: the handle has no background to hide the line under its icon.
-        const lineEnd = imageToCanvas(viewport, rotationHandlePoint(rect, (ROTATION_HANDLE_OFFSET_PX - ROTATION_HANDLE_ICON_RADIUS_PX) / viewport.zoom));
-        // The dark casing first, all of it, so it never crosses the red where the line meets a handle.
-        const passes: [string, number][] = [[SELECTION_CASING_STYLE, SELECTION_CASING_PX], [SELECTED_STROKE_STYLE, 0]];
-        for (const [color, casing] of passes) {
+        const stemEnd = imageToCanvas(viewport, rotationHandlePoint(rect, (ROTATION_HANDLE_OFFSET_PX - ROTATION_HANDLE_RADIUS_PX) / viewport.zoom));
+        context.save();
+        // The casing first, so it never crosses the colour where the stem meets the outline.
+        for (const [color, extra] of [[SELECTION_CASING_STYLE, SELECTION_CASING_PX * 2], [SELECTED_STROKE_STYLE, 0]] as const) {
             context.strokeStyle = color;
-            context.fillStyle = color;
-            context.lineWidth = 2 + casing * 2;
+            context.lineWidth = 2 + extra;
             context.beginPath();
             context.moveTo(topMiddle.x, topMiddle.y);
-            context.lineTo(lineEnd.x, lineEnd.y);
+            context.lineTo(stemEnd.x, stemEnd.y);
             context.stroke();
-            const size = HANDLE_SIZE_PX + casing * 2;
-            for (const { point } of handlePoints(rect)) {
-                const screenPoint = imageToCanvas(viewport, point);
-                context.fillRect(screenPoint.x - size / 2, screenPoint.y - size / 2, size, size);
-            }
         }
+        for (const { point } of handlePoints(rect)) {
+            const screenPoint = imageToCanvas(viewport, point);
+            context.beginPath();
+            context.arc(screenPoint.x, screenPoint.y, HANDLE_RADIUS_PX + HANDLE_RING_PX / 2, 0, Math.PI * 2);
+            context.fillStyle = HANDLE_FILL_STYLE;
+            context.fill();
+            context.strokeStyle = HANDLE_SHADOW_STYLE;
+            context.lineWidth = HANDLE_RING_PX + 2;
+            context.stroke();
+            context.strokeStyle = SELECTED_STROKE_STYLE;
+            context.lineWidth = HANDLE_RING_PX;
+            context.stroke();
+        }
+        context.restore();
+    }
+
+    // One box round all the selected shapes, upright.
+    function drawGroupOutline(rects: RotatedRect[]): void {
+        const box = boundingRectOfAll(rects);
+        const topLeft = imageToCanvas(viewport, { x: box.x, y: box.y });
+        context.save();
+        context.setLineDash([6, 4]);
+        for (const [color, width] of [[SELECTION_CASING_STYLE, 3], [SELECTED_STROKE_STYLE, 1.5]] as const) {
+            context.strokeStyle = color;
+            context.lineWidth = width;
+            context.strokeRect(
+                topLeft.x - GROUP_OUTLINE_PADDING_PX,
+                topLeft.y - GROUP_OUTLINE_PADDING_PX,
+                box.width * viewport.zoom + GROUP_OUTLINE_PADDING_PX * 2,
+                box.height * viewport.zoom + GROUP_OUTLINE_PADDING_PX * 2
+            );
+        }
+        context.restore();
     }
 
     // A preview rect is in canvas coordinates; any other is in image coordinates.
