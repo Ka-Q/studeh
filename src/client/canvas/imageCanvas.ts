@@ -101,14 +101,14 @@ const SHAPE_ACTIONS_EDGE_MARGIN_PX = 4;
 const UNSELECTED_STROKE_STYLE = 'rgba(37, 99, 235, 0.62)';
 const UNSELECTED_FILL_STYLE = 'rgba(37, 99, 235, 0.1)';
 const SELECTED_STROKE_STYLE = 'rgba(37, 99, 235, 0.95)';
-const SELECTED_FILL_STYLE = 'rgba(37, 99, 235, 0.2)';
+const SELECTED_FILL_STYLE = 'rgba(37, 99, 235, 0.38)';
 // An edge round the selection's outline, so it shows on dark or busy images too: white, or dark for a light custom colour.
 const SELECTION_CASING_STYLE = 'rgba(255, 255, 255, 0.9)';
 const DARK_SELECTION_CASING_STYLE = 'rgba(15, 35, 80, 0.85)';
 const SELECTION_CASING_PX = 1;
+const SELECTED_LINE_WIDTH_PX = 3;
 const HANDLE_SHADOW_STYLE = 'rgba(15, 35, 80, 0.4)';
 const HANDLE_FILL_STYLE = 'rgb(255, 255, 255)';
-const GROUP_OUTLINE_PADDING_PX = 4;
 const OCCLUSION_FILL_STYLE = 'rgb(121, 122, 123)';
 const OCCLUSION_STROKE_STYLE = 'rgb(213, 35, 35)';
 const REVEALED_FILL_STYLE = 'rgba(242, 242, 242, 0.05)';
@@ -139,25 +139,21 @@ interface RectStyle {
     casing?: string;
 }
 const unselectedStyle: RectStyle = { fill: UNSELECTED_FILL_STYLE, stroke: UNSELECTED_STROKE_STYLE, lineWidth: 2 };
-const selectedStyle: RectStyle = { fill: SELECTED_FILL_STYLE, stroke: SELECTED_STROKE_STYLE, lineWidth: 2, isCased: true };
+const selectedStyle: RectStyle = { fill: SELECTED_FILL_STYLE, stroke: SELECTED_STROKE_STYLE, lineWidth: SELECTED_LINE_WIDTH_PX, isCased: true };
 const occlusionStyle: RectStyle = { fill: OCCLUSION_FILL_STYLE, stroke: OCCLUSION_STROKE_STYLE, lineWidth: 2 };
 const revealedStyle: RectStyle = { fill: REVEALED_FILL_STYLE, stroke: REVEALED_STROKE_STYLE, lineWidth: 3 };
 const CUSTOM_UNSELECTED_FILL_ALPHA = 0.15;
-const CUSTOM_SELECTED_FILL_ALPHA = 0.3;
+const CUSTOM_SELECTED_FILL_ALPHA = 0.5;
 const marqueeStyle: RectStyle = { fill: null, stroke: SELECTED_STROKE_STYLE, lineWidth: 1 };
-// Of several selected shapes, all but the one with the handles are drawn lighter.
-function editStyleOf(shape: RectangleShape, isSelected: boolean, isSecondary: boolean): RectStyle {
+function editStyleOf(shape: RectangleShape, isSelected: boolean): RectStyle {
     const { color } = shape;
-    if (isSecondary) {
-        return { fill: color ? colorWithAlpha(color, CUSTOM_SELECTED_FILL_ALPHA) : SELECTED_FILL_STYLE, stroke: color ?? SELECTED_STROKE_STYLE, lineWidth: 1 };
-    }
     if (!color) {
         return isSelected ? selectedStyle : unselectedStyle;
     }
     return {
         fill: colorWithAlpha(color, isSelected ? CUSTOM_SELECTED_FILL_ALPHA : CUSTOM_UNSELECTED_FILL_ALPHA),
         stroke: color,
-        lineWidth: 2,
+        lineWidth: isSelected ? SELECTED_LINE_WIDTH_PX : 2,
         isCased: isSelected,
         casing: isLightColor(color) ? DARK_SELECTION_CASING_STYLE : undefined
     };
@@ -352,13 +348,8 @@ export function mountImageCanvas(
             return;
         }
         const highlightedIds = new Set(creatingRect ? [] : [...selectedShapeIds, ...shapeIdsTouchedBy(selectingArea)]);
-        const isGroup = highlightedIds.size > 1;
-        const primaryId = selectedShapeIds[selectedShapeIds.length - 1];
         for (const shape of shapes) {
-            drawRect(activeDrag?.current.get(shape.id) ?? shape, editStyleOf(shape, highlightedIds.has(shape.id), isGroup && shape.id !== primaryId), false);
-        }
-        if (isGroup) {
-            drawGroupOutline(shapes.filter((shape) => highlightedIds.has(shape.id)).map((shape) => activeDrag?.current.get(shape.id) ?? shape));
+            drawRect(activeDrag?.current.get(shape.id) ?? shape, editStyleOf(shape, highlightedIds.has(shape.id)), false);
         }
         if (creatingRect) {
             drawRect(rectFromPoints(creatingRect.start, creatingRect.current), unselectedStyle, true);
@@ -593,25 +584,6 @@ export function mountImageCanvas(
             context.strokeStyle = SELECTED_STROKE_STYLE;
             context.lineWidth = HANDLE_RING_PX;
             context.stroke();
-        }
-        context.restore();
-    }
-
-    // One box round all the selected shapes, upright.
-    function drawGroupOutline(rects: RotatedRect[]): void {
-        const box = boundingRectOfAll(rects);
-        const topLeft = imageToCanvas(viewport, { x: box.x, y: box.y });
-        context.save();
-        context.setLineDash([6, 4]);
-        for (const [color, width] of [[SELECTION_CASING_STYLE, 3], [SELECTED_STROKE_STYLE, 1.5]] as const) {
-            context.strokeStyle = color;
-            context.lineWidth = width;
-            context.strokeRect(
-                topLeft.x - GROUP_OUTLINE_PADDING_PX,
-                topLeft.y - GROUP_OUTLINE_PADDING_PX,
-                box.width * viewport.zoom + GROUP_OUTLINE_PADDING_PX * 2,
-                box.height * viewport.zoom + GROUP_OUTLINE_PADDING_PX * 2
-            );
         }
         context.restore();
     }
