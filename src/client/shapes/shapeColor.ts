@@ -13,7 +13,7 @@ export interface Hsv {
 }
 
 // Share of a custom colour's saturation kept in a hidden shape's fill, so it hides its label like the default grey.
-const HIDDEN_FILL_SATURATION = 0.2;
+const HIDDEN_FILL_SATURATION = 0.4;
 const SHORT_HEX_PATTERN = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i;
 const LONG_HEX_PATTERN = /^#[0-9a-f]{6}$/i;
 const RGB_PATTERN = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i;
