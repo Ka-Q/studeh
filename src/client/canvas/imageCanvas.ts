@@ -94,13 +94,13 @@ const ROTATION_SNAP_DEGREES = 45;
 const CLONE_OFFSET_PX = 12;
 const SHAPE_ACTIONS_GAP_PX = 8;
 const SHAPE_ACTIONS_EDGE_MARGIN_PX = 4;
-const UNSELECTED_STROKE_STYLE = 'rgba(37, 99, 235, 0.9)';
-const UNSELECTED_FILL_STYLE = 'rgba(37, 99, 235, 0.15)';
-const SELECTED_STROKE_STYLE = 'rgba(220, 38, 38, 0.95)';
-const SELECTED_FILL_STYLE = 'rgba(220, 38, 38, 0.2)';
-// A dark edge round the selection's outline, handles and icons (the icons' is in the CSS), so they show on dark or busy
-// images too.
-const SELECTION_CASING_STYLE = 'rgba(0, 0, 0, 0.55)';
+const UNSELECTED_STROKE_STYLE = 'rgba(37, 99, 235, 0.62)';
+const UNSELECTED_FILL_STYLE = 'rgba(37, 99, 235, 0.1)';
+const SELECTED_STROKE_STYLE = 'rgba(37, 99, 235, 0.95)';
+const SELECTED_FILL_STYLE = 'rgba(37, 99, 235, 0.2)';
+// A dark blue edge round the selection's outline, handles and icons (the icons' is in the CSS), so they show on dark or
+// busy images too.
+const SELECTION_CASING_STYLE = 'rgba(15, 35, 80, 0.85)';
 const SELECTION_CASING_PX = 1;
 const OCCLUSION_FILL_STYLE = 'rgb(121, 122, 123)';
 const OCCLUSION_STROKE_STYLE = 'rgb(213, 35, 35)';

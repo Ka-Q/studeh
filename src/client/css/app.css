@@ -17,7 +17,7 @@
     --radius-md: 8px;
 
     --color-bg: #fafafa;
-    --color-surface: #f5f5f5;
+    --color-surface: #ededed;
     --color-border: #c4c4c4;
     --color-text: #1a1a1a;
     --color-text-muted: #666666;
@@ -26,8 +26,8 @@
     --color-danger: #dc2626;
     --color-danger-hover: #b91c1c;
     --color-focus-ring: #2563eb;
-    --color-surface-hover: #e8e8e8;
-    --color-surface-secondary: rgb(222, 222, 222);
+    --color-surface-hover: #e3e3e3;
+    --color-surface-secondary: #d5d5d5;
     --color-canvas-vignette: rgba(0, 0, 0, 0.1);
     accent-color: var(--color-accent);
 }
@@ -281,8 +281,26 @@ button:hover:not(:disabled) {
     mask-image: url('/icons/help.svg');
 }
 
+/* Icon controls stay recognizable through their hover and keyboard focus states without
+   drawing a box around every repeated action. */
 .icon-button {
     padding: var(--space-1);
+    border-color: transparent;
+    background: transparent;
+}
+
+.icon-button:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+}
+
+/* Keep the toolbar's labeled actions easy to spot while removing the heavy outline. */
+#toolbar .flex-row > button:not(.icon-button) {
+    border-color: transparent;
+    background: var(--color-surface);
+}
+
+#toolbar .flex-row > button:not(.icon-button):hover:not(:disabled) {
+    background: var(--color-surface-hover);
 }
 
 button:disabled {
@@ -578,6 +596,12 @@ dialog::backdrop {
 
 #btn-rename-document {
     flex: none;
+}
+
+#btn-save {
+    flex: none;
+    min-width: 80px;
+    justify-content: center;
 }
 
 #btn-save.dirty {
@@ -891,6 +915,20 @@ dialog::backdrop {
     display: flex;
     justify-content: flex-end;
     gap: var(--space-1);
+    color: var(--color-text-muted);
+    opacity: 0.45;
+    transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.page-item:hover .page-actions,
+.page-item:focus-within .page-actions,
+.page-item.active .page-actions {
+    color: var(--color-text);
+    opacity: 1;
+}
+
+.page-actions .icon-button:disabled {
+    opacity: 0.35;
 }
 
 #canvas-area {
@@ -941,6 +979,17 @@ dialog::backdrop {
     color: var(--color-text-muted);
 }
 
+.segmented-control button,
+.toggle-button.stage-controls-fixed {
+    border-color: transparent;
+    background: var(--color-surface);
+}
+
+.segmented-control button:hover:not(:disabled),
+.toggle-button.stage-controls-fixed:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+}
+
 .segmented-control button {
     border-radius: 0;
     margin-left: -1px;
@@ -963,6 +1012,11 @@ button.toggle-button[aria-pressed='true'] {
     color: var(--color-accent-text);
 }
 
+.segmented-control button[aria-pressed='true']:hover:not(:disabled),
+button.toggle-button[aria-pressed='true']:hover:not(:disabled) {
+    background: var(--color-accent);
+}
+
 .segmented-control button:focus-visible {
     position: relative;
     z-index: 1;
@@ -971,6 +1025,17 @@ button.toggle-button[aria-pressed='true'] {
 .stage-controls-fixed {
     flex: 0 0 auto;
     white-space: nowrap;
+}
+
+button.stage-controls-fixed,
+.flex-row.stage-controls-fixed > button {
+    border-color: transparent;
+    background: transparent;
+}
+
+button.stage-controls-fixed:hover:not(:disabled),
+.flex-row.stage-controls-fixed > button:hover:not(:disabled) {
+    background: var(--color-surface-hover);
 }
 
 .canvas-mount {
@@ -1044,6 +1109,13 @@ button.toggle-button[aria-pressed='true'] {
     cursor: grab;
 }
 
+/* A 1px dark edge, as round the selected shape's outline on the canvas (SELECTION_CASING_STYLE): unblurred shadows
+   shifted each way. */
+.shape-rotation-handle,
+.shape-actions .icon-button {
+    filter: drop-shadow(1px 0 0 rgba(15, 35, 80, 0.85)) drop-shadow(-1px 0 0 rgba(15, 35, 80, 0.85)) drop-shadow(0 1px 0 rgba(15, 35, 80, 0.85)) drop-shadow(0 -1px 0 rgba(15, 35, 80, 0.85));
+}
+
 /* Bare icons in the selected shape's border colour (set from the canvas), as if part of its outline. */
 .shape-rotation-handle,
 .shape-rotation-handle:hover:not(:disabled),
@@ -1056,13 +1128,6 @@ button.toggle-button[aria-pressed='true'] {
 .shape-actions .icon {
     width: 20px;
     height: 20px;
-}
-
-/* A 1px dark edge, as round the selected shape's outline on the canvas (SELECTION_CASING_STYLE): unblurred shadows
-   shifted each way. */
-.shape-rotation-handle,
-.shape-actions .icon-button {
-    filter: drop-shadow(1px 0 0 rgba(0, 0, 0, 0.55)) drop-shadow(-1px 0 0 rgba(0, 0, 0, 0.55)) drop-shadow(0 1px 0 rgba(0, 0, 0, 0.55)) drop-shadow(0 -1px 0 rgba(0, 0, 0, 0.55));
 }
 
 .shape-rotation-handle .icon {
