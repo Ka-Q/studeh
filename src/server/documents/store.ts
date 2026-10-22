@@ -5,6 +5,8 @@ import { DocumentNotFoundError, InvalidManifestError } from './errors.ts';
 import { pruneUnreferencedImages } from './images.ts';
 import { MANIFEST_FORMAT, MANIFEST_VERSION, type DocumentManifest, type DocumentSummary } from '../../shared/types.ts';
 
+const SHAPE_COLOR_PATTERN = /^#[0-9a-f]{6}$/;
+
 export async function listDocuments(): Promise<DocumentSummary[]> {
     await fs.mkdir(documentsRoot, { recursive: true });
     const entries = await fs.readdir(documentsRoot, { withFileTypes: true });
@@ -168,6 +170,9 @@ function validateShape(shape: unknown, index: number, pageId: string): void {
     }
     if (s.rotation !== undefined && (typeof s.rotation !== 'number' || !Number.isFinite(s.rotation))) {
         throw new InvalidManifestError(`Shape "${s.id}" on page "${pageId}" has an invalid rotation`);
+    }
+    if (s.color !== undefined && (typeof s.color !== 'string' || !SHAPE_COLOR_PATTERN.test(s.color))) {
+        throw new InvalidManifestError(`Shape "${s.id}" on page "${pageId}" has an invalid color`);
     }
     if (typeof s.visible !== 'boolean') {
         throw new InvalidManifestError(`Shape "${s.id}" on page "${pageId}" is missing a valid visible flag`);

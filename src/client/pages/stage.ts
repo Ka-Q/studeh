@@ -3,6 +3,7 @@ import {
     addShapes,
     clearPageShapes,
     cloneSelectedShapes,
+    setSelectedShapesColor,
     deleteSelectedShapes,
     getActivePage,
     getState,
@@ -495,6 +496,9 @@ function renderCanvas(documentId: string, page: Page): void {
                 },
                 onToggleVisibility(shapeId) {
                     toggleShapeVisibility(shapeId);
+                },
+                onColorSelected(color) {
+                    setSelectedShapesColor(color);
                 }
             }
         )

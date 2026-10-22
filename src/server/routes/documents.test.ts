@@ -275,11 +275,17 @@ test('PUT /api/documents/:id rejects a shape with a non-finite/invalid geometry 
     const stringRotation = await putDocument(doc.id, manifestOf(doc, [validPage({ shapes: [validShape({ rotation: '45' })] })]));
     assert.equal(stringRotation.status, 400);
     assert.equal((stringRotation.body as { error: string }).error, 'Shape "shape-1" on page "page-1" has an invalid rotation');
+
+    for (const color of ['red', '#FFF', '#12345g', 7]) {
+        const badColor = await putDocument(doc.id, manifestOf(doc, [validPage({ shapes: [validShape({ color })] })]));
+        assert.equal(badColor.status, 400);
+        assert.equal((badColor.body as { error: string }).error, 'Shape "shape-1" on page "page-1" has an invalid color');
+    }
 });
 
 test('PUT /api/documents/:id accepts a fully valid manifest with pages and shapes', async function () {
     const doc = await createDocument();
-    const page = validPage({ shapes: [validShape(), validShape({ id: 'shape-2', rotation: 30 })] });
+    const page = validPage({ shapes: [validShape(), validShape({ id: 'shape-2', rotation: 30, color: '#a1b2c3' })] });
 
     const { status } = await putDocument(doc.id, manifestOf(doc, [page]));
     assert.equal(status, 200);

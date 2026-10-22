@@ -26,6 +26,7 @@ const {
     setDocument,
     setMode,
     setPageImage,
+    setSelectedShapesColor,
     subscribe,
     undo,
     updateShapeRects
@@ -114,6 +115,19 @@ test('cloneSelectedShapes copies every selected shape, shifted, and selects the 
     assert.equal(shapes.length, 4);
     assert.deepEqual(getState().selectedShapeIds, [shapes[2].id, shapes[3].id]);
     assert.deepEqual([shapes[2].x, shapes[2].y], [15, 17]);
+});
+
+test('setSelectedShapesColor colours only the selected shapes, as one undoable step', function () {
+    setDocument(fixtureDocumentWithShapes(['a', 'b']));
+    selectShapes(['b']);
+
+    setSelectedShapesColor('#112233');
+
+    const [first, second] = getState().document!.pages[0].shapes;
+    assert.equal(first.color, undefined);
+    assert.equal(second.color, '#112233');
+    undo();
+    assert.equal(getState().document!.pages[0].shapes[1].color, undefined);
 });
 
 test('deletePages falls back to the nearest remaining sibling when the active page is deleted', function () {

@@ -210,6 +210,19 @@ export function cloneSelectedShapes(dx: number, dy: number): void {
     }
 }
 
+export function setSelectedShapesColor(color: string): void {
+    const page = getActivePage();
+    if (!page) {
+        return;
+    }
+    const selected = new Set(state.selectedShapeIds);
+    if (updatePageShapes(page.id, function applyColor(shapes) {
+        return shapes.map((shape) => selected.has(shape.id) ? { ...shape, color } : shape);
+    })) {
+        notify();
+    }
+}
+
 function insertShapes(pageId: string, newShapes: RectangleShape[]): void {
     if (!updatePageShapes(pageId, function addShapesToPage(shapes) {
         return [...shapes, ...newShapes];

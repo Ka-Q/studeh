@@ -25,8 +25,10 @@ import {
     type ResizeHandle,
     type RotatedRect
 } from '../shapes/rectangle';
+import { colorWithAlpha, hiddenFillOf, isLightColor } from '../shapes/shapeColor';
 import type { RectangleShape } from '../../shared/types';
 import type { Mode } from '../document/state';
+import { buildColorPicker, type ColorPicker } from './colorPicker';
 import { iconSpan, isBlockedByInputOrDialog, isPrimaryModifierPressed, startDragSession } from '../dom';
 import { registerShortcut, unregisterShortcut } from '../shortcutDispatch';
 import { shortcutHint } from '../shortcuts';
@@ -44,6 +46,7 @@ export interface ImageCanvasCallbacks {
     // The copies go this far from the selected shapes.
     onCloneSelected(dx: number, dy: number): void;
     onToggleVisibility(shapeId: string): void;
+    onColorSelected(color: string): void;
 }
 
 interface ActiveDrag {
@@ -129,12 +132,40 @@ interface RectStyle {
     stroke: string;
     lineWidth: number;
     isCased?: boolean;
+    casing?: string;
 }
 const unselectedStyle: RectStyle = { fill: UNSELECTED_FILL_STYLE, stroke: UNSELECTED_STROKE_STYLE, lineWidth: 2 };
 const selectedStyle: RectStyle = { fill: SELECTED_FILL_STYLE, stroke: SELECTED_STROKE_STYLE, lineWidth: 2, isCased: true };
 const occlusionStyle: RectStyle = { fill: OCCLUSION_FILL_STYLE, stroke: OCCLUSION_STROKE_STYLE, lineWidth: 2 };
 const revealedStyle: RectStyle = { fill: REVEALED_FILL_STYLE, stroke: REVEALED_STROKE_STYLE, lineWidth: 3 };
+const CUSTOM_UNSELECTED_FILL_ALPHA = 0.15;
+const CUSTOM_SELECTED_FILL_ALPHA = 0.3;
+const LIGHT_SELECTION_CASING_STYLE = 'rgba(255, 255, 255, 0.9)';
 const marqueeStyle: RectStyle = { fill: null, stroke: SELECTED_STROKE_STYLE, lineWidth: 1 };
+function editStyleOf(shape: RectangleShape, isSelected: boolean): RectStyle {
+    const { color } = shape;
+    if (!color) {
+        return isSelected ? selectedStyle : unselectedStyle;
+    }
+    return {
+        fill: colorWithAlpha(color, isSelected ? CUSTOM_SELECTED_FILL_ALPHA : CUSTOM_UNSELECTED_FILL_ALPHA),
+        stroke: color,
+        lineWidth: 2,
+        isCased: isSelected,
+        casing: isLightColor(color) ? undefined : LIGHT_SELECTION_CASING_STYLE
+    };
+}
+
+function studyStyleOf(shape: RectangleShape, isRevealed: boolean): RectStyle {
+    const { color } = shape;
+    if (!color) {
+        return isRevealed ? revealedStyle : occlusionStyle;
+    }
+    return isRevealed
+        ? { fill: null, stroke: color, lineWidth: revealedStyle.lineWidth }
+        : { fill: hiddenFillOf(color), stroke: color, lineWidth: occlusionStyle.lineWidth };
+}
+
 const handleCursors: Record<ResizeHandle, string> = {
     n: 'ns-resize',
     s: 'ns-resize',
@@ -162,6 +193,7 @@ export function mountImageCanvas(
     canvas.tabIndex = 0;
     const context = getContext2d(canvas);
     container.appendChild(canvas);
+    let colorPicker!: ColorPicker;
     const shapeActions = buildShapeActions();
     const rotationHandle = buildRotationHandle();
     container.append(shapeActions, rotationHandle);
@@ -283,6 +315,9 @@ export function mountImageCanvas(
         context.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
         shapeActions.hidden = true;
         rotationHandle.hidden = true;
+        if (colorPicker.isOpen() && (mode !== 'edit' || !selectedShapeRect())) {
+            closeColorPicker();
+        }
         if (!image) {
             return;
         }
@@ -292,7 +327,7 @@ export function mountImageCanvas(
         drawPageImage(image);
         if (mode === 'study') {
             for (const shape of shapes) {
-                drawRect(shape, revealedShapeIds.has(shape.id) ? revealedStyle : occlusionStyle, false);
+                drawRect(shape, studyStyleOf(shape, revealedShapeIds.has(shape.id)), false);
                 if (shape.id === focusedShapeId) {
                     drawFocusOutline(shape);
                 }
@@ -311,7 +346,7 @@ export function mountImageCanvas(
         }
         const highlightedIds = new Set(creatingRect ? [] : [...selectedShapeIds, ...shapeIdsTouchedBy(selectingArea)]);
         for (const shape of shapes) {
-            drawRect(activeDrag?.current.get(shape.id) ?? shape, highlightedIds.has(shape.id) ? selectedStyle : unselectedStyle, false);
+            drawRect(activeDrag?.current.get(shape.id) ?? shape, editStyleOf(shape, highlightedIds.has(shape.id)), false);
         }
         if (creatingRect) {
             drawRect(rectFromPoints(creatingRect.start, creatingRect.current), unselectedStyle, true);
@@ -364,11 +399,46 @@ export function mountImageCanvas(
         actions.className = 'shape-actions';
         actions.style.color = SELECTED_STROKE_STYLE;
         actions.hidden = true;
+        colorPicker = buildColorPicker((color) => callbacks.onColorSelected(color));
+        colorPicker.element.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                event.stopPropagation();
+                closeColorPicker();
+            }
+        });
+        const colorButton = buildShapeActionButton('icon-palette', 'Colour', toggleColorPicker);
+        colorButton.setAttribute('aria-haspopup', 'dialog');
         actions.append(
             buildShapeActionButton('icon-clone', `Clone (${shortcutHint('cloneSelectedShape')})`, cloneSelectedShapes),
-            buildShapeActionButton('icon-trash', `Delete (${shortcutHint('deleteSelectedShape')})`, deleteSelectedShapes)
+            colorButton,
+            buildShapeActionButton('icon-trash', `Delete (${shortcutHint('deleteSelectedShape')})`, deleteSelectedShapes),
+            colorPicker.element
         );
         return actions;
+    }
+
+    function toggleColorPicker(): void {
+        if (colorPicker.isOpen()) {
+            closeColorPicker();
+            return;
+        }
+        const actionsBox = shapeActions.getBoundingClientRect();
+        const canvasBox = canvas.getBoundingClientRect();
+        const opensUpward = actionsBox.top - canvasBox.top > canvasBox.bottom - actionsBox.bottom;
+        colorPicker.open(lastSelectedShape()?.color, opensUpward);
+        window.addEventListener('mousedown', closeColorPickerOnOutsideClick);
+    }
+
+    function closeColorPicker(): void {
+        colorPicker.close();
+        window.removeEventListener('mousedown', closeColorPickerOnOutsideClick);
+        canvas.focus();
+    }
+
+    function closeColorPickerOnOutsideClick(event: MouseEvent): void {
+        if (!shapeActions.contains(event.target as Node)) {
+            closeColorPicker();
+        }
     }
 
     function buildShapeActionButton(icon: string, hint: string, onClick: () => void): HTMLButtonElement {
@@ -526,7 +596,7 @@ export function mountImageCanvas(
             }
             if (style.isCased) {
                 context.save();
-                context.strokeStyle = SELECTION_CASING_STYLE;
+                context.strokeStyle = style.casing ?? SELECTION_CASING_STYLE;
                 context.lineWidth = style.lineWidth + SELECTION_CASING_PX * 2;
                 context.strokeRect(-width / 2, -height / 2, width, height);
                 context.restore();
@@ -1104,6 +1174,8 @@ export function mountImageCanvas(
             canvas.removeEventListener('mousedown', onMouseDown);
             canvas.removeEventListener('mousemove', onHoverMove);
             canvas.removeEventListener('blur', onCanvasBlur);
+            colorPicker.close();
+            window.removeEventListener('mousedown', closeColorPickerOnOutsideClick);
             window.removeEventListener('keydown', onPanModifierKeyDown);
             window.removeEventListener('keyup', onPanModifierKeyUp);
             window.removeEventListener('blur', onWindowBlur);

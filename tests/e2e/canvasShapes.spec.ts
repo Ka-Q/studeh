@@ -315,3 +315,41 @@ test('Escape unselects every selected shape', async ({ page }) => {
     const manifest = await fetchManifest(page, docId);
     expect(manifest.pages[0].shapes).toHaveLength(2);
 });
+
+test('the Colour button colours the selected shapes from a typed value or a recent colour, and the colour is saved', async ({ page }) => {
+    await page.goto('/');
+    const docId = await createDocument(page, uniqueName('Shape Colour Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+    const imageRect = await imageOnScreenRect(page);
+
+    await dragOnCanvas(page, { x: imageRect.left + 20, y: imageRect.top + 20 }, { x: imageRect.left + 100, y: imageRect.top + 100 });
+    await page.locator('.shape-actions button[aria-label="Colour"]').click();
+    const hexField = page.getByLabel('Colour as hex or rgb()');
+
+    await hexField.fill('nonsense');
+    await hexField.press('Enter');
+    await expect(hexField).toHaveAttribute('aria-invalid', '');
+    await expect(page.getByRole('alert')).toBeVisible();
+
+    await hexField.fill('rgb(255, 0, 16)');
+    await hexField.press('Enter');
+    await expect(page.getByLabel(/^Recent colour/)).toHaveCount(0);
+    await page.keyboard.press('Escape');
+
+    await page.locator('.shape-actions button[aria-label="Colour"]').click();
+    await hexField.fill('#0A0');
+    await hexField.press('Enter');
+    await page.keyboard.press('Escape');
+
+    await page.locator('.shape-actions button[aria-label="Colour"]').click();
+    await expect(page.getByLabel(/^Recent colour/)).toHaveCount(2);
+    await page.getByLabel('Recent colour #ff0010').click();
+    await page.keyboard.press('Escape');
+
+    await saveDocument(page);
+    const manifest = await fetchManifest(page, docId);
+    const shapes = manifest.pages[0].shapes as unknown as { color?: string }[];
+
+    expect(shapes.map((shape) => shape.color)).toEqual(['#ff0010']);
+});
