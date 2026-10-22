@@ -1,5 +1,9 @@
 :root {
     color-scheme: light;
+    /* The look shared by everything floating over the canvas: solid, so it stays readable over any page image. */
+    --overlay-background: var(--color-bg);
+    --overlay-border: 1px solid var(--color-border);
+    --overlay-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 
     --space-1: 4px;
     --space-2: 8px;
@@ -1104,12 +1108,10 @@ button.stage-controls-fixed:hover:not(:disabled),
     gap: 2px;
     padding: 2px;
     color: var(--color-text);
-    /* Solid with an edge and a shadow, not the canvas's translucent overlays: it floats over the page image, where
-       they would blend into light or busy content. */
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
+    background: var(--overlay-background);
+    border: var(--overlay-border);
     border-radius: var(--radius-md);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--overlay-shadow);
 }
 
 .shape-actions[hidden] {
@@ -1338,7 +1340,9 @@ button.stage-controls-fixed:hover:not(:disabled),
     top: var(--space-2);
     right: var(--space-2);
     z-index: 1;
-    background: var(--color-surface);
+    background: var(--overlay-background);
+    border: var(--overlay-border);
+    box-shadow: var(--overlay-shadow);
     color: var(--color-accent);
 }
 
@@ -1349,8 +1353,9 @@ button.stage-controls-fixed:hover:not(:disabled),
     z-index: 1;
     padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-md);
-    background: color-mix(in srgb, var(--color-surface) 60%, transparent);
-    backdrop-filter: blur(8px);
+    background: var(--overlay-background);
+    border: var(--overlay-border);
+    box-shadow: var(--overlay-shadow);
     color: var(--color-text-muted);
     font-size: var(--font-size-sm);
     pointer-events: none;
@@ -1410,8 +1415,9 @@ button.stage-controls-fixed:hover:not(:disabled),
     gap: var(--space-3);
     padding: var(--space-1);
     border-radius: var(--radius-md);
-    background: color-mix(in srgb, var(--color-surface) 60%, transparent);
-    backdrop-filter: blur(8px);
+    background: var(--overlay-background);
+    border: var(--overlay-border);
+    box-shadow: var(--overlay-shadow);
     color: var(--color-text);
     font-size: var(--font-size-sm);
 }
@@ -1455,8 +1461,9 @@ button.stage-controls-fixed:hover:not(:disabled),
     border-radius: 50%;
     /* Clips the arrows' wedges, their hover tint and their hit areas to the circle. */
     clip-path: circle(50%);
-    background: color-mix(in srgb, var(--color-surface) 60%, transparent);
-    backdrop-filter: blur(8px);
+    background: var(--overlay-background);
+    border: var(--overlay-border);
+    box-shadow: var(--overlay-shadow);
     color: var(--color-text);
 }
 
@@ -1566,8 +1573,9 @@ button.stage-controls-fixed:hover:not(:disabled),
     gap: var(--space-3);
     padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
     border-radius: var(--radius-md);
-    background: color-mix(in srgb, var(--color-surface) 60%, transparent);
-    backdrop-filter: blur(8px);
+    background: var(--overlay-background);
+    border: var(--overlay-border);
+    box-shadow: var(--overlay-shadow);
     color: var(--color-text-muted);
     font-size: var(--font-size-sm);
 }
@@ -1631,8 +1639,8 @@ button.stage-controls-fixed:hover:not(:disabled),
     gap: var(--space-2);
     width: 60px;
     padding: var(--space-2) var(--space-1);
-    background: color-mix(in srgb, var(--color-surface) 60%, transparent);
-    backdrop-filter: blur(8px);
+    background: var(--overlay-background);
+    border-right: var(--overlay-border);
     color: var(--color-text);
     font-size: var(--font-size-sm);
 }
@@ -1647,7 +1655,7 @@ button.stage-controls-fixed:hover:not(:disabled),
 }
 
 .page-navigator .scroll-fade {
-    background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--color-surface) 60%, transparent));
+    background: linear-gradient(to bottom, transparent, var(--overlay-background));
 }
 
 .page-navigator-list {
