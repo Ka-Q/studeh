@@ -995,6 +995,11 @@ dialog::backdrop {
     cursor: text;
 }
 
+/* The edit's underline would otherwise add its own pixel to the page's height. */
+.page-name.inline-edit {
+    margin-bottom: -1px;
+}
+
 .page-actions {
     display: flex;
     justify-content: flex-end;

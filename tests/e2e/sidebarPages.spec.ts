@@ -250,3 +250,16 @@ test('a page shows its select checkbox only on hover or focus, unless it is sele
     await expect.poll(() => checkboxOpacity(0)).toBe('1');
     await expect.poll(() => checkboxOpacity(1)).toBe('0');
 });
+
+test('renaming a page does not change its row height', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('Sidebar Rename Height Doc'));
+    await addPage(page);
+    const item = page.locator('#page-list .page-item').first();
+    const heightBefore = (await item.boundingBox())!.height;
+
+    await page.keyboard.press('ControlOrMeta+F2');
+
+    await expect(page.locator('#page-list input.inline-edit')).toBeVisible();
+    expect((await item.boundingBox())!.height).toBe(heightBefore);
+});
