@@ -125,22 +125,43 @@ export function deletePage(pageId: string): void {
     notify();
 }
 
+// Moving a page makes it the active page, as the page being worked on.
 export function movePage(pageId: string, direction: -1 | 1): void {
+    const index = pageIndex(pageId);
+    if (index !== -1 && applyPageMove(pageId, index + direction)) {
+        if (state.activePageId !== pageId) {
+            state.activePageId = pageId;
+            state.selectedShapeIds = [];
+        }
+        notify();
+    }
+}
+
+export function movePageTo(pageId: string, targetIndex: number): void {
+    if (applyPageMove(pageId, targetIndex)) {
+        notify();
+    }
+}
+
+function applyPageMove(pageId: string, targetIndex: number): boolean {
     if (!state.document) {
-        return;
+        return false;
     }
     const pages = state.document.pages;
-    const index = pages.findIndex(function matchesId(page) {
-        return page.id === pageId;
-    });
-    const targetIndex = index + direction;
+    const index = pageIndex(pageId);
     if (index === -1 || targetIndex < 0 || targetIndex >= pages.length) {
-        return;
+        return false;
     }
     const reordered = [...pages];
-    [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+    reordered.splice(targetIndex, 0, ...reordered.splice(index, 1));
     commitDocument({ ...state.document, pages: reordered }, pageId);
-    notify();
+    return true;
+}
+
+function pageIndex(pageId: string): number {
+    return state.document?.pages.findIndex(function matchesId(page) {
+        return page.id === pageId;
+    }) ?? -1;
 }
 
 export function deletePages(pageIds: string[]): void {

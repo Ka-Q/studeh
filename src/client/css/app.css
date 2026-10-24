@@ -180,6 +180,11 @@ button:hover:not(:disabled) {
     mask-image: url('/icons/move-down.svg');
 }
 
+.icon-grip {
+    -webkit-mask-image: url('/icons/grip.svg');
+    mask-image: url('/icons/grip.svg');
+}
+
 .icon-image-placeholder {
     -webkit-mask-image: url('/icons/image-placeholder.svg');
     mask-image: url('/icons/image-placeholder.svg');
@@ -753,6 +758,8 @@ dialog::backdrop {
 #page-list {
     height: 100%;
     overflow-y: auto;
+    /* The pages' offsets are then measured from the list's own scrolled content. */
+    position: relative;
     list-style: none;
     margin: 0;
     padding: 0;
@@ -848,21 +855,84 @@ dialog::backdrop {
 }
 
 .page-item {
+    /* The titles are not text to select: repeated clicks on a page's buttons would select them as double clicks. */
+    user-select: none;
     display: flex;
     align-items: stretch;
     gap: var(--space-2);
     padding: var(--space-2);
     border-radius: var(--radius-md);
-    cursor: pointer;
+    cursor: grab;
+}
+
+.page-item input {
+    user-select: text;
 }
 
 .page-item:hover {
     background: var(--color-surface-hover);
 }
 
-.page-select-checkbox {
+/* While a page is dragged, only it looks hovered: the pages sliding past the pointer would otherwise flash with it. */
+#page-list.dragging-page .page-item:hover:not(.dragging, .active) {
+    background: none;
+}
+
+#page-list.dragging-page .page-item.active:hover:not(.dragging) {
+    background: var(--color-surface);
+}
+
+#page-list.dragging-page .page-item:hover:not(.dragging, .active, :focus-within) .page-actions {
+    color: var(--color-text-muted);
+    opacity: 0.45;
+}
+
+#page-list .page-item.dragging {
+    /* Above the pages sliding past it. */
+    position: relative;
+    z-index: 1;
+    background: var(--color-surface-hover);
+    box-shadow: var(--overlay-shadow);
+}
+
+#page-list.dragging-page,
+#page-list.dragging-page * {
+    cursor: grabbing;
+}
+
+/* The handle sits above the checkbox in one column. Both keep their room while hidden, so the row doesn't shift when
+   they show. */
+.page-leading {
     flex: 0 0 auto;
     align-self: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    margin-right: var(--space-1);
+}
+
+.page-grip,
+.page-select-checkbox {
+    margin: 0;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.page-grip {
+    display: flex;
+    color: var(--color-text-muted);
+}
+
+.page-item:is(:hover, :focus-within, .active) .page-grip,
+.page-item:is(:hover, :focus-within) .page-select-checkbox,
+.page-select-checkbox:is(:checked, :indeterminate) {
+    opacity: 1;
+}
+
+#page-list.dragging-page .page-item:hover:not(.dragging, .active, :focus-within) .page-grip,
+#page-list.dragging-page .page-item:hover:not(.dragging, :focus-within) .page-select-checkbox:not(:checked) {
+    opacity: 0;
 }
 
 .page-item.active {

@@ -13,10 +13,18 @@ import {
 } from '../document/state';
 import type { Page } from '../../shared/types';
 import { confirmDialog } from '../dialogs/confirmDialog';
-import { getDroppedImageFiles, iconSpan, initHoverScopedPaste, initScrollFade, isFileDrag, requireElement, startDragSession } from '../dom';
+import { getDroppedImageFiles, iconSpan, initHoverScopedPaste, isFileDrag, requireElement, startDragSession } from '../dom';
 import { reportError } from '../errors';
 import { startInlineEdit } from '../inlineEdit';
 import { shortcutHint } from '../shortcuts';
+import { initPageListDrag } from './pageListDrag';
+import {
+    captureItemTops,
+    followPageListChanges,
+    initPageListScroll,
+    selectPageWithPointer,
+    updatePageListFade
+} from './pageListScroll';
 
 const MIN_SIDEBAR_WIDTH = 224;
 const MAX_SIDEBAR_WIDTH = 480;
@@ -29,13 +37,26 @@ let listEl: HTMLElement;
 let selectAllCheckbox: HTMLInputElement;
 let deleteSelectedButton: HTMLButtonElement;
 let imagesInput: HTMLInputElement;
-let updateListScrollFade: () => void;
 let toggleSidebarCollapseRef: (() => void) | null = null;
 const selectedPageIds = new Set<string>();
+// A page's list item outlives a render: reordering moves the item rather than building it again, which keeps its
+// thumbnail from loading again (it would flicker) and is much less work in a long list.
+interface PageRow {
+    item: HTMLLIElement;
+    checkbox: HTMLInputElement;
+    thumbnail: HTMLSpanElement;
+    thumbnailKey: string | null;
+    nameEl: HTMLSpanElement;
+    moveUpButton: HTMLButtonElement;
+    moveDownButton: HTMLButtonElement;
+}
+const pageRows = new Map<string, PageRow>();
+let pageRowsDocumentId: string | null = null;
 
 export function initPageSidebar(): void {
     listEl = requireElement('page-list');
-    updateListScrollFade = initScrollFade(listEl, requireElement('page-list-fade'));
+    initPageListScroll(listEl, requireElement('page-list-fade'));
+    initPageListDrag(listEl, () => renderPageList(listEl));
     const addButton = requireElement('btn-add-page');
     const addFromImagesButton = requireElement('btn-add-pages-from-images');
     imagesInput = createImagesFileInput();
@@ -304,16 +325,24 @@ function clampSidebarWidth(width: number): number {
 
 function renderPageList(listEl: HTMLElement): void {
     const { document: doc, activePageId } = getState();
-    listEl.innerHTML = '';
+    const topsBefore = captureItemTops();
+    const focusedControl = focusedPageControl();
 
     if (!doc) {
         pendingAutoRename = false;
         selectedPageIds.clear();
+        pageRows.clear();
+        listEl.replaceChildren();
         updateSelectionControls(0, 0);
-        updateListScrollFade();
+        updatePageListFade();
         return;
     }
 
+    if (doc.id !== pageRowsDocumentId) {
+        pageRows.clear();
+        listEl.replaceChildren();
+        pageRowsDocumentId = doc.id;
+    }
     const pageIds = new Set(doc.pages.map(function toId(page) {
         return page.id;
     }));
@@ -322,16 +351,26 @@ function renderPageList(listEl: HTMLElement): void {
             selectedPageIds.delete(selectedId);
         }
     }
+    for (const [pageId, row] of pageRows) {
+        if (!pageIds.has(pageId)) {
+            row.item.remove();
+            pageRows.delete(pageId);
+        }
+    }
 
-    doc.pages.forEach(function renderItem(page, index) {
-        const isActive = page.id === activePageId;
-        const isFirst = index === 0;
-        const isLast = index === doc.pages.length - 1;
-        listEl.appendChild(renderPageItem(doc.id, page, isActive, isFirst, isLast));
+    doc.pages.forEach(function placeItem(page, index) {
+        const row = pageRows.get(page.id) ?? createPageRow(page.id);
+        pageRows.set(page.id, row);
+        updatePageRow(row, doc.id, page, page.id === activePageId, index === 0, index === doc.pages.length - 1);
+        if (listEl.children[index] !== row.item) {
+            listEl.insertBefore(row.item, listEl.children[index] ?? null);
+        }
     });
 
     updateSelectionControls(selectedPageIds.size, doc.pages.length);
-    updateListScrollFade();
+    restoreFocusedPageControl(focusedControl);
+    followPageListChanges(doc.pages, activePageId, topsBefore);
+    updatePageListFade();
 
     if (pendingAutoRename) {
         pendingAutoRename = false;
@@ -345,47 +384,118 @@ function renderPageList(listEl: HTMLElement): void {
     }
 }
 
+interface FocusedPageControl {
+    pageId: string;
+    // The control's place among its page's checkbox and buttons.
+    index: number;
+}
+
+const PAGE_CONTROLS = '.page-select-checkbox, .page-actions button';
+
+// The list is rebuilt on every change, which would drop the keyboard focus from the control it is on.
+function focusedPageControl(): FocusedPageControl | null {
+    const focused = document.activeElement;
+    const item = focused instanceof HTMLElement ? focused.closest<HTMLElement>('.page-item') : null;
+    if (!item || !listEl.contains(item) || !focused?.matches(PAGE_CONTROLS)) {
+        return null;
+    }
+    return { pageId: item.dataset.pageId!, index: [...item.querySelectorAll(PAGE_CONTROLS)].indexOf(focused) };
+}
+
+// A control now disabled (a page moved to an end can't move further) hands its focus to the page's next one.
+function restoreFocusedPageControl(control: FocusedPageControl | null): void {
+    const item = control ? listEl.querySelector(`[data-page-id="${control.pageId}"]`) : null;
+    if (!control || !item) {
+        return;
+    }
+    const controls = [...item.querySelectorAll<HTMLElement>(PAGE_CONTROLS)];
+    const target = [controls[control.index], ...controls.slice(control.index + 1), ...controls.slice(0, control.index).reverse()].find(function isEnabled(candidate) {
+        return !(candidate as HTMLButtonElement).disabled;
+    });
+    target?.focus({ preventScroll: true });
+}
+
 function updateSelectionControls(selectedCount: number, totalCount: number): void {
     selectAllCheckbox.checked = totalCount > 0 && selectedCount === totalCount;
     selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalCount;
     deleteSelectedButton.disabled = selectedCount === 0;
 }
 
-function renderPageItem(
-    documentId: string,
-    page: Page,
-    isActive: boolean,
-    isFirst: boolean,
-    isLast: boolean
-): HTMLLIElement {
-    const item = document.createElement('li');
-    item.className = isActive ? 'page-item active' : 'page-item';
-    item.dataset.pageId = page.id;
-    item.addEventListener('click', () => setActivePage(page.id));
-
-    const nameEl = renderPageName(page);
-    const body = document.createElement('div');
-    body.className = 'page-body';
-    body.append(nameEl, renderActions(page, isFirst, isLast, nameEl));
-
-    item.append(renderSelectCheckbox(page), renderThumbnail(documentId, page), body);
-    return item;
+function currentPage(pageId: string): Page {
+    return getState().document!.pages.find(function matchesId(page) {
+        return page.id === pageId;
+    })!;
 }
 
-function renderSelectCheckbox(page: Page): HTMLInputElement {
+function createPageRow(pageId: string): PageRow {
+    const item = document.createElement('li');
+    item.dataset.pageId = pageId;
+    item.title = 'Drag to reorder';
+    item.addEventListener('click', () => {
+        selectPageWithPointer(() => setActivePage(pageId));
+    });
+
+    const checkbox = renderSelectCheckbox(pageId);
+    const thumbnail = document.createElement('span');
+    const nameEl = renderPageName(pageId);
+    const moveUpButton = renderMoveButton(pageId, -1, `Move page up (${shortcutHint('reorderPageUp')} to move active page, or drag the page)`, 'icon-move-up');
+    const moveDownButton = renderMoveButton(pageId, 1, `Move page down (${shortcutHint('reorderPageDown')} to move active page, or drag the page)`, 'icon-move-down');
+    const actions = document.createElement('div');
+    actions.className = 'page-actions';
+    actions.append(moveUpButton, moveDownButton, renderRenameButton(pageId, nameEl), renderDeleteButton(pageId));
+    const body = document.createElement('div');
+    body.className = 'page-body';
+    body.append(nameEl, actions);
+
+    item.append(renderLeadingColumn(checkbox), thumbnail, body);
+    return { item, checkbox, thumbnail, thumbnailKey: null, nameEl, moveUpButton, moveDownButton };
+}
+
+function updatePageRow(row: PageRow, documentId: string, page: Page, isActive: boolean, isFirst: boolean, isLast: boolean): void {
+    // A slide still running from the last move would offset the positions measured for the next one.
+    for (const slide of row.item.getAnimations()) {
+        slide.cancel();
+    }
+    row.item.className = isActive ? 'page-item active' : 'page-item';
+    row.checkbox.checked = selectedPageIds.has(page.id);
+    row.moveUpButton.disabled = isFirst;
+    row.moveDownButton.disabled = isLast;
+    if (row.nameEl.textContent !== page.name) {
+        row.nameEl.textContent = page.name;
+        row.nameEl.title = page.name;
+    }
+    const thumbnailKey = page.image?.file ?? '';
+    if (thumbnailKey !== row.thumbnailKey) {
+        const thumbnail = renderThumbnail(documentId, page);
+        row.thumbnail.replaceWith(thumbnail);
+        row.thumbnail = thumbnail;
+        row.thumbnailKey = thumbnailKey;
+    }
+}
+
+function renderLeadingColumn(checkbox: HTMLInputElement): HTMLSpanElement {
+    const grip = document.createElement('span');
+    grip.className = 'page-grip';
+    grip.appendChild(iconSpan('icon-grip'));
+    const column = document.createElement('span');
+    column.className = 'page-leading';
+    column.append(grip, checkbox);
+    return column;
+}
+
+function renderSelectCheckbox(pageId: string): HTMLInputElement {
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.className = 'page-select-checkbox';
-    checkbox.checked = selectedPageIds.has(page.id);
     setLabelWithHint(checkbox, 'Select page', `${shortcutHint('toggleActivePageSelection')} to toggle active page's selection`);
     checkbox.addEventListener('click', (event) => {
         event.stopPropagation();
     });
     checkbox.addEventListener('change', () => {
         if (checkbox.checked) {
-            selectedPageIds.add(page.id);
+            selectedPageIds.add(pageId);
         } else {
-            selectedPageIds.delete(page.id);
+            selectedPageIds.delete(pageId);
         }
         renderPageList(listEl);
     });
@@ -408,58 +518,37 @@ export function renderThumbnail(documentId: string, page: Page): HTMLSpanElement
     return thumb;
 }
 
-function renderPageName(page: Page): HTMLSpanElement {
+function renderPageName(pageId: string): HTMLSpanElement {
     const name = document.createElement('span');
     name.className = 'page-name';
-    name.textContent = page.name;
-    name.title = page.name;
     name.addEventListener('dblclick', (event) => {
         event.stopPropagation();
-        startPageRename(page, name);
+        startPageRename(currentPage(pageId), name);
     });
     return name;
 }
 
-function renderActions(page: Page, isFirst: boolean, isLast: boolean, nameEl: HTMLElement): HTMLDivElement {
-    const actions = document.createElement('div');
-    actions.className = 'page-actions';
-    actions.append(
-        renderMoveButton(page, -1, `Move page up (${shortcutHint('reorderPageUp')} to move active page)`, 'icon-move-up', isFirst),
-        renderMoveButton(page, 1, `Move page down (${shortcutHint('reorderPageDown')} to move active page)`, 'icon-move-down', isLast),
-        renderRenameButton(page, nameEl),
-        renderDeleteButton(page)
-    );
-    return actions;
-}
-
-function renderMoveButton(
-    page: Page,
-    direction: -1 | 1,
-    label: string,
-    iconClass: string,
-    disabled: boolean
-): HTMLButtonElement {
+function renderMoveButton(pageId: string, direction: -1 | 1, label: string, iconClass: string): HTMLButtonElement {
     const button = document.createElement('button');
     button.className = 'icon-button';
     button.title = label;
     button.setAttribute('aria-label', label);
-    button.disabled = disabled;
     button.appendChild(iconSpan(iconClass));
     button.addEventListener('click', (event) => {
         event.stopPropagation();
-        movePage(page.id, direction);
+        movePage(pageId, direction);
     });
     return button;
 }
 
-function renderRenameButton(page: Page, nameEl: HTMLElement): HTMLButtonElement {
+function renderRenameButton(pageId: string, nameEl: HTMLElement): HTMLButtonElement {
     const button = document.createElement('button');
     button.className = 'icon-button';
     setLabelWithHint(button, 'Rename page', `${shortcutHint('renameActivePage')} to rename active page`);
     button.appendChild(iconSpan('icon-rename'));
     button.addEventListener('click', (event) => {
         event.stopPropagation();
-        startPageRename(page, nameEl);
+        startPageRename(currentPage(pageId), nameEl);
     });
     return button;
 }
@@ -470,14 +559,14 @@ function startPageRename(page: Page, nameEl: HTMLElement): void {
     });
 }
 
-function renderDeleteButton(page: Page): HTMLButtonElement {
+function renderDeleteButton(pageId: string): HTMLButtonElement {
     const button = document.createElement('button');
     button.className = 'icon-button';
     setLabelWithHint(button, 'Delete page', `${shortcutHint('deleteActivePage')} to delete active page`);
     button.appendChild(iconSpan('icon-trash'));
     button.addEventListener('click', async (event) => {
         event.stopPropagation();
-        await deletePageWithConfirm(page);
+        await deletePageWithConfirm(currentPage(pageId));
     });
     return button;
 }
