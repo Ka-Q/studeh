@@ -360,3 +360,32 @@ test('the Colour button colours the selected shapes from a typed value or a rece
 
     expect(shapes.map((shape) => shape.color)).toEqual(['#ff0010', undefined]);
 });
+
+test('the open colour picker is drawn over the rotation handle', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('Shape Picker Over Handle Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+    const imageRect = await imageOnScreenRect(page);
+    await dragOnCanvas(
+        page,
+        { x: imageRect.left + 150, y: imageRect.top + 150 },
+        { x: imageRect.left + 400, y: imageRect.top + 400 }
+    );
+
+    await page.locator('.shape-actions button[aria-label="Colour"]').click();
+
+    const handleCentre = await page.locator('.shape-rotation-handle').evaluate(function centreOf(handle) {
+        const box = handle.getBoundingClientRect();
+        return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    });
+    const pickerBox = (await page.locator('.color-picker').boundingBox())!;
+    expect(handleCentre.x).toBeGreaterThan(pickerBox.x);
+    expect(handleCentre.x).toBeLessThan(pickerBox.x + pickerBox.width);
+    expect(handleCentre.y).toBeGreaterThan(pickerBox.y);
+    expect(handleCentre.y).toBeLessThan(pickerBox.y + pickerBox.height);
+    const isPickerOnTop = await page.evaluate(function isPickerAt(point) {
+        return document.elementFromPoint(point.x, point.y)?.closest('.color-picker') !== null;
+    }, handleCentre);
+    expect(isPickerOnTop).toBe(true);
+});

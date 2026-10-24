@@ -1182,8 +1182,9 @@ button.stage-controls-fixed:hover:not(:disabled),
 
 .shape-actions {
     position: absolute;
-    /* Over the canvas's own overlays (hints, zoom), so they stay usable at the canvas's edges. */
-    z-index: 2;
+    /* Over the canvas's own overlays (hints, zoom), so they stay usable at the canvas's edges, and over the rotation
+       handle, which the open colour picker can reach. */
+    z-index: 3;
     display: flex;
     gap: 2px;
     padding: 2px;
