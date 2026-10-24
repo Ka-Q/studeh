@@ -21,7 +21,7 @@
     --radius-md: 8px;
 
     --color-bg: #fafafa;
-    --color-surface: #ededed;
+    --color-surface: #d4d4d4;
     --color-border: #c4c4c4;
     --color-text: #1a1a1a;
     --color-text-muted: #666666;
@@ -30,10 +30,10 @@
     --color-danger: #dc2626;
     --color-danger-hover: #b91c1c;
     --color-focus-ring: #2563eb;
-    --color-surface-hover: #e3e3e3;
+    --color-surface-hover: #c0c0c0;
     /* A surface picked up above the others: lighter than what it floats over in both themes. */
     --color-surface-lifted: #fafafa;
-    --color-surface-secondary: #d5d5d5;
+    --color-surface-secondary: #e7e7e7;
     --color-canvas-vignette: rgba(0, 0, 0, 0.1);
     accent-color: var(--color-accent);
 }
