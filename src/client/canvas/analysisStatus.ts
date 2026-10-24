@@ -1,4 +1,4 @@
-import { imageAnalysis, type AnalysisStage } from '../imageAnalysis';
+import { imageAnalysis, type AnalysisStage } from '@studeh/image-analysis';
 
 const STAGE_LABELS: Record<AnalysisStage, string> = {
     image: 'Reading the image…',
