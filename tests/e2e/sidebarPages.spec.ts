@@ -137,6 +137,7 @@ test('dragging a page row to another place reorders the pages as one undoable st
     await page.keyboard.press('ControlOrMeta+z');
 
     expect(await names()).toEqual(initial);
+    await expect(page.locator('#page-list .page-item.active .page-name')).toHaveText(initial[3]);
 });
 
 test('Escape during a drag puts the pages back, and a short press on a page just selects it', async ({ page }) => {

@@ -392,7 +392,7 @@ interface FocusedPageControl {
 
 const PAGE_CONTROLS = '.page-select-checkbox, .page-actions button';
 
-// The list is rebuilt on every change, which would drop the keyboard focus from the control it is on.
+// A render moves the page's controls around in the list, which can drop the keyboard focus from the one it is on.
 function focusedPageControl(): FocusedPageControl | null {
     const focused = document.activeElement;
     const item = focused instanceof HTMLElement ? focused.closest<HTMLElement>('.page-item') : null;

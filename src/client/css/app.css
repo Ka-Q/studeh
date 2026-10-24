@@ -31,6 +31,8 @@
     --color-danger-hover: #b91c1c;
     --color-focus-ring: #2563eb;
     --color-surface-hover: #e3e3e3;
+    /* A surface picked up above the others: lighter than what it floats over in both themes. */
+    --color-surface-lifted: #fafafa;
     --color-surface-secondary: #d5d5d5;
     --color-canvas-vignette: rgba(0, 0, 0, 0.1);
     accent-color: var(--color-accent);
@@ -50,6 +52,7 @@
     --color-danger-hover: #f87171;
     --color-focus-ring: #60a5fa;
     --color-surface-hover: #323232;
+    --color-surface-lifted: #323232;
     --color-surface-secondary: rgb(19, 19, 19);
     --color-canvas-vignette: rgba(0, 0, 0, 0.4);
     accent-color: var(--color-accent);
@@ -70,6 +73,7 @@
         --color-danger-hover: #f87171;
         --color-focus-ring: #60a5fa;
         --color-surface-hover: #323232;
+    --color-surface-lifted: #323232;
         --color-surface-secondary: rgb(19, 19, 19);
         --color-canvas-vignette: rgba(0, 0, 0, 0.4);
     }
@@ -891,8 +895,9 @@ dialog::backdrop {
     /* Above the pages sliding past it. */
     position: relative;
     z-index: 1;
-    background: var(--color-surface-hover);
-    box-shadow: var(--overlay-shadow);
+    background: var(--color-surface-lifted);
+    /* The list clips at its left and right edges, so the shadow is kept to the top and bottom, where it can fade out. */
+    box-shadow: 0 5px 6px -5px rgba(0, 0, 0, 0.3), 0 -5px 6px -5px rgba(0, 0, 0, 0.3);
 }
 
 #page-list.dragging-page,

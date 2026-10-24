@@ -128,7 +128,7 @@ export function deletePage(pageId: string): void {
 // Moving a page makes it the active page, as the page being worked on.
 export function movePage(pageId: string, direction: -1 | 1): void {
     const index = pageIndex(pageId);
-    if (index !== -1 && applyPageMove(pageId, index + direction)) {
+    if (index !== -1 && applyPageMove(pageId, index + direction, pageId)) {
         if (state.activePageId !== pageId) {
             state.activePageId = pageId;
             state.selectedShapeIds = [];
@@ -138,12 +138,13 @@ export function movePage(pageId: string, direction: -1 | 1): void {
 }
 
 export function movePageTo(pageId: string, targetIndex: number): void {
-    if (applyPageMove(pageId, targetIndex)) {
+    if (applyPageMove(pageId, targetIndex, state.activePageId)) {
         notify();
     }
 }
 
-function applyPageMove(pageId: string, targetIndex: number): boolean {
+// `historyPageId` is the page undoing and redoing the move go back to.
+function applyPageMove(pageId: string, targetIndex: number, historyPageId: string | null): boolean {
     if (!state.document) {
         return false;
     }
@@ -154,7 +155,7 @@ function applyPageMove(pageId: string, targetIndex: number): boolean {
     }
     const reordered = [...pages];
     reordered.splice(targetIndex, 0, ...reordered.splice(index, 1));
-    commitDocument({ ...state.document, pages: reordered }, pageId);
+    commitDocument({ ...state.document, pages: reordered }, historyPageId);
     return true;
 }
 
