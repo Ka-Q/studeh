@@ -1,5 +1,4 @@
-import { imageAnalysis } from '../imageAnalysis/analysisClient';
-import type { AnalysisStage } from '../imageAnalysis/pipeline/progress';
+import { imageAnalysis, type AnalysisStage } from '../imageAnalysis';
 
 const STAGE_LABELS: Record<AnalysisStage, string> = {
     image: 'Reading the image…',

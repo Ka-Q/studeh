@@ -32,7 +32,7 @@ import { buildColorPicker, type ColorPicker } from './colorPicker';
 import { iconSpan, isBlockedByInputOrDialog, isPrimaryModifierPressed, startDragSession } from '../dom';
 import { registerShortcut, unregisterShortcut } from '../shortcutDispatch';
 import { shortcutHint } from '../shortcuts';
-import { imageAnalysis, type AnalysedShape } from '../imageAnalysis/analysisClient';
+import { imageAnalysis, type AnalysedShape } from '../imageAnalysis';
 import { shapesInReadingOrder } from '../shapes/rectangle';
 
 // The order shapes are numbered in: by the image analysis or in plain rows.

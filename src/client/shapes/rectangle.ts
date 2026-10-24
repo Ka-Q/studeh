@@ -242,6 +242,8 @@ export function topmostShapeAt(point: Point, shapes: RectangleShape[]): Rectangl
     return null;
 }
 
+// The rows numbering's order. The image analysis keeps its own copy (imageAnalysis/geometry), as it changes with the
+// numbering rules and this must not.
 // Groups shapes into rows before ordering left to right, so a shape a few pixels higher than its
 // neighbour doesn't jump ahead of it. Each shape is compared against the row's average vertical band, which
 // follows a gently slanted row but not a staircase whose steps exceed half a shape's height.

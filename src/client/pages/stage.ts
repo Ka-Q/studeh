@@ -25,7 +25,7 @@ import { initCanvasPan, type CanvasPanHandle } from '../canvas/canvasPan';
 import { initCanvasZoom, type CanvasZoomHandle } from '../canvas/canvasZoom';
 import { initPageNavigator, type PageNavigatorHandle } from '../canvas/pageNavigator';
 import { initAnalysisStatus } from '../canvas/analysisStatus';
-import { imageAnalysis } from '../imageAnalysis/analysisClient';
+import { imageAnalysis } from '../imageAnalysis';
 import { confirmDialog } from '../dialogs/confirmDialog';
 import { createModeToggle, type ModeToggleHandle } from '../modes/modeToggle';
 import { browseDialog } from '../document/browseDialog';
