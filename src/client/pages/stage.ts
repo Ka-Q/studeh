@@ -202,7 +202,7 @@ function render(): void {
 
     renderControls(doc.id, page);
     renderCanvas(doc.id, page);
-    mountedCanvas?.handle.setPreviewBoxes(autoOcclusion.preview()?.boxes ?? null);
+    showPreviewBoxes();
     keepFocusAcrossPreview();
 }
 
@@ -345,10 +345,8 @@ function isPreviewStillValid(target: { documentId: string; pageId: string; image
 // user's hand.
 function showPreviewBoxes(): void {
     const preview = autoOcclusion.preview();
-    if (preview) {
-        previewBar?.setBoxCount(preview.boxes.length);
-        mountedCanvas?.handle.setPreviewBoxes(preview.boxes);
-    }
+    previewBar?.setBoxCount(preview?.boxes.length ?? 0);
+    mountedCanvas?.handle.setPreviewBoxes(preview ? preview.boxes.map((rect, index) => ({ rect, merged: preview.groupSizes[index] })) : null);
 }
 
 // Auto-occlusion changed (detection started or ended, a preview opened or closed): the page is drawn again. As a preview opens the

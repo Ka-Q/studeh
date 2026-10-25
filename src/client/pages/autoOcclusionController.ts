@@ -26,12 +26,14 @@ export interface AutoOcclusionTarget {
 }
 
 // Auto-occlusion's boxes before they are applied, with the settings that gave them: foundBoxes are the analysis's for the minimum
-// length, boxes what is shown of them (merged when a merge distance is set).
+// length, boxes what is shown of them (merged when a merge distance is set), and groupSizes how many found boxes each shown one
+// is made of (1: not merged).
 export interface AutoOcclusionPreview extends AutoOcclusionTarget {
     minLetters: number;
     merge: MergeSetting;
     foundBoxes: RotatedRect[];
     boxes: RotatedRect[];
+    groupSizes: number[];
 }
 
 interface AutoOcclusionDependencies {
@@ -65,12 +67,12 @@ export function createAutoOcclusionController(dependencies: AutoOcclusionDepende
     const detectingPageIds = new Set<string>();
     let lastRequest = 0;
 
-    function shownBoxes(preview: AutoOcclusionPreview): RotatedRect[] {
-        return preview.merge === null ? preview.foundBoxes : mergeNearbyBoxes(preview.foundBoxes, preview.merge * typicalThickness(preview.foundBoxes));
-    }
-
     function showBoxes(preview: AutoOcclusionPreview): void {
-        preview.boxes = shownBoxes(preview);
+        const shown = preview.merge === null
+            ? preview.foundBoxes.map((box) => ({ box, count: 1 }))
+            : mergeNearbyBoxes(preview.foundBoxes, preview.merge * typicalThickness(preview.foundBoxes));
+        preview.boxes = shown.map((entry) => entry.box);
+        preview.groupSizes = shown.map((entry) => entry.count);
         dependencies.onBoxesChange();
     }
 
@@ -91,7 +93,7 @@ export function createAutoOcclusionController(dependencies: AutoOcclusionDepende
             dependencies.findBoxes(target.imageUrl, MIN_LETTERS_RANGE.max, (boxes) => {
                 detectingPageIds.delete(target.pageId);
                 if (!current && dependencies.isStillValid(target)) {
-                    current = { ...target, minLetters: MIN_LETTERS_RANGE.max, merge: null, foundBoxes: boxes, boxes };
+                    current = { ...target, minLetters: MIN_LETTERS_RANGE.max, merge: null, foundBoxes: boxes, boxes, groupSizes: boxes.map(() => 1) };
                 }
                 dependencies.onChange();
             });

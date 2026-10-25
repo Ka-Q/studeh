@@ -24,16 +24,16 @@ test('turned boxes are measured along their own edges', function () {
 test('boxes within the distance become one, as a chain too; boxes further apart stay', function () {
     const boxes = [{ x: 0, y: 0, width: 10, height: 10 }, { x: 12, y: 0, width: 10, height: 10 }, { x: 24, y: 0, width: 10, height: 10 }, { x: 60, y: 0, width: 10, height: 10 }];
 
-    assert.deepEqual(mergeNearbyBoxes(boxes, 2), [{ x: 0, y: 0, width: 34, height: 10 }, boxes[3]]);
-    assert.deepEqual(mergeNearbyBoxes(boxes, 1), boxes);
+    assert.deepEqual(mergeNearbyBoxes(boxes, 2), [{ box: { x: 0, y: 0, width: 34, height: 10 }, count: 3 }, { box: boxes[3], count: 1 }]);
+    assert.deepEqual(mergeNearbyBoxes(boxes, 1), boxes.map((box) => ({ box, count: 1 })));
 });
 
 test('a negative distance joins only boxes overlapping by that much', function () {
     const boxes = [{ x: 0, y: 0, width: 10, height: 10 }, { x: 8, y: 0, width: 10, height: 10 }, { x: 40, y: 0, width: 10, height: 10 }, { x: 49, y: 0, width: 10, height: 10 }];
 
-    assert.deepEqual(mergeNearbyBoxes(boxes, -2), [{ x: 0, y: 0, width: 18, height: 10 }, boxes[2], boxes[3]]);
-    assert.deepEqual(mergeNearbyBoxes(boxes, -1), [{ x: 0, y: 0, width: 18, height: 10 }, { x: 40, y: 0, width: 19, height: 10 }]);
-    assert.deepEqual(mergeNearbyBoxes(boxes, -3), boxes);
+    assert.deepEqual(mergeNearbyBoxes(boxes, -2), [{ box: { x: 0, y: 0, width: 18, height: 10 }, count: 2 }, { box: boxes[2], count: 1 }, { box: boxes[3], count: 1 }]);
+    assert.deepEqual(mergeNearbyBoxes(boxes, -1), [{ box: { x: 0, y: 0, width: 18, height: 10 }, count: 2 }, { box: { x: 40, y: 0, width: 19, height: 10 }, count: 2 }]);
+    assert.deepEqual(mergeNearbyBoxes(boxes, -3), boxes.map((box) => ({ box, count: 1 })));
 });
 
 test('turned boxes merge into a box turned as the largest one, and a box turned another way is left alone', function () {
@@ -47,9 +47,10 @@ test('turned boxes merge into a box turned as the largest one, and a box turned 
     const merged = mergeNearbyBoxes([a, b, across], 3);
 
     assert.equal(merged.length, 2);
-    assert.equal(merged[0].rotation, 30);
-    assert.ok(Math.abs(merged[0].width - 100) < 1e-6 && Math.abs(merged[0].height - 42) < 1e-6);
-    assert.deepEqual(merged[1], across);
+    assert.equal(merged[0].box.rotation, 30);
+    assert.equal(merged[0].count, 2);
+    assert.ok(Math.abs(merged[0].box.width - 100) < 1e-6 && Math.abs(merged[0].box.height - 42) < 1e-6);
+    assert.deepEqual(merged[1], { box: across, count: 1 });
 });
 
 test('the typical thickness is the median short side', function () {

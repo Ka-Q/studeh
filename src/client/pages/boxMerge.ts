@@ -91,9 +91,15 @@ function boundingBoxOf(group: RotatedRect[]): RotatedRect {
     return rotation === 0 ? box : { ...box, rotation };
 }
 
+// A box and how many of the boxes given it is made of (1 for one left as it was).
+export interface MergedBox {
+    box: RotatedRect;
+    count: number;
+}
+
 // Boxes no further apart than the distance (see signedDistance, so a negative one only joins boxes overlapping by that much) become
 // one, chains of them too, as long as they are turned alike. A box left alone is returned as it is.
-export function mergeNearbyBoxes(boxes: readonly RotatedRect[], distance: number): RotatedRect[] {
+export function mergeNearbyBoxes(boxes: readonly RotatedRect[], distance: number): MergedBox[] {
     const parent = boxes.map((_, index) => index);
     function rootOf(index: number): number {
         while (parent[index] !== index) {
@@ -121,7 +127,7 @@ export function mergeNearbyBoxes(boxes: readonly RotatedRect[], distance: number
         const root = rootOf(index);
         groups.set(root, [...(groups.get(root) ?? []), box]);
     });
-    return [...groups.values()].map((group) => (group.length === 1 ? group[0] : boundingBoxOf(group)));
+    return [...groups.values()].map((group) => ({ box: group.length === 1 ? group[0] : boundingBoxOf(group), count: group.length }));
 }
 
 // How thick the boxes usually are (the median of their short sides): the unit a merge distance is measured in, so the same setting

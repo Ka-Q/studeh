@@ -83,10 +83,12 @@ test('merging joins the boxes within the distance, in line heights, and switchin
 
     controller.setMerge(0.5);
     assert.deepEqual(controller.preview()?.boxes, [{ x: 0, y: 0, width: 100, height: 22 }, BOXES[2]]);
+    assert.deepEqual(controller.preview()?.groupSizes, [2, 1]);
     controller.setMerge(0.1);
     assert.deepEqual(controller.preview()?.boxes, BOXES);
     controller.setMerge(null);
     assert.deepEqual(controller.preview()?.boxes, BOXES);
+    assert.deepEqual(controller.preview()?.groupSizes, [1, 1, 1]);
 });
 
 test('merging is kept when the length changes: the new boxes are merged too', function () {

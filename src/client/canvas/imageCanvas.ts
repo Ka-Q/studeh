@@ -65,11 +65,17 @@ interface DraggedArea {
     current: Point;
 }
 
+// A box of the preview, and how many boxes it is the merge of (1: none).
+export interface PreviewBox {
+    rect: RotatedRect;
+    merged: number;
+}
+
 export interface ImageCanvasHandle {
     update(shapes: RectangleShape[], selectedShapeIds: readonly string[], mode: Mode, numbering: NumberingMode, showNumbers: boolean, revealedShapeIds: ReadonlySet<string>): void;
     setFullscreen(isFullscreen: boolean): void;
     // Boxes shown over the page as a preview (edit mode only), instead of the page's own shapes; null ends the preview.
-    setPreviewBoxes(boxes: readonly RotatedRect[] | null): void;
+    setPreviewBoxes(boxes: readonly PreviewBox[] | null): void;
     destroy(): void;
     isReady(): boolean;
     getZoom(): number;
@@ -101,6 +107,9 @@ const ROTATION_SNAP_DEGREES = 45;
 const CLONE_OFFSET_PX = 12;
 const SHAPE_ACTIONS_GAP_PX = 8;
 const SHAPE_ACTIONS_EDGE_MARGIN_PX = 4;
+// A merged preview box is drawn apart from the others by more than its colour: a solid outline (the others are dashed) and a count.
+const MERGED_PREVIEW_BOX_STROKE_STYLE = 'rgb(194, 65, 12)';
+const MERGED_PREVIEW_BOX_FILL_STYLE = 'rgba(234, 88, 12, 0.34)';
 const PREVIEW_BOX_STROKE_STYLE = 'rgba(217, 119, 6, 0.95)';
 const PREVIEW_BOX_FILL_STYLE = 'rgba(245, 158, 11, 0.22)';
 const UNSELECTED_STROKE_STYLE = 'rgba(37, 99, 235, 0.62)';
@@ -155,6 +164,7 @@ const CUSTOM_UNSELECTED_FILL_ALPHA = 0.15;
 const CUSTOM_SELECTED_FILL_ALPHA = 0.5;
 // Auto-occlusion's boxes before they are applied: dashed and tinted, nothing yet a shape of the page.
 const previewBoxStyle: RectStyle = { fill: PREVIEW_BOX_FILL_STYLE, stroke: PREVIEW_BOX_STROKE_STYLE, lineWidth: 2, dash: [6, 4] };
+const mergedPreviewBoxStyle: RectStyle = { fill: MERGED_PREVIEW_BOX_FILL_STYLE, stroke: MERGED_PREVIEW_BOX_STROKE_STYLE, lineWidth: 3 };
 const marqueeStyle: RectStyle = { fill: null, stroke: SELECTED_STROKE_STYLE, lineWidth: 1 };
 function editStyleOf(shape: RectangleShape, isSelected: boolean): RectStyle {
     const { color } = shape;
@@ -219,7 +229,7 @@ export function mountImageCanvas(
     const elementSizes = new Map<HTMLElement, Size>();
     let viewport: Viewport = { zoom: 1, panX: 0, panY: 0 };
     let shapes = initialShapes;
-    let previewBoxes: readonly RotatedRect[] | null = null;
+    let previewBoxes: readonly PreviewBox[] | null = null;
     let selectedShapeIds = initialSelectedShapeIds;
     let mode = initialMode;
     let numbering = initialNumbering;
@@ -363,8 +373,13 @@ export function mountImageCanvas(
         }
         const highlightedIds = new Set(creatingRect ? [] : [...selectedShapeIds, ...shapeIdsTouchedBy(selectingArea)]);
         if (previewBoxes) {
-            for (const box of previewBoxes) {
-                drawRect(box, previewBoxStyle, false);
+            for (const { rect, merged } of previewBoxes) {
+                drawRect(rect, merged > 1 ? mergedPreviewBoxStyle : previewBoxStyle, false);
+            }
+            for (const { rect, merged } of previewBoxes) {
+                if (merged > 1) {
+                    drawCornerBadge(rect, `×${merged}`, MERGED_PREVIEW_BOX_STROKE_STYLE, 1, true);
+                }
             }
             return;
         }
@@ -661,20 +676,25 @@ export function mountImageCanvas(
 
     // Upright, hanging from the shape's corner nearest the top left of the page.
     function drawShapeNumber(rect: RotatedRect, shapeNumber: number, opacity: number): void {
+        drawCornerBadge(rect, String(shapeNumber), SHAPE_NUMBER_BACKGROUND_STYLE, opacity);
+    }
+
+    // Hanging from the corner, or with isAbove standing on it, so it covers none of the box's text.
+    function drawCornerBadge(rect: RotatedRect, text: string, background: string, opacity: number, isAbove = false): void {
         const topLeft = imageToCanvas(viewport, rectCorners(rect).reduce(function nearerTopLeft(best, corner) {
             return corner.x + corner.y < best.x + best.y ? corner : best;
         }));
-        const text = String(shapeNumber);
         context.save();
         context.globalAlpha = opacity;
         context.font = SHAPE_NUMBER_FONT;
         const width = Math.max(SHAPE_NUMBER_SIZE_PX, context.measureText(text).width + SHAPE_NUMBER_PADDING_PX * 2);
-        context.fillStyle = SHAPE_NUMBER_BACKGROUND_STYLE;
-        context.fillRect(topLeft.x, topLeft.y, width, SHAPE_NUMBER_SIZE_PX);
+        const top = isAbove ? topLeft.y - SHAPE_NUMBER_SIZE_PX : topLeft.y;
+        context.fillStyle = background;
+        context.fillRect(topLeft.x, top, width, SHAPE_NUMBER_SIZE_PX);
         context.fillStyle = SHAPE_NUMBER_TEXT_STYLE;
         context.textAlign = 'center';
         context.textBaseline = 'middle';
-        context.fillText(text, topLeft.x + width / 2, topLeft.y + SHAPE_NUMBER_SIZE_PX / 2);
+        context.fillText(text, topLeft.x + width / 2, top + SHAPE_NUMBER_SIZE_PX / 2);
         context.restore();
     }
 
@@ -1164,7 +1184,7 @@ export function mountImageCanvas(
             revealedShapeIds = nextRevealedShapeIds;
             draw();
         },
-        setPreviewBoxes(boxes: readonly RotatedRect[] | null): void {
+        setPreviewBoxes(boxes: readonly PreviewBox[] | null): void {
             previewBoxes = boxes;
             draw();
         },
