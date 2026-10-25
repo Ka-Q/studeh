@@ -1,5 +1,5 @@
 :root {
-    color-scheme: light;
+    color-scheme: light dark;
     /* The look shared by everything floating over the canvas: solid, so it stays readable over any page image. */
     --overlay-background: var(--color-bg);
     --overlay-border: 1px solid var(--color-border);
@@ -20,63 +20,30 @@
     --radius-sm: 4px;
     --radius-md: 8px;
 
-    --color-bg: #fafafa;
-    --color-surface: #d4d4d4;
-    --color-border: #c4c4c4;
-    --color-text: #1a1a1a;
-    --color-text-muted: #666666;
-    --color-accent: #2563eb;
+    --color-bg: light-dark(#fafafa, #1a1a1a);
+    --color-surface: light-dark(#d4d4d4, #242424);
+    --color-border: light-dark(#c4c4c4, #3a3a3a);
+    --color-text: light-dark(#1a1a1a, #eaeaea);
+    --color-text-muted: light-dark(#666666, #a0a0a0);
+    --color-accent: light-dark(#2563eb, #3b82f6);
     --color-accent-text: #ffffff;
-    --color-danger: #dc2626;
-    --color-danger-hover: #b91c1c;
-    --color-focus-ring: #2563eb;
-    --color-surface-hover: #c0c0c0;
+    --color-danger: light-dark(#dc2626, #ef4444);
+    --color-danger-hover: light-dark(#b91c1c, #f87171);
+    --color-focus-ring: light-dark(#2563eb, #60a5fa);
+    --color-surface-hover: light-dark(#c0c0c0, #323232);
     /* A surface picked up above the others: lighter than what it floats over in both themes. */
-    --color-surface-lifted: #fafafa;
-    --color-surface-secondary: #e7e7e7;
-    --color-canvas-vignette: rgba(0, 0, 0, 0.1);
+    --color-surface-lifted: light-dark(#fafafa, #323232);
+    --color-surface-secondary: light-dark(#e7e7e7, rgb(19, 19, 19));
+    --color-canvas-vignette: light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.4));
     accent-color: var(--color-accent);
+}
+
+[data-theme='light'] {
+    color-scheme: light;
 }
 
 [data-theme='dark'] {
     color-scheme: dark;
-
-    --color-bg: #1a1a1a;
-    --color-surface: #242424;
-    --color-border: #3a3a3a;
-    --color-text: #eaeaea;
-    --color-text-muted: #a0a0a0;
-    --color-accent: #3b82f6;
-    --color-accent-text: #ffffff;
-    --color-danger: #ef4444;
-    --color-danger-hover: #f87171;
-    --color-focus-ring: #60a5fa;
-    --color-surface-hover: #323232;
-    --color-surface-lifted: #323232;
-    --color-surface-secondary: rgb(19, 19, 19);
-    --color-canvas-vignette: rgba(0, 0, 0, 0.4);
-    accent-color: var(--color-accent);
-}
-
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme='light']) {
-        color-scheme: dark;
-
-        --color-bg: #1a1a1a;
-        --color-surface: #242424;
-        --color-border: #3a3a3a;
-        --color-text: #eaeaea;
-        --color-text-muted: #a0a0a0;
-        --color-accent: #3b82f6;
-        --color-accent-text: #ffffff;
-        --color-danger: #ef4444;
-        --color-danger-hover: #f87171;
-        --color-focus-ring: #60a5fa;
-        --color-surface-hover: #323232;
-    --color-surface-lifted: #323232;
-        --color-surface-secondary: rgb(19, 19, 19);
-        --color-canvas-vignette: rgba(0, 0, 0, 0.4);
-    }
 }
 
 *,
@@ -105,7 +72,7 @@ button {
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
-    border: 1px solid var(--color-border);
+    border: 1px solid transparent;
     border-radius: var(--radius-md);
     padding: var(--space-1) var(--space-3);
     background: var(--color-surface);
@@ -303,22 +270,7 @@ button:hover:not(:disabled) {
    drawing a box around every repeated action. */
 .icon-button {
     padding: var(--space-1);
-    border-color: transparent;
     background: transparent;
-}
-
-.icon-button:hover:not(:disabled) {
-    background: var(--color-surface-hover);
-}
-
-/* Keep the toolbar's labeled actions easy to spot while removing the heavy outline. */
-#toolbar .flex-row > button:not(.icon-button) {
-    border-color: transparent;
-    background: var(--color-surface);
-}
-
-#toolbar .flex-row > button:not(.icon-button):hover:not(:disabled) {
-    background: var(--color-surface-hover);
 }
 
 button:disabled {
@@ -1068,17 +1020,6 @@ dialog::backdrop {
     color: var(--color-text-muted);
 }
 
-.segmented-control button,
-.toggle-button.stage-controls-fixed {
-    border-color: transparent;
-    background: var(--color-surface);
-}
-
-.segmented-control button:hover:not(:disabled),
-.toggle-button.stage-controls-fixed:hover:not(:disabled) {
-    background: var(--color-surface-hover);
-}
-
 .segmented-control button {
     border-radius: 0;
     margin-left: -1px;
@@ -1118,7 +1059,6 @@ button.toggle-button[aria-pressed='true']:hover:not(:disabled) {
 
 button.stage-controls-fixed,
 .flex-row.stage-controls-fixed > button {
-    border-color: transparent;
     background: transparent;
 }
 
