@@ -21,7 +21,7 @@ export function initShortcutDispatch(): void {
 }
 
 function onKeyDown(event: KeyboardEvent): void {
-    if (event.repeat || isBlockedByInputOrDialog()) {
+    if (event.repeat || isBlockedByInputOrDialog(event)) {
         return;
     }
     const isFullscreen = document.fullscreenElement !== null;

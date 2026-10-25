@@ -1,6 +1,7 @@
 import { createDocument, saveDocument } from './api';
 import { canRedo, canUndo, getState, markClean, redo, renameDocument, setDocument, subscribe, undo } from './state';
 import { confirmDiscardIfDirty } from './discardGuard';
+import { cancelTransientState, hasTransientState, onTransientStateChange } from './transientState';
 import { browseDialog } from './browseDialog';
 import { newDocumentDialog } from '../dialogs/newDocumentDialog';
 import { requireElement } from '../dom';
@@ -36,24 +37,42 @@ export function initToolbar(): void {
     newButton.addEventListener('click', onNew);
     browseButton.addEventListener('click', browseDialog);
     saveButton.addEventListener('click', onSave);
-    undoButton.addEventListener('click', undo);
-    redoButton.addEventListener('click', redo);
+    undoButton.addEventListener('click', undoOrCancel);
+    redoButton.addEventListener('click', redoOrCancel);
     renameButton.addEventListener('click', onRenameDocument);
     titleEl.addEventListener('dblclick', onRenameDocument);
     registerShortcut('renameDocument', onRenameDocument);
-    registerShortcut('undo', undo);
-    registerShortcut('redo', redo);
+    registerShortcut('undo', undoOrCancel);
+    registerShortcut('redo', redoOrCancel);
+
+    function updateHistoryButtons(): void {
+        undoButton.toggleAttribute('disabled', !canUndo() && !hasTransientState());
+        redoButton.toggleAttribute('disabled', !canRedo() && !hasTransientState());
+    }
+    onTransientStateChange(updateHistoryButtons);
 
     subscribe(function renderOnChange(state) {
         titleEl.textContent = state.document?.name ?? 'No document open';
         titleEl.title = state.document?.name ?? '';
         saveButton.toggleAttribute('disabled', !state.document);
         saveButton.classList.toggle('dirty', state.dirty);
-        undoButton.toggleAttribute('disabled', !canUndo());
-        redoButton.toggleAttribute('disabled', !canRedo());
+        updateHistoryButtons();
         renameButton.hidden = !state.document;
         updateSaveStatus(state.dirty);
     });
+}
+
+// With something shown but not yet in the document, undo and redo only end that.
+function undoOrCancel(): void {
+    if (!cancelTransientState()) {
+        undo();
+    }
+}
+
+function redoOrCancel(): void {
+    if (!cancelTransientState()) {
+        redo();
+    }
 }
 
 function labelIconButton(button: HTMLElement, label: string): void {

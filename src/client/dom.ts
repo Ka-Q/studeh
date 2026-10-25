@@ -17,14 +17,22 @@ export function primaryModifierLabel(): 'Ctrl' | 'Cmd' {
     return IS_MAC_PLATFORM ? 'Cmd' : 'Ctrl';
 }
 
-export function isBlockedByInputOrDialog(): boolean {
-    return isTypingTarget() || document.querySelector('dialog[open]') !== null;
+// The keys a focused slider moves by: shortcuts on them wait while it has focus, so one key doesn't move a slider and the canvas.
+const SLIDER_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown']);
+
+// Whether shortcuts wait: in a field that takes typing (its keys, such as Ctrl+Z, are the field's own) or an open dialog. A focused slider
+// takes no typing, so only the keys it moves by wait, and the other shortcuts (undo, save) work.
+export function isBlockedByInputOrDialog(event?: KeyboardEvent): boolean {
+    return isTypingTarget(event) || document.querySelector('dialog[open]') !== null;
 }
 
-function isTypingTarget(): boolean {
+function isTypingTarget(event?: KeyboardEvent): boolean {
     const active = document.activeElement;
     if (!active) {
         return false;
+    }
+    if (active instanceof HTMLInputElement && active.type === 'range') {
+        return event !== undefined && SLIDER_KEYS.has(event.key);
     }
     return active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || (active as HTMLElement).isContentEditable;
 }

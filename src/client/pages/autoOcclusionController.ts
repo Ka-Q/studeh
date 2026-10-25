@@ -17,12 +17,14 @@ export const MERGE_LINES_LIMITS = { min: MERGE_LINES_RANGE.min, max: 20 };
 // A merge distance in lines, or null for no merging.
 export type MergeSetting = number | null;
 
-// What a preview is for: the page and image the detection was started for.
+// What a preview is for: the page and image the detection was started for, and the page's shapes then (any value that is another one
+// once the shapes change: a preview replacing shapes that are no longer there would mislead).
 export interface AutoOcclusionTarget {
     documentId: string;
     pageId: string;
     imageFile: string;
     imageUrl: string;
+    shapes: unknown;
 }
 
 // Auto-occlusion's boxes before they are applied, with the settings that gave them: foundBoxes are the analysis's for the minimum
@@ -40,7 +42,7 @@ interface AutoOcclusionDependencies {
     // Asks the analysis for the boxes of a minimum length; calls back with them (at once when it has them already).
     findBoxes(imageUrl: string, minLetters: number, onFound: (boxes: RotatedRect[]) => void): void;
     applyBoxes(pageId: string, boxes: RotatedRect[]): void;
-    // Whether the page, image, mode and document are still those a preview was made for.
+    // Whether the page, its image and shapes, the mode and the document are still those a preview was made for.
     isStillValid(target: AutoOcclusionTarget): boolean;
     // A preview opened or closed, or detection started or ended: the page is drawn again.
     onChange(): void;

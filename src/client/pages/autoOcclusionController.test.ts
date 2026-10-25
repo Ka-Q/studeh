@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import type { RotatedRect } from '@studeh/image-analysis';
 import { createAutoOcclusionController, MIN_LETTERS_RANGE, type AutoOcclusionTarget } from './autoOcclusionController';
 
-const TARGET: AutoOcclusionTarget = { documentId: 'doc-1', pageId: 'page-1', imageFile: 'a.png', imageUrl: 'http://x/a.png' };
+const TARGET: AutoOcclusionTarget = { documentId: 'doc-1', pageId: 'page-1', imageFile: 'a.png', imageUrl: 'http://x/a.png', shapes: [] };
 
 // Two label boxes one under the other, 2 apart, and a third far away.
 const BOXES: RotatedRect[] = [{ x: 0, y: 0, width: 100, height: 10 }, { x: 0, y: 12, width: 100, height: 10 }, { x: 500, y: 500, width: 100, height: 10 }];

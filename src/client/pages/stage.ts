@@ -28,6 +28,7 @@ import { initAnalysisStatus } from '../canvas/analysisStatus';
 import { imageAnalysis } from '@studeh/image-analysis';
 import { buildAutoOcclusionPreviewBar, type AutoOcclusionPreviewBar } from './autoOcclusionPreview';
 import { createAutoOcclusionController } from './autoOcclusionController';
+import { registerTransientState, transientStateChanged } from '../document/transientState';
 import { confirmDialog } from '../dialogs/confirmDialog';
 import { createModeToggle, type ModeToggleHandle } from '../modes/modeToggle';
 import { browseDialog } from '../document/browseDialog';
@@ -72,6 +73,7 @@ let areListenersOn = false;
 let wasPreviewing = false;
 
 export function initStage(): void {
+    registerTransientState({ isActive: () => autoOcclusion.preview() !== null, cancel: autoOcclusion.cancel });
     const container = requireElement('canvas-area');
     container.innerHTML = '';
     controlsEl = document.createElement('div');
@@ -331,14 +333,14 @@ function buildClearOcclusionsButton(page: Page): HTMLElement {
 function autoOcclude(documentId: string, page: Page): void {
     if (page.image) {
         const imageUrl = new URL(pageImageUrl(documentId, page.image), document.baseURI).href;
-        autoOcclusion.start({ documentId, pageId: page.id, imageFile: page.image.file, imageUrl });
+        autoOcclusion.start({ documentId, pageId: page.id, imageFile: page.image.file, imageUrl, shapes: page.shapes });
     }
 }
 
-function isPreviewStillValid(target: { documentId: string; pageId: string; imageFile: string }): boolean {
+function isPreviewStillValid(target: { documentId: string; pageId: string; imageFile: string; shapes: unknown }): boolean {
     const { document: doc } = getState();
     const page = getActivePage();
-    return isEditMode() && doc?.id === target.documentId && page?.id === target.pageId && page.image?.file === target.imageFile;
+    return isEditMode() && doc?.id === target.documentId && page?.id === target.pageId && page.image?.file === target.imageFile && page.shapes === target.shapes;
 }
 
 // The sliders moved: only the boxes and their count are drawn again, as drawing the controls again would take the slider out of the
@@ -367,6 +369,7 @@ function syncPreviewListeners(): void {
         return;
     }
     areListenersOn = isPreviewing;
+    transientStateChanged();
     if (isPreviewing) {
         document.addEventListener('keydown', handlePreviewKey, true);
         canvasBody.addEventListener('pointerdown', ignoreEditsOnImage, true);

@@ -163,6 +163,70 @@ test('merging joins boxes that lie within the distance, live, and applying gives
     expect(covers(box, 40, 45) && covers(box, 40, 90)).toBe(true);
 });
 
+test('the undo button ends the preview first and leaves the history alone; the next press undoes', async ({ page }) => {
+    const docId = await openLabelsPage(page, 'Auto Occlude Undo Under Preview Doc');
+    const imageRect = await imageOnScreenRect(page, LABELS_IMAGE_SIZE);
+    await dragOnCanvas(page, { x: imageRect.left + 160, y: imageRect.top + 100 }, { x: imageRect.left + 200, y: imageRect.top + 140 });
+    const bar = await openPreview(page);
+
+    await page.locator('#btn-undo').click();
+
+    await expect(bar.slider).not.toBeVisible();
+    await expect(page.getByRole('button', { name: 'Auto-occlude' })).toBeVisible();
+    expect(await savedShapes(page, docId)).toHaveLength(1);
+    await page.locator('#btn-undo').click();
+    expect(await savedShapes(page, docId)).toHaveLength(0);
+});
+
+test('Ctrl+Z and redo work with a slider focused: they end the preview first, then act as usual', async ({ page }) => {
+    const docId = await openLabelsPage(page, 'Auto Occlude Keyboard Undo Doc');
+    const imageRect = await imageOnScreenRect(page, LABELS_IMAGE_SIZE);
+    await dragOnCanvas(page, { x: imageRect.left + 160, y: imageRect.top + 100 }, { x: imageRect.left + 200, y: imageRect.top + 140 });
+
+    let bar = await openPreview(page);
+    await expect(bar.slider).toBeFocused();
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect(bar.slider).not.toBeVisible();
+    expect(await savedShapes(page, docId)).toHaveLength(1);
+    await page.keyboard.press('ControlOrMeta+z');
+    expect(await savedShapes(page, docId)).toHaveLength(0);
+
+    bar = await openPreview(page);
+    await expect(bar.slider).toBeFocused();
+    await page.keyboard.press('ControlOrMeta+Shift+z');
+    await expect(bar.slider).not.toBeVisible();
+    expect(await savedShapes(page, docId)).toHaveLength(0);
+    await page.keyboard.press('ControlOrMeta+Shift+z');
+    expect(await savedShapes(page, docId)).toHaveLength(1);
+});
+
+test('with nothing to undo, the undo button is still available to end a preview, and is disabled again after', async ({ page }) => {
+    await openLabelsPage(page, 'Auto Occlude No History Doc');
+    await saveDocument(page);
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Auto-occlude' })).toBeVisible();
+    const undoButton = page.locator('#btn-undo');
+    await expect(undoButton).toBeDisabled();
+
+    const bar = await openPreview(page);
+    await expect(undoButton).toBeEnabled();
+    await undoButton.click();
+
+    await expect(bar.slider).not.toBeVisible();
+    await expect(undoButton).toBeDisabled();
+});
+
+test('the arrow keys on a focused slider move it and do nothing else', async ({ page }) => {
+    await openLabelsPage(page, 'Auto Occlude Arrow Doc');
+    const bar = await openPreview(page);
+    await says(bar, 'Minimum length 24 units');
+
+    await page.keyboard.press('ArrowRight');
+
+    await says(bar, 'Minimum length 23 units');
+    await expect(bar.slider).toBeVisible();
+});
+
 test('keyboard focus goes to the length slider when the preview opens and back to the button when it closes', async ({ page }) => {
     await openLabelsPage(page, 'Auto Occlude Focus Doc');
 
