@@ -10,6 +10,7 @@ import { test } from 'node:test';
 
 const {
     addPage,
+    addShape,
     canRedo,
     canUndo,
     cloneSelectedShapes,
@@ -396,7 +397,7 @@ test('undoing an added page goes to the page before it', function () {
     assert.equal(getState().activePageId, 'page-1');
 });
 
-test('undo in Edit mode selects the shapes it brought back or changed; in Study mode nothing', function () {
+test('undo in Edit mode selects what was selected before the action, as redo what it left selected; in Study mode nothing', function () {
     setDocument(fixtureDocumentWithShapes(['a', 'b', 'c']));
     selectShapes(['a', 'b']);
     deleteSelectedShapes();
@@ -410,4 +411,31 @@ test('undo in Edit mode selects the shapes it brought back or changed; in Study 
     undo();
     assert.deepEqual(getState().selectedShapeIds, []);
     assert.equal(getState().document!.pages[0].shapes[2].x, 10);
+});
+
+test('undoing a drawn shape selects the one drawn before it, and redo selects the shape again', function () {
+    setDocument(fixtureDocument(['page-1']));
+    addShape('page-1', { x: 0, y: 0, width: 10, height: 10 });
+    const first = getState().selectedShapeIds[0];
+    addShape('page-1', { x: 50, y: 50, width: 10, height: 10 });
+    const second = getState().selectedShapeIds[0];
+
+    undo();
+    assert.deepEqual(getState().selectedShapeIds, [first]);
+    redo();
+    assert.deepEqual(getState().selectedShapeIds, [second]);
+    undo();
+    undo();
+    assert.deepEqual(getState().selectedShapeIds, []);
+});
+
+test('undoing a clone selects the shape that was cloned', function () {
+    setDocument(fixtureDocumentWithShapes(['a', 'b']));
+    selectShapes(['a']);
+    cloneSelectedShapes(12, 12);
+    assert.equal(getState().selectedShapeIds.length, 1);
+
+    undo();
+
+    assert.deepEqual(getState().selectedShapeIds, ['a']);
 });

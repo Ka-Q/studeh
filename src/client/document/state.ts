@@ -15,10 +15,13 @@ export interface AppState {
 
 type Listener = (state: AppState) => void;
 
-// A document the undo or redo history goes back to, and the page its change was made on (null: the whole document's).
+// A document the undo or redo history goes back to, the page its change was made on (null: the whole document's), and the shapes that
+// were selected when it was left, which a step back selects again (those of them still on the page): after undoing a drawn shape the one
+// drawn before it is selected, after undoing a delete the shapes come back selected, and redo selects what the action left selected.
 interface HistoryEntry {
     document: DocumentManifest;
     pageId: string | null;
+    selection: readonly string[];
 }
 
 const HISTORY_LIMIT = 200;
@@ -396,10 +399,10 @@ function stepHistory(from: HistoryEntry[], to: HistoryEntry[]): void {
     if (!entry || !previous) {
         return;
     }
-    to.push({ document: previous, pageId: entry.pageId });
+    to.push({ document: previous, pageId: entry.pageId, selection: state.selectedShapeIds });
     replaceDocument(entry.document);
     state.activePageId = activePageIdAfterStep(previous, entry.pageId);
-    state.selectedShapeIds = state.mode === 'edit' ? shapeIdsChangedOnPage(previous, state.activePageId) : [];
+    state.selectedShapeIds = state.mode === 'edit' ? shapeIdsOnActivePage(entry.selection) : [];
     notify();
 }
 
@@ -418,14 +421,9 @@ function activePageIdAfterStep(previous: DocumentManifest, changedPageId: string
 }
 
 // Shapes are frozen and shared between documents, so a shape not in the previous document is one the step changed.
-function shapeIdsChangedOnPage(previous: DocumentManifest, pageId: string | null): string[] {
-    const page = pageId ? findPage(pageId) : null;
-    const previousPage = previous.pages.find((candidate) => candidate.id === pageId);
-    if (!page || !previousPage) {
-        return [];
-    }
-    const previousShapes = new Set(previousPage.shapes);
-    return page.shapes.filter((shape) => !previousShapes.has(shape)).map((shape) => shape.id);
+function shapeIdsOnActivePage(shapeIds: readonly string[]): string[] {
+    const page = getActivePage();
+    return shapeIds.filter((shapeId) => page?.shapes.some((shape) => shape.id === shapeId));
 }
 
 export function documentUrlPath(document: DocumentManifest | null): string {
@@ -506,7 +504,7 @@ function commitDocument(document: DocumentManifest, pageId: string | null): void
     if (!previous || deepEqual(document, previous)) {
         return;
     }
-    undoHistory.push({ document: previous, pageId });
+    undoHistory.push({ document: previous, pageId, selection: state.selectedShapeIds });
     if (undoHistory.length > HISTORY_LIMIT) {
         undoHistory.shift();
     }
