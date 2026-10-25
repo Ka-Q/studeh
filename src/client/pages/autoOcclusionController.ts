@@ -1,5 +1,5 @@
 import type { RotatedRect } from '@studeh/image-analysis';
-import { mergeNearbyBoxes, typicalThickness } from './boxMerge';
+import { mergeNearbyBoxes, typicalThickness, type MergeDirection } from './boxMerge';
 
 // The fewest letters wide a label may be, as auto-occlusion takes it (see LabelOptions). The length slider runs the other way round:
 // from the longest labels only, at the left, where there are the fewest boxes, to the shortest at the right, so sliding right shows more
@@ -16,6 +16,7 @@ export const MERGE_LINES_LIMITS = { min: MERGE_LINES_RANGE.min, max: 20 };
 
 // A merge distance in lines, or null for no merging.
 export type MergeSetting = number | null;
+export type { MergeDirection };
 
 // What a preview is for: the page and image the detection was started for, and the page's shapes then (any value that is another one
 // once the shapes change: a preview replacing shapes that are no longer there would mislead).
@@ -33,6 +34,7 @@ export interface AutoOcclusionTarget {
 export interface AutoOcclusionPreview extends AutoOcclusionTarget {
     minLetters: number;
     merge: MergeSetting;
+    mergeDirection: MergeDirection;
     foundBoxes: RotatedRect[];
     boxes: RotatedRect[];
     groupSizes: number[];
@@ -54,6 +56,7 @@ export interface AutoOcclusionController {
     start(target: AutoOcclusionTarget): void;
     setMinLetters(minLetters: number): void;
     setMerge(merge: MergeSetting): void;
+    setMergeDirection(direction: MergeDirection): void;
     apply(): void;
     cancel(): void;
     // Ends a preview that is no longer valid, without a redraw (it is called while drawing); whether it did.
@@ -72,7 +75,7 @@ export function createAutoOcclusionController(dependencies: AutoOcclusionDepende
     function showBoxes(preview: AutoOcclusionPreview): void {
         const shown = preview.merge === null
             ? preview.foundBoxes.map((box) => ({ box, count: 1 }))
-            : mergeNearbyBoxes(preview.foundBoxes, preview.merge * typicalThickness(preview.foundBoxes));
+            : mergeNearbyBoxes(preview.foundBoxes, preview.merge * typicalThickness(preview.foundBoxes), preview.mergeDirection);
         preview.boxes = shown.map((entry) => entry.box);
         preview.groupSizes = shown.map((entry) => entry.count);
         dependencies.onBoxesChange();
@@ -95,7 +98,7 @@ export function createAutoOcclusionController(dependencies: AutoOcclusionDepende
             dependencies.findBoxes(target.imageUrl, MIN_LETTERS_RANGE.max, (boxes) => {
                 detectingPageIds.delete(target.pageId);
                 if (!current && dependencies.isStillValid(target)) {
-                    current = { ...target, minLetters: MIN_LETTERS_RANGE.max, merge: null, foundBoxes: boxes, boxes, groupSizes: boxes.map(() => 1) };
+                    current = { ...target, minLetters: MIN_LETTERS_RANGE.max, merge: null, mergeDirection: 'all', foundBoxes: boxes, boxes, groupSizes: boxes.map(() => 1) };
                 }
                 dependencies.onChange();
             });
@@ -117,6 +120,12 @@ export function createAutoOcclusionController(dependencies: AutoOcclusionDepende
         setMerge(merge) {
             if (current) {
                 current.merge = merge;
+                showBoxes(current);
+            }
+        },
+        setMergeDirection(direction) {
+            if (current) {
+                current.mergeDirection = direction;
                 showBoxes(current);
             }
         },

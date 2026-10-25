@@ -91,6 +91,24 @@ test('merging joins the boxes within the distance, in line heights, and switchin
     assert.deepEqual(controller.preview()?.groupSizes, [1, 1, 1]);
 });
 
+test('the merge direction limits what is merged, and is kept as the distance moves', function () {
+    const side = [{ x: 0, y: 0, width: 100, height: 10 }, { x: 102, y: 0, width: 100, height: 10 }, { x: 0, y: 12, width: 100, height: 10 }];
+    const { controller, asked } = setup();
+    controller.start(TARGET);
+    asked[0].answer(side);
+
+    controller.setMerge(0.5);
+    assert.deepEqual(controller.preview()?.groupSizes, [3]);
+    controller.setMergeDirection('horizontal');
+    assert.deepEqual(controller.preview()?.groupSizes, [2, 1]);
+    controller.setMerge(0.1);
+    assert.deepEqual(controller.preview()?.groupSizes, [1, 1, 1]);
+    controller.setMerge(0.5);
+    controller.setMergeDirection('vertical');
+    assert.deepEqual(controller.preview()?.groupSizes, [2, 1]);
+    assert.equal(controller.preview()?.mergeDirection, 'vertical');
+});
+
 test('merging is kept when the length changes: the new boxes are merged too', function () {
     const { controller, asked } = setup();
     controller.start(TARGET);

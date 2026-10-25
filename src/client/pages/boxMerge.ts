@@ -66,6 +66,46 @@ export function signedDistance(a: RotatedRect, b: RotatedRect): number {
     return -leastOverlap;
 }
 
+// Which neighbours merge: any near ones, only those side by side (along a line), or only those one above the other.
+export type MergeDirection = 'all' | 'horizontal' | 'vertical';
+
+// Two boxes side by side or one above the other must share at least this much of the smaller one's extent across, or they are not in a
+// line or a column at all (a long label and a short one just off its end).
+const MIN_SHARED_EXTENT_RATIO = 0.5;
+
+interface Extent {
+    min: number;
+    max: number;
+}
+
+// A box's extent along each of two perpendicular axes, the first turned by a degrees.
+function extentsOf(box: RotatedRect, angle: number): { along: Extent; across: Extent } {
+    const corners = cornersOf(box);
+    const [minAlong, maxAlong] = projectionOf(corners, { x: Math.cos(angle), y: Math.sin(angle) });
+    const [minAcross, maxAcross] = projectionOf(corners, { x: -Math.sin(angle), y: Math.cos(angle) });
+    return { along: { min: minAlong, max: maxAlong }, across: { min: minAcross, max: maxAcross } };
+}
+
+function overlapOf(a: Extent, b: Extent): number {
+    return Math.min(a.max, b.max) - Math.max(a.min, b.min);
+}
+
+// The distance between two boxes along one direction, in the frame of the first box (turned as it is): the gap between their extents along
+// it, or minus their overlap there, when they share enough of their extent across it; otherwise Infinity.
+export function directedDistance(a: RotatedRect, b: RotatedRect, direction: 'horizontal' | 'vertical'): number {
+    const angle = ((a.rotation ?? 0) * Math.PI) / 180;
+    const extentsA = extentsOf(a, angle);
+    const extentsB = extentsOf(b, angle);
+    const [alongA, alongB, acrossA, acrossB] = direction === 'horizontal'
+        ? [extentsA.along, extentsB.along, extentsA.across, extentsB.across]
+        : [extentsA.across, extentsB.across, extentsA.along, extentsB.along];
+    const shared = overlapOf(acrossA, acrossB);
+    if (shared < MIN_SHARED_EXTENT_RATIO * Math.min(acrossA.max - acrossA.min, acrossB.max - acrossB.min)) {
+        return Infinity;
+    }
+    return -overlapOf(alongA, alongB);
+}
+
 function isParallel(a: RotatedRect, b: RotatedRect): boolean {
     const difference = Math.abs(((a.rotation ?? 0) - (b.rotation ?? 0)) % 180);
     return Math.min(difference, 180 - difference) <= MAX_MERGED_ROTATION_DIFFERENCE_DEGREES;
@@ -98,8 +138,9 @@ export interface MergedBox {
 }
 
 // Boxes no further apart than the distance (see signedDistance, so a negative one only joins boxes overlapping by that much) become
-// one, chains of them too, as long as they are turned alike. A box left alone is returned as it is.
-export function mergeNearbyBoxes(boxes: readonly RotatedRect[], distance: number): MergedBox[] {
+// one, chains of them too, as long as they are turned alike; in one direction only, only boxes side by side or one above the other (in
+// the first one's own frame). A box left alone is returned as it is.
+export function mergeNearbyBoxes(boxes: readonly RotatedRect[], distance: number, direction: MergeDirection = 'all'): MergedBox[] {
     const parent = boxes.map((_, index) => index);
     function rootOf(index: number): number {
         while (parent[index] !== index) {
@@ -111,13 +152,14 @@ export function mergeNearbyBoxes(boxes: readonly RotatedRect[], distance: number
     // Each box's enclosing circle: boxes whose circles are further apart than the distance (and apart at all) are too far for the exact,
     // dearer test, which makes a page with hundreds of boxes quick to merge.
     const circles = boxes.map((box) => ({ x: box.x + box.width / 2, y: box.y + box.height / 2, radius: Math.hypot(box.width, box.height) / 2 }));
+    const distanceBetweenBoxes = (a: RotatedRect, b: RotatedRect) => (direction === 'all' ? signedDistance(a, b) : directedDistance(a, b, direction));
     function isNear(a: number, b: number): boolean {
         const gap = Math.hypot(circles[a].x - circles[b].x, circles[a].y - circles[b].y) - circles[a].radius - circles[b].radius;
         return gap <= Math.max(distance, 0);
     }
     for (let a = 0; a < boxes.length; a++) {
         for (let b = a + 1; b < boxes.length; b++) {
-            if (rootOf(a) !== rootOf(b) && isNear(a, b) && isParallel(boxes[a], boxes[b]) && signedDistance(boxes[a], boxes[b]) <= distance) {
+            if (rootOf(a) !== rootOf(b) && isNear(a, b) && isParallel(boxes[a], boxes[b]) && distanceBetweenBoxes(boxes[a], boxes[b]) <= distance) {
                 parent[rootOf(b)] = rootOf(a);
             }
         }

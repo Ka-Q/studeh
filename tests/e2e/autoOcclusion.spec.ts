@@ -227,6 +227,41 @@ test('the arrow keys on a focused slider move it and do nothing else', async ({ 
     await expect(bar.slider).toBeVisible();
 });
 
+test('the merge direction limits merging to labels along a line or stacked, and is available only with merging on', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('Auto Occlude Direction Doc'));
+    await addPage(page);
+    await assignActivePageImage(page, CLOSE_LABELS_IMAGE_PATH);
+    const bar = await openPreview(page);
+    await showAllBoxes(page, bar);
+    const every = page.getByRole('button', { name: 'Merge in every direction' });
+    const along = page.getByRole('button', { name: /^Merge only along a line/ });
+    const across = page.getByRole('button', { name: /^Merge only across lines/ });
+    await expect(every).toBeDisabled();
+    await expect(across).toBeDisabled();
+    await expect(every).toHaveAttribute('aria-pressed', 'true');
+    await says(bar, '2 boxes');
+
+    // The two labels are one under the other: along a line they stay apart, across lines they join.
+    await bar.merge.focus();
+    await page.keyboard.press('End');
+    await expect(every).toBeEnabled();
+    await says(bar, '1 box');
+    await along.click();
+    await expect(along).toHaveAttribute('aria-pressed', 'true');
+    await expect(every).toHaveAttribute('aria-pressed', 'false');
+    await says(bar, '2 boxes');
+    await across.click();
+    await says(bar, '1 box');
+    await every.click();
+    await says(bar, '1 box');
+    await page.keyboard.press('Home');
+    await bar.merge.focus();
+    await page.keyboard.press('Home');
+    await expect(across).toBeDisabled();
+    await says(bar, '2 boxes');
+});
+
 test('keyboard focus goes to the length slider when the preview opens and back to the button when it closes', async ({ page }) => {
     await openLabelsPage(page, 'Auto Occlude Focus Doc');
 

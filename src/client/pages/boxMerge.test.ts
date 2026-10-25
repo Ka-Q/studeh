@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mergeNearbyBoxes, signedDistance, typicalThickness } from './boxMerge';
+import { directedDistance, mergeNearbyBoxes, signedDistance, typicalThickness } from './boxMerge';
 
 test('boxes apart are as far as the gap between their edges, touching ones 0, overlapping ones minus the overlap', function () {
     assert.equal(signedDistance({ x: 0, y: 0, width: 10, height: 10 }, { x: 13, y: 0, width: 10, height: 10 }), 3);
@@ -79,4 +79,44 @@ test('merging gives the same groups as testing every pair exactly, for boxes upr
     for (const distance of [-6, -1, 0, 3, 12, 40]) {
         assert.equal(mergeNearbyBoxes(boxes, distance).length, exact(distance), `distance ${distance}`);
     }
+});
+
+test('in one direction only boxes side by side, or one above the other, are near, and only when they share most of their extent across', function () {
+    const left = { x: 0, y: 0, width: 50, height: 10 };
+    const right = { x: 54, y: 0, width: 50, height: 10 };
+    const below = { x: 0, y: 14, width: 50, height: 10 };
+    const offBelow = { x: 40, y: 14, width: 50, height: 10 };
+
+    assert.equal(directedDistance(left, right, 'horizontal'), 4);
+    assert.equal(directedDistance(left, right, 'vertical'), Infinity);
+    assert.equal(directedDistance(left, below, 'vertical'), 4);
+    assert.equal(directedDistance(left, below, 'horizontal'), Infinity);
+    assert.equal(directedDistance(left, offBelow, 'vertical'), Infinity);
+    assert.equal(directedDistance(left, { x: 46, y: 0, width: 50, height: 10 }, 'horizontal'), -4);
+});
+
+test('merging in a direction joins only what lies that way, and chains along it', function () {
+    const boxes = [
+        { x: 0, y: 0, width: 50, height: 10 }, { x: 54, y: 0, width: 50, height: 10 }, { x: 108, y: 0, width: 50, height: 10 },
+        { x: 0, y: 14, width: 50, height: 10 }, { x: 0, y: 28, width: 50, height: 10 }
+    ];
+
+    assert.deepEqual(mergeNearbyBoxes(boxes, 4, 'horizontal').map((merged) => [merged.box.width, merged.box.height, merged.count]), [[158, 10, 3], [50, 10, 1], [50, 10, 1]]);
+    assert.deepEqual(mergeNearbyBoxes(boxes, 4, 'vertical').map((merged) => [merged.box.width, merged.box.height, merged.count]), [[50, 38, 3], [50, 10, 1], [50, 10, 1]]);
+    assert.equal(mergeNearbyBoxes(boxes, 4, 'all').length, 1);
+    assert.equal(mergeNearbyBoxes(boxes, 3, 'horizontal').length, 5);
+});
+
+test('a label turned a quarter turn is merged by its own line, not the page\'s, in a direction', function () {
+    // Two bars turned 90 degrees about their centres: each 50 long up the page, 10 across.
+    const bar = (x: number, y: number) => ({ x: x - 25, y: y + 20, width: 50, height: 10, rotation: 90 });
+    const columnTop = bar(100, 0);
+    const columnBelow = bar(100, 54);
+    const columnBeside = bar(114, 0);
+
+    // Horizontal is along the text as it runs (here up the page), vertical across its lines (here side by side on the page).
+    assert.equal(mergeNearbyBoxes([columnTop, columnBelow], 4, 'horizontal').length, 1);
+    assert.equal(mergeNearbyBoxes([columnTop, columnBelow], 4, 'vertical').length, 2);
+    assert.equal(mergeNearbyBoxes([columnTop, columnBeside], 4, 'vertical').length, 1);
+    assert.equal(mergeNearbyBoxes([columnTop, columnBeside], 4, 'horizontal').length, 2);
 });

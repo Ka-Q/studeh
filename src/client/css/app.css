@@ -201,6 +201,21 @@ button:hover:not(:disabled) {
     mask-image: url('/icons/sun.svg');
 }
 
+.icon-merge-all {
+    -webkit-mask-image: url('/icons/merge-all.svg');
+    mask-image: url('/icons/merge-all.svg');
+}
+
+.icon-merge-horizontal {
+    -webkit-mask-image: url('/icons/merge-horizontal.svg');
+    mask-image: url('/icons/merge-horizontal.svg');
+}
+
+.icon-merge-vertical {
+    -webkit-mask-image: url('/icons/merge-vertical.svg');
+    mask-image: url('/icons/merge-vertical.svg');
+}
+
 .icon-apply {
     -webkit-mask-image: url('/icons/apply.svg');
     mask-image: url('/icons/apply.svg');

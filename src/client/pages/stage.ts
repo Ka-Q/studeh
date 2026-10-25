@@ -249,9 +249,10 @@ function renderControls(documentId: string, page: Page): void {
     controlsEl.innerHTML = '';
     const preview = autoOcclusion.preview();
     if (preview) {
-        previewBar = buildAutoOcclusionPreviewBar(preview.minLetters, preview.merge, preview.boxes.length, page.shapes.length, {
+        previewBar = buildAutoOcclusionPreviewBar(preview.minLetters, preview.merge, preview.mergeDirection, preview.boxes.length, page.shapes.length, {
             onMinLettersChange: autoOcclusion.setMinLetters,
             onMergeChange: autoOcclusion.setMerge,
+            onMergeDirectionChange: autoOcclusion.setMergeDirection,
             onApply: autoOcclusion.apply,
             onCancel: autoOcclusion.cancel
         });

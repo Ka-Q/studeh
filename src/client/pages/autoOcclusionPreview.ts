@@ -1,8 +1,15 @@
 import { iconSpan } from '../dom';
-import { MERGE_LINES_LIMITS, MERGE_LINES_RANGE, MIN_LETTERS_RANGE, type MergeSetting } from './autoOcclusionController';
+import { MERGE_LINES_LIMITS, MERGE_LINES_RANGE, MIN_LETTERS_RANGE, type MergeDirection, type MergeSetting } from './autoOcclusionController';
 
 // The merge slider has one more position than there are distances: the first, where nothing is merged.
 const MERGE_POSITIONS = Math.round((MERGE_LINES_RANGE.max - MERGE_LINES_RANGE.min) / MERGE_LINES_RANGE.step) + 1;
+
+// The icons and hints of the merge directions. Along and across are the text's own: for a label turned up the page, along runs up it.
+const DIRECTIONS: { direction: MergeDirection; icon: string; hint: string }[] = [
+    { direction: 'all', icon: 'icon-merge-all', hint: 'Merge in every direction' },
+    { direction: 'horizontal', icon: 'icon-merge-horizontal', hint: 'Merge only along a line: words and labels side by side, as the text runs' },
+    { direction: 'vertical', icon: 'icon-merge-vertical', hint: 'Merge only across lines: labels and lines stacked, one above the other' }
+];
 
 function minLettersAt(sliderValue: number): number {
     return MIN_LETTERS_RANGE.max - sliderValue;
@@ -86,6 +93,7 @@ export interface AutoOcclusionPreviewBar {
 interface AutoOcclusionPreviewHandlers {
     onMinLettersChange(minLetters: number): void;
     onMergeChange(merge: MergeSetting): void;
+    onMergeDirectionChange(direction: MergeDirection): void;
     onApply(): void;
     onCancel(): void;
 }
@@ -95,6 +103,7 @@ interface AutoOcclusionPreviewHandlers {
 export function buildAutoOcclusionPreviewBar(
     minLetters: number,
     merge: MergeSetting,
+    mergeDirection: MergeDirection,
     boxCount: number,
     replacedCount: number,
     handlers: AutoOcclusionPreviewHandlers
@@ -191,6 +200,7 @@ export function buildAutoOcclusionPreviewBar(
     moveFieldByWheel(mergeInput);
     mergeSlider.addEventListener('input', () => {
         const distance = mergeAt(Number(mergeSlider.value));
+        enableDirections(distance);
         mergeInput.value = distance === null ? '' : String(distance);
         describeMerge(distance);
         handlers.onMergeChange(distance);
@@ -203,6 +213,7 @@ export function buildAutoOcclusionPreviewBar(
         const distance = Number.isFinite(typed) ? Math.min(MERGE_LINES_LIMITS.max, Math.max(MERGE_LINES_LIMITS.min, typed)) : null;
         mergeSlider.value = String(positionOf(distance));
         updateMergeShare();
+        enableDirections(distance);
         describeMerge(distance);
         handlers.onMergeChange(distance);
     });
@@ -217,6 +228,30 @@ export function buildAutoOcclusionPreviewBar(
         track.append(notch);
     }
     track.append(mergeSlider);
+    // Which neighbours merge: any, those along a line (as the text runs), or those stacked (across its lines). Only with merging on.
+    const directionGroup = document.createElement('div');
+    directionGroup.className = 'segmented-control stage-controls-fixed';
+    directionGroup.setAttribute('role', 'group');
+    directionGroup.setAttribute('aria-label', 'Merge direction');
+    const directionButtons = DIRECTIONS.map(({ direction, icon, hint }) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'icon-button';
+        button.append(iconSpan(icon));
+        button.title = hint;
+        button.setAttribute('aria-label', hint);
+        button.setAttribute('aria-pressed', String(direction === mergeDirection));
+        button.addEventListener('click', () => {
+            directionButtons.forEach((other) => other.setAttribute('aria-pressed', String(other === button)));
+            handlers.onMergeDirectionChange(direction);
+        });
+        directionGroup.append(button);
+        return button;
+    });
+    function enableDirections(distance: MergeSetting): void {
+        directionButtons.forEach((button) => (button.disabled = distance === null));
+    }
+    enableDirections(merge);
     const mergeGroup = document.createElement('label');
     mergeGroup.className = 'flex-row auto-occlusion-slider-group';
     mergeGroup.append(document.createTextNode('Merge'), track);
@@ -224,7 +259,7 @@ export function buildAutoOcclusionPreviewBar(
     const buttons = document.createElement('div');
     buttons.className = 'flex-row auto-occlusion-buttons';
     buttons.append(cancelButton, applyButton);
-    bar.append(title, sliderGroup, mergeGroup, mergeInput, buttons);
+    bar.append(title, sliderGroup, mergeGroup, mergeInput, directionGroup, buttons);
     return {
         element: bar,
         lengthSlider: slider,
