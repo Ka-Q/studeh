@@ -206,6 +206,17 @@ function newShapeOf(rect: RotatedRect): RectangleShape {
     return withRect({ id: generateId('shape'), type: 'rectangle', x: rect.x, y: rect.y, width: rect.width, height: rect.height, visible: false }, rect);
 }
 
+// The page's shapes replaced by new ones in one step of the history (auto-occlusion's boxes, applied).
+export function replacePageShapes(pageId: string, rects: RotatedRect[]): void {
+    if (!updatePageShapes(pageId, () => rects.map(newShapeOf))) {
+        return;
+    }
+    if (pageId === state.activePageId) {
+        state.selectedShapeIds = [];
+    }
+    notify();
+}
+
 export function clearPageShapes(pageId: string): void {
     if (!updatePageShapes(pageId, () => [])) {
         return;

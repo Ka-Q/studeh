@@ -1,8 +1,8 @@
 import {
     addShape,
-    addShapes,
     clearPageShapes,
     cloneSelectedShapes,
+    replacePageShapes,
     setSelectedShapesColor,
     deleteSelectedShapes,
     getActivePage,
@@ -26,6 +26,8 @@ import { initCanvasZoom, type CanvasZoomHandle } from '../canvas/canvasZoom';
 import { initPageNavigator, type PageNavigatorHandle } from '../canvas/pageNavigator';
 import { initAnalysisStatus } from '../canvas/analysisStatus';
 import { imageAnalysis } from '@studeh/image-analysis';
+import { buildAutoOcclusionPreviewBar, type AutoOcclusionPreviewBar } from './autoOcclusionPreview';
+import { createAutoOcclusionController } from './autoOcclusionController';
 import { confirmDialog } from '../dialogs/confirmDialog';
 import { createModeToggle, type ModeToggleHandle } from '../modes/modeToggle';
 import { browseDialog } from '../document/browseDialog';
@@ -56,8 +58,18 @@ let isFullscreen = false;
 // Numbering preferences for every page, kept in this browser like the theme.
 let numbering: NumberingMode = localStorage.getItem(NUMBERING_STORAGE_KEY) === 'rows' ? 'rows' : 'smart';
 let showNumbers = localStorage.getItem(SHOW_NUMBERS_STORAGE_KEY) !== 'false';
-// Pages whose labels auto-occlusion is looking for.
-const detectingPageIds = new Set<string>();
+
+// Auto-occlusion: detection, then a preview of its boxes over the page until they are applied or cancelled (see the controller).
+const autoOcclusion = createAutoOcclusionController({
+    findBoxes: (imageUrl, minLetters, onFound) => imageAnalysis.labelBoxesOf(imageUrl, onFound, { minLetters }),
+    applyBoxes: replacePageShapes,
+    isStillValid: isPreviewStillValid,
+    onChange: drawAutoOcclusion,
+    onBoxesChange: showPreviewBoxes
+});
+let previewBar: AutoOcclusionPreviewBar | null = null;
+let areListenersOn = false;
+let wasPreviewing = false;
 
 export function initStage(): void {
     const container = requireElement('canvas-area');
@@ -175,6 +187,8 @@ function initImagePaste(): void {
 
 function render(): void {
     const { document: doc } = getState();
+    autoOcclusion.endIfInvalid();
+    syncPreviewListeners();
     if (!doc) {
         renderNoDocumentState();
         return;
@@ -188,6 +202,8 @@ function render(): void {
 
     renderControls(doc.id, page);
     renderCanvas(doc.id, page);
+    mountedCanvas?.handle.setPreviewBoxes(autoOcclusion.preview()?.boxes ?? null);
+    keepFocusAcrossPreview();
 }
 
 function renderNoPagesState(): void {
@@ -229,6 +245,18 @@ function renderNoDocumentState(): void {
 
 function renderControls(documentId: string, page: Page): void {
     controlsEl.innerHTML = '';
+    const preview = autoOcclusion.preview();
+    if (preview) {
+        previewBar = buildAutoOcclusionPreviewBar(preview.minLetters, preview.merge, preview.boxes.length, page.shapes.length, {
+            onMinLettersChange: autoOcclusion.setMinLetters,
+            onMergeChange: autoOcclusion.setMerge,
+            onApply: autoOcclusion.apply,
+            onCancel: autoOcclusion.cancel
+        });
+        controlsEl.append(previewBar.element);
+        return;
+    }
+    previewBar = null;
 
     const leftGroup = document.createElement('div');
     leftGroup.className = 'flex-row stage-controls-left';
@@ -265,14 +293,15 @@ function renderControls(documentId: string, page: Page): void {
 }
 
 function buildAutoOccludeButton(documentId: string, page: Page): HTMLElement {
-    const isDetecting = detectingPageIds.has(page.id);
+    const isDetecting = autoOcclusion.isDetecting(page.id);
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'stage-controls-fixed';
+    button.dataset.autoOcclude = '';
     button.disabled = isDetecting;
     button.title = 'Cover the labels in the image with occlusions';
     button.append(iconSpan('icon-auto-occlude'), document.createTextNode(isDetecting ? 'Detecting…' : 'Auto-occlude'));
-    button.addEventListener('click', () => void autoOcclude(documentId, page));
+    button.addEventListener('click', () => autoOcclude(documentId, page));
     return button;
 }
 
@@ -296,33 +325,92 @@ function buildClearOcclusionsButton(page: Page): HTMLElement {
     return button;
 }
 
-// The page's occlusions are replaced by boxes over its labels, found in the analysis worker; they are added to the page
-// detection started for, unless its image was replaced meanwhile.
-async function autoOcclude(documentId: string, page: Page): Promise<void> {
-    const image = page.image;
-    if (!image) {
-        return;
+// Boxes over the page's labels are found in the analysis worker and shown as a preview, with sliders for the minimum label length and
+// for merging boxes; nothing of the page changes until the user applies them, when they replace the page's occlusions. The preview is
+// for the page detection started for, and ends if the page, its image, the mode or the document changes.
+function autoOcclude(documentId: string, page: Page): void {
+    if (page.image) {
+        const imageUrl = new URL(pageImageUrl(documentId, page.image), document.baseURI).href;
+        autoOcclusion.start({ documentId, pageId: page.id, imageFile: page.image.file, imageUrl });
     }
-    const confirmed = await confirmDialog({
-        title: 'Auto-occlude?',
-        message: 'This action will replace all pre-existing occlusions from the page. Do you want to continue?',
-        confirmLabel: 'Auto-occlude',
-        confirmIcon: 'icon-auto-occlude'
-    });
-    if (!confirmed) {
-        return;
+}
+
+function isPreviewStillValid(target: { documentId: string; pageId: string; imageFile: string }): boolean {
+    const { document: doc } = getState();
+    const page = getActivePage();
+    return isEditMode() && doc?.id === target.documentId && page?.id === target.pageId && page.image?.file === target.imageFile;
+}
+
+// The sliders moved: only the boxes and their count are drawn again, as drawing the controls again would take the slider out of the
+// user's hand.
+function showPreviewBoxes(): void {
+    const preview = autoOcclusion.preview();
+    if (preview) {
+        previewBar?.setBoxCount(preview.boxes.length);
+        mountedCanvas?.handle.setPreviewBoxes(preview.boxes);
     }
-    clearPageShapes(page.id);
-    detectingPageIds.add(page.id);
-    render();
-    imageAnalysis.labelBoxesOf(new URL(pageImageUrl(documentId, image), document.baseURI).href, (boxes) => {
-        detectingPageIds.delete(page.id);
-        const current = getState().document?.pages.find((candidate) => candidate.id === page.id);
-        if (current?.image?.file === image.file) {
-            addShapes(page.id, boxes);
-        }
+}
+
+// Auto-occlusion changed (detection started or ended, a preview opened or closed): the page is drawn again. As a preview opens the
+// selection is cleared, for the page's own boxes are hidden behind it and must not be acted on unseen; clearing it draws the page.
+function drawAutoOcclusion(): void {
+    if (autoOcclusion.preview() && !areListenersOn) {
+        selectShapes([]);
+    } else {
         render();
-    });
+    }
+}
+
+// While a preview is open: Esc discards it and Enter on a slider applies it (an open dialog keeps its own Esc), and plain clicks on the
+// image do nothing.
+function syncPreviewListeners(): void {
+    const isPreviewing = autoOcclusion.preview() !== null;
+    if (isPreviewing === areListenersOn) {
+        return;
+    }
+    areListenersOn = isPreviewing;
+    if (isPreviewing) {
+        document.addEventListener('keydown', handlePreviewKey, true);
+        canvasBody.addEventListener('pointerdown', ignoreEditsOnImage, true);
+    } else {
+        document.removeEventListener('keydown', handlePreviewKey, true);
+        canvasBody.removeEventListener('pointerdown', ignoreEditsOnImage, true);
+    }
+}
+
+// Where focus goes as the preview opens and closes (the Auto-occlude button is replaced by the sliders, and back): to the length slider
+// when it opens, so the arrow keys work at once; to the Auto-occlude button when it closes, unless focus is somewhere the user put it.
+function keepFocusAcrossPreview(): void {
+    const isPreviewing = autoOcclusion.preview() !== null;
+    if (isPreviewing && !wasPreviewing) {
+        previewBar?.lengthSlider.focus();
+    } else if (!isPreviewing && wasPreviewing && (!document.activeElement || document.activeElement === document.body)) {
+        controlsEl.querySelector<HTMLElement>('[data-auto-occlude]')?.focus();
+    }
+    wasPreviewing = isPreviewing;
+}
+
+function handlePreviewKey(event: KeyboardEvent): void {
+    if (document.querySelector('dialog[open]')) {
+        return;
+    }
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        autoOcclusion.cancel();
+    } else if (event.key === 'Enter' && event.target instanceof HTMLInputElement && event.target.type === 'range') {
+        event.preventDefault();
+        autoOcclusion.apply();
+    }
+}
+
+// While the page's own boxes are hidden behind the preview, a plain click or drag on the image does nothing: it neither ends the
+// preview nor draws, selects or moves a box the user can't see. Panning (Shift, middle button, the wheel) still works.
+function ignoreEditsOnImage(event: PointerEvent): void {
+    if (event.button === 0 && !event.shiftKey) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
 }
 
 const numberingOptions: { mode: NumberingMode; icon: string; hint: string }[] = [

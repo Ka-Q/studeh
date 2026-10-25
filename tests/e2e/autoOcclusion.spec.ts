@@ -27,41 +27,179 @@ function covers(box: Box, x: number, y: number): boolean {
     return x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height;
 }
 
-test('auto-occlude asks before replacing the page\'s occlusions, then covers each label with one', async ({ page }) => {
+// What the length slider says to a screen reader: its length and how many boxes that gives.
+function says(bar: ReturnType<typeof previewBar>, text: string | RegExp) {
+    return expect(bar.slider).toHaveAttribute('aria-valuetext', typeof text === 'string' ? new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) : text);
+}
+
+// The preview's controls: its slider and the box count it reads out.
+function previewBar(page: Page) {
+    return { slider: page.getByRole('slider', { name: 'Minimum label length' }), apply: page.getByRole('button', { name: 'Apply' }), cancel: page.getByRole('button', { name: 'Cancel' }), merge: page.getByRole('slider', { name: 'Merge distance' }) };
+}
+
+async function openPreview(page: Page): Promise<ReturnType<typeof previewBar>> {
+    await page.getByRole('button', { name: 'Auto-occlude' }).click();
+    const bar = previewBar(page);
+    await expect(bar.slider).toBeVisible();
+    return bar;
+}
+
+// The slider starts at the longest labels, where nothing is covered: moved to the far right it covers every label.
+async function showAllBoxes(page: Page, bar: ReturnType<typeof previewBar>): Promise<void> {
+    await bar.slider.focus();
+    await page.keyboard.press('End');
+    await expect(bar.apply).toBeEnabled();
+}
+
+test('auto-occlude shows its boxes as a preview, without asking, and applying them covers each label', async ({ page }) => {
     const docId = await openLabelsPage(page, 'Auto Occlude Doc');
     const imageRect = await imageOnScreenRect(page, LABELS_IMAGE_SIZE);
     await dragOnCanvas(page, { x: imageRect.left + 160, y: imageRect.top + 100 }, { x: imageRect.left + 200, y: imageRect.top + 140 });
 
-    await page.getByRole('button', { name: 'Auto-occlude' }).click();
-    await expect(page.locator('#confirm-dialog-message')).toHaveText('This action will replace all pre-existing occlusions from the page. Do you want to continue?');
-    await page.locator('#btn-confirm-delete').click();
-
-    // The boxes are added once the analysis worker has found the labels.
+    const bar = await openPreview(page);
+    await showAllBoxes(page, bar);
+    await expect(page.locator('#confirm-dialog')).not.toBeVisible();
+    await expect(bar.apply).toHaveAttribute('title', 'Replaces 1 occlusion');
+    // Nothing of the page has changed yet: the one drawn occlusion is the only edit to undo.
+    await bar.apply.click();
+    await expect(bar.slider).not.toBeVisible();
     await expect.poll(async () => (await savedShapes(page, docId)).length).toBe(2);
     const shapes = await savedShapes(page, docId);
     expect(shapes.some((box) => covers(box, 300, 80) && covers(box, 385, 80))).toBe(true);
     expect(shapes.some((box) => covers(box, 35, 202) && covers(box, 85, 202))).toBe(true);
 });
 
-test('auto-occlude asks first even on a page without occlusions', async ({ page }) => {
-    const docId = await openLabelsPage(page, 'Auto Occlude Empty Doc');
+test('applied auto-occlusion is one undo step', async ({ page }) => {
+    const docId = await openLabelsPage(page, 'Auto Occlude Undo Doc');
+    const imageRect = await imageOnScreenRect(page, LABELS_IMAGE_SIZE);
+    await dragOnCanvas(page, { x: imageRect.left + 160, y: imageRect.top + 100 }, { x: imageRect.left + 200, y: imageRect.top + 140 });
 
-    await page.getByRole('button', { name: 'Auto-occlude' }).click();
-    await expect(page.locator('#confirm-dialog-message')).toHaveText('This action will replace all pre-existing occlusions from the page. Do you want to continue?');
-    await page.locator('#btn-cancel-confirm').click();
+    const bar = await openPreview(page);
+    await showAllBoxes(page, bar);
+    await bar.apply.click();
+    await expect.poll(async () => (await savedShapes(page, docId)).length).toBe(2);
+    await page.locator('#btn-undo').click();
 
-    expect(await savedShapes(page, docId)).toHaveLength(0);
+    const shapes = await savedShapes(page, docId);
+    expect(shapes).toHaveLength(1);
+    expect(covers(shapes[0], 180, 120)).toBe(true);
 });
 
-test('cancelling auto-occlude keeps the page\'s occlusions', async ({ page }) => {
+test('the slider starts at the longest labels and covers more as it moves right, live', async ({ page }) => {
+    const docId = await openLabelsPage(page, 'Auto Occlude Slider Doc');
+    const bar = await openPreview(page);
+    await says(bar, 'Labels of at least 24 letters');
+    const countAt = async () => Number(/(\d+) box/.exec((await bar.slider.getAttribute('aria-valuetext')) ?? '')?.[1] ?? 0);
+
+    await bar.slider.focus();
+    await page.keyboard.press('End');
+    await says(bar, 'Labels of at least 2 letters');
+    await expect.poll(countAt).toBe(2);
+    await page.keyboard.press('Home');
+    await says(bar, 'Labels of at least 24 letters');
+    await page.keyboard.press('End');
+    await expect.poll(countAt).toBe(2);
+
+    await page.keyboard.press('Escape');
+    await expect(bar.slider).not.toBeVisible();
+    expect(await savedShapes(page, docId)).toHaveLength(0);
+    await page.getByRole('button', { name: 'Auto-occlude' }).click();
+    await says(previewBar(page), 'Labels of at least 24 letters');
+});
+
+test('on a page without text the preview has no boxes and Apply is not offered', async ({ page }) => {
+    await page.goto('/');
+    await createDocument(page, uniqueName('Auto Occlude No Text Doc'));
+    await addPage(page);
+    await assignActivePageImage(page);
+
+    const bar = await openPreview(page);
+
+    await says(bar, 'no boxes');
+    await expect(bar.apply).toBeDisabled();
+});
+
+// Two labels one under the other, close enough that their boxes nearly touch, but read as two labels.
+const CLOSE_LABELS_IMAGE_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'labels-close.png');
+
+test('merging joins boxes that lie within the distance, live, and applying gives the merged box', async ({ page }) => {
+    await page.goto('/');
+    const docId = await createDocument(page, uniqueName('Auto Occlude Merge Doc'));
+    await addPage(page);
+    await assignActivePageImage(page, CLOSE_LABELS_IMAGE_PATH);
+    const bar = await openPreview(page);
+    await showAllBoxes(page, bar);
+    await says(bar, '2 boxes');
+    // Merging starts off, at the left end of its slider; moving right joins boxes by how near they are.
+    await expect(bar.merge).toHaveAttribute('aria-valuetext', 'Merge boxes: Off');
+    await bar.merge.focus();
+    await page.keyboard.press('End');
+    await expect(bar.merge).toHaveAttribute('aria-valuetext', 'Merge boxes: within 3 lines');
+    await says(bar, '1 box');
+    await page.keyboard.press('Home');
+    await says(bar, '2 boxes');
+    await page.keyboard.press('End');
+    await says(bar, '1 box');
+
+    await bar.apply.click();
+    await expect.poll(async () => (await savedShapes(page, docId)).length).toBe(1);
+    const [box] = await savedShapes(page, docId);
+    expect(covers(box, 40, 45) && covers(box, 40, 90)).toBe(true);
+});
+
+test('keyboard focus goes to the length slider when the preview opens and back to the button when it closes', async ({ page }) => {
+    await openLabelsPage(page, 'Auto Occlude Focus Doc');
+
+    const bar = await openPreview(page);
+    await expect(bar.slider).toBeFocused();
+    await page.keyboard.press('Escape');
+
+    await expect(bar.slider).not.toBeVisible();
+    await expect(page.getByRole('button', { name: 'Auto-occlude' })).toBeFocused();
+});
+
+test('Esc closes an open dialog and leaves the preview as it is', async ({ page }) => {
+    await openLabelsPage(page, 'Auto Occlude Dialog Doc');
+    const bar = await openPreview(page);
+
+    await page.locator('#btn-help').click();
+    await expect(page.locator('#help-dialog')).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    await expect(page.locator('#help-dialog')).not.toBeVisible();
+    await expect(bar.slider).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(bar.slider).not.toBeVisible();
+});
+
+test('Esc and Cancel discard the preview and leave the page\'s occlusions as they were', async ({ page }) => {
     const docId = await openLabelsPage(page, 'Auto Occlude Cancel Doc');
     const imageRect = await imageOnScreenRect(page, LABELS_IMAGE_SIZE);
     await dragOnCanvas(page, { x: imageRect.left + 160, y: imageRect.top + 100 }, { x: imageRect.left + 200, y: imageRect.top + 140 });
 
-    await page.getByRole('button', { name: 'Auto-occlude' }).click();
-    await page.locator('#btn-cancel-confirm').click();
+    let bar = await openPreview(page);
+    await page.keyboard.press('Escape');
+    await expect(bar.slider).not.toBeVisible();
+    bar = await openPreview(page);
+    await bar.cancel.click();
+    await expect(bar.slider).not.toBeVisible();
 
     expect(await savedShapes(page, docId)).toHaveLength(1);
+});
+
+test('a click or drag on the image during the preview changes nothing: it neither ends the preview nor draws a box', async ({ page }) => {
+    const docId = await openLabelsPage(page, 'Auto Occlude Click Doc');
+    const imageRect = await imageOnScreenRect(page, LABELS_IMAGE_SIZE);
+
+    const bar = await openPreview(page);
+    await dragOnCanvas(page, { x: imageRect.left + 160, y: imageRect.top + 100 }, { x: imageRect.left + 200, y: imageRect.top + 140 });
+    await page.mouse.click(imageRect.left + 300, imageRect.top + 200);
+
+    await expect(bar.slider).toBeVisible();
+    await showAllBoxes(page, bar);
+    await bar.apply.click();
+    // Only the detected labels were added: the drag drew nothing.
+    await expect.poll(async () => (await savedShapes(page, docId)).length).toBe(2);
 });
 
 test('clear occlusions asks, then removes every occlusion from the page', async ({ page }) => {
@@ -86,8 +224,9 @@ test('a label written up the page is covered by a shape turned along it', async 
     await addPage(page);
     await assignActivePageImage(page, path.join(path.dirname(LABELS_IMAGE_PATH), 'label-vertical.png'));
 
-    await page.getByRole('button', { name: 'Auto-occlude' }).click();
-    await page.locator('#btn-confirm-delete').click();
+    const bar = await openPreview(page);
+    await showAllBoxes(page, bar);
+    await bar.apply.click();
 
     await expect.poll(async () => (await savedShapes(page, docId)).length).toBe(1);
     const [shape] = (await savedShapes(page, docId)) as (Box & { rotation?: number })[];

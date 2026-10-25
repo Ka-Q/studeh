@@ -201,6 +201,11 @@ button:hover:not(:disabled) {
     mask-image: url('/icons/sun.svg');
 }
 
+.icon-apply {
+    -webkit-mask-image: url('/icons/apply.svg');
+    mask-image: url('/icons/apply.svg');
+}
+
 .icon-cancel {
     -webkit-mask-image: url('/icons/cancel.svg');
     mask-image: url('/icons/cancel.svg');
@@ -1065,6 +1070,133 @@ button.stage-controls-fixed,
 button.stage-controls-fixed:hover:not(:disabled),
 .flex-row.stage-controls-fixed > button:hover:not(:disabled) {
     background: var(--color-surface-hover);
+}
+
+.auto-occlusion-bar {
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    min-width: 0;
+    gap: var(--space-2) var(--space-3);
+}
+
+.auto-occlusion-title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.auto-occlusion-slider-group {
+    flex: 1 1 120px;
+    min-width: 110px;
+    max-width: 440px;
+    gap: var(--space-2);
+    color: var(--color-text-muted);
+}
+
+.auto-occlusion-slider {
+    --share: 0;
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    position: relative;
+    z-index: 1;
+}
+
+/* The sliders are drawn the same in every browser, a 16px thumb (--share is how far along it is), so the merge slider's notches
+   can be placed exactly under where the thumb stops. */
+.auto-occlusion-slider::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(to right, var(--color-accent) calc(8px + var(--share) * (100% - 16px)), var(--color-border) 0);
+}
+
+.auto-occlusion-slider::-moz-range-track {
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(to right, var(--color-accent) calc(8px + var(--share) * (100% - 16px)), var(--color-border) 0);
+}
+
+.auto-occlusion-slider::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+    margin-top: -6px;
+    box-sizing: border-box;
+    border: 1px solid var(--color-text-muted);
+    border-radius: 50%;
+    background: var(--color-surface-lifted);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.auto-occlusion-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    box-sizing: border-box;
+    border: 1px solid var(--color-text-muted);
+    border-radius: 50%;
+    background: var(--color-surface-lifted);
+}
+
+.auto-occlusion-slider:focus-visible {
+    outline: none;
+}
+
+.auto-occlusion-slider:focus-visible::-webkit-slider-thumb {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 1px;
+}
+
+.auto-occlusion-slider:focus-visible::-moz-range-thumb {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 1px;
+}
+
+.auto-occlusion-slider:hover::-webkit-slider-thumb {
+    border-color: var(--color-accent);
+}
+
+.auto-occlusion-slider:hover::-moz-range-thumb {
+    border-color: var(--color-accent);
+}
+
+/* The merge slider with notches under it: a notch sits at a share of the track, inset by half a thumb at each end. */
+.auto-occlusion-track {
+    position: relative;
+    flex: 1 1 auto;
+    display: flex;
+    min-width: 0;
+}
+
+.auto-occlusion-notch {
+    position: absolute;
+    top: calc(50% - 7px);
+    left: calc(8px + var(--notch-position) * (100% - 16px));
+    width: 4px;
+    height: 14px;
+    margin-left: -2px;
+    border-radius: 2px;
+    background: var(--color-border);
+    pointer-events: none;
+}
+
+.auto-occlusion-buttons {
+    margin-left: auto;
+    flex: 0 0 auto;
+}
+
+.auto-occlusion-merge-value {
+    min-width: 4.5em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
 
 .canvas-mount {

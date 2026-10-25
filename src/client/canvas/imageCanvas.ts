@@ -68,6 +68,8 @@ interface DraggedArea {
 export interface ImageCanvasHandle {
     update(shapes: RectangleShape[], selectedShapeIds: readonly string[], mode: Mode, numbering: NumberingMode, showNumbers: boolean, revealedShapeIds: ReadonlySet<string>): void;
     setFullscreen(isFullscreen: boolean): void;
+    // Boxes shown over the page as a preview (edit mode only), instead of the page's own shapes; null ends the preview.
+    setPreviewBoxes(boxes: readonly RotatedRect[] | null): void;
     destroy(): void;
     isReady(): boolean;
     getZoom(): number;
@@ -99,6 +101,8 @@ const ROTATION_SNAP_DEGREES = 45;
 const CLONE_OFFSET_PX = 12;
 const SHAPE_ACTIONS_GAP_PX = 8;
 const SHAPE_ACTIONS_EDGE_MARGIN_PX = 4;
+const PREVIEW_BOX_STROKE_STYLE = 'rgba(217, 119, 6, 0.95)';
+const PREVIEW_BOX_FILL_STYLE = 'rgba(245, 158, 11, 0.22)';
 const UNSELECTED_STROKE_STYLE = 'rgba(37, 99, 235, 0.62)';
 const UNSELECTED_FILL_STYLE = 'rgba(37, 99, 235, 0.1)';
 const SELECTED_STROKE_STYLE = 'rgba(37, 99, 235, 0.95)';
@@ -141,6 +145,7 @@ interface RectStyle {
     // Drawn inside the shape's edge instead of centred on it, so a thick line doesn't grow outwards over the page.
     isInset?: boolean;
     casing?: string;
+    dash?: number[];
 }
 const unselectedStyle: RectStyle = { fill: UNSELECTED_FILL_STYLE, stroke: UNSELECTED_STROKE_STYLE, lineWidth: 2 };
 const selectedStyle: RectStyle = { fill: SELECTED_FILL_STYLE, stroke: SELECTED_STROKE_STYLE, lineWidth: SELECTED_LINE_WIDTH_PX, isCased: true };
@@ -148,6 +153,8 @@ const occlusionStyle: RectStyle = { fill: OCCLUSION_FILL_STYLE, stroke: OCCLUSIO
 const revealedStyle: RectStyle = { fill: REVEALED_FILL_STYLE, stroke: REVEALED_STROKE_STYLE, lineWidth: 3 };
 const CUSTOM_UNSELECTED_FILL_ALPHA = 0.15;
 const CUSTOM_SELECTED_FILL_ALPHA = 0.5;
+// Auto-occlusion's boxes before they are applied: dashed and tinted, nothing yet a shape of the page.
+const previewBoxStyle: RectStyle = { fill: PREVIEW_BOX_FILL_STYLE, stroke: PREVIEW_BOX_STROKE_STYLE, lineWidth: 2, dash: [6, 4] };
 const marqueeStyle: RectStyle = { fill: null, stroke: SELECTED_STROKE_STYLE, lineWidth: 1 };
 function editStyleOf(shape: RectangleShape, isSelected: boolean): RectStyle {
     const { color } = shape;
@@ -212,6 +219,7 @@ export function mountImageCanvas(
     const elementSizes = new Map<HTMLElement, Size>();
     let viewport: Viewport = { zoom: 1, panX: 0, panY: 0 };
     let shapes = initialShapes;
+    let previewBoxes: readonly RotatedRect[] | null = null;
     let selectedShapeIds = initialSelectedShapeIds;
     let mode = initialMode;
     let numbering = initialNumbering;
@@ -354,6 +362,12 @@ export function mountImageCanvas(
             return;
         }
         const highlightedIds = new Set(creatingRect ? [] : [...selectedShapeIds, ...shapeIdsTouchedBy(selectingArea)]);
+        if (previewBoxes) {
+            for (const box of previewBoxes) {
+                drawRect(box, previewBoxStyle, false);
+            }
+            return;
+        }
         for (const shape of shapes) {
             drawRect(activeDrag?.current.get(shape.id) ?? shape, editStyleOf(shape, highlightedIds.has(shape.id)), false);
         }
@@ -599,6 +613,7 @@ export function mountImageCanvas(
         context.save();
         context.strokeStyle = style.stroke;
         context.lineWidth = style.lineWidth;
+        context.setLineDash(style.dash ?? []);
         if (isPreview) {
             context.setLineDash([4, 4]);
             context.strokeRect(rect.x, rect.y, rect.width, rect.height);
@@ -1147,6 +1162,10 @@ export function mountImageCanvas(
             numbering = nextNumbering;
             showNumbers = nextShowNumbers;
             revealedShapeIds = nextRevealedShapeIds;
+            draw();
+        },
+        setPreviewBoxes(boxes: readonly RotatedRect[] | null): void {
+            previewBoxes = boxes;
             draw();
         },
         setFullscreen(nextIsFullscreen: boolean): void {

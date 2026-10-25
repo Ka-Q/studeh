@@ -3,6 +3,7 @@ import { imageAnalysis, type AnalysisStage } from '@studeh/image-analysis';
 const STAGE_LABELS: Record<AnalysisStage, string> = {
     image: 'Reading the image…',
     text: 'Finding text…',
+    boxes: 'Boxing the labels…',
     edges: 'Detecting edges…',
     subjects: 'Finding subjects…',
     labels: 'Linking labels…'

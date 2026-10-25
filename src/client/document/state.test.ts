@@ -21,6 +21,7 @@ const {
     redo,
     renameDocument,
     renamePage,
+    replacePageShapes,
     selectShapes,
     setActivePage,
     setDocument,
@@ -66,6 +67,21 @@ function fixtureDocumentWithShapes(shapeIds: string[]) {
     });
     return document;
 }
+
+test('replacePageShapes swaps the page\'s shapes for new ones in one undoable step', function () {
+    setDocument(fixtureDocumentWithShapes(['shape-1', 'shape-2']));
+    setActivePage('page-1');
+    selectShapes(['shape-1']);
+
+    replacePageShapes('page-1', [{ x: 1, y: 2, width: 30, height: 4 }, { x: 5, y: 6, width: 70, height: 8, rotation: 90 }]);
+
+    const shapes = getState().document!.pages[0].shapes;
+    assert.deepEqual(shapes.map((shape) => [shape.x, shape.y, shape.width, shape.height, shape.rotation]), [[1, 2, 30, 4, undefined], [5, 6, 70, 8, 90]]);
+    assert.deepEqual(getState().selectedShapeIds, []);
+    undo();
+    assert.deepEqual(getState().document!.pages[0].shapes.map((shape) => shape.id), ['shape-1', 'shape-2']);
+    assert.equal(canUndo(), false);
+});
 
 test('deleteSelectedShapes selects the shape selected before it, going back as shapes are deleted', function () {
     setDocument(fixtureDocumentWithShapes(['a', 'b', 'c']));
