@@ -88,15 +88,15 @@ test('applied auto-occlusion is one undo step', async ({ page }) => {
 test('the slider starts at the longest labels and covers more as it moves right, live', async ({ page }) => {
     const docId = await openLabelsPage(page, 'Auto Occlude Slider Doc');
     const bar = await openPreview(page);
-    await says(bar, 'Labels of at least 24 letters');
+    await says(bar, 'Minimum length 24 units');
     const countAt = async () => Number(/(\d+) box/.exec((await bar.slider.getAttribute('aria-valuetext')) ?? '')?.[1] ?? 0);
 
     await bar.slider.focus();
     await page.keyboard.press('End');
-    await says(bar, 'Labels of at least 2 letters');
+    await says(bar, 'Minimum length 2 units');
     await expect.poll(countAt).toBe(2);
     await page.keyboard.press('Home');
-    await says(bar, 'Labels of at least 24 letters');
+    await says(bar, 'Minimum length 24 units');
     await page.keyboard.press('End');
     await expect.poll(countAt).toBe(2);
 
@@ -104,7 +104,7 @@ test('the slider starts at the longest labels and covers more as it moves right,
     await expect(bar.slider).not.toBeVisible();
     expect(await savedShapes(page, docId)).toHaveLength(0);
     await page.getByRole('button', { name: 'Auto-occlude' }).click();
-    await says(previewBar(page), 'Labels of at least 24 letters');
+    await says(previewBar(page), 'Minimum length 24 units');
 });
 
 test('on a page without text the preview has no boxes and Apply is not offered', async ({ page }) => {
@@ -141,6 +141,22 @@ test('merging joins boxes that lie within the distance, live, and applying gives
     await page.keyboard.press('End');
     await says(bar, '1 box');
 
+    // The same distance typed: the number field and the slider follow each other, and empty is Off.
+    const typed = page.getByRole('spinbutton', { name: 'Merge distance in line heights' });
+    await expect(typed).toHaveValue('3');
+    await typed.fill('');
+    await expect(bar.merge).toHaveAttribute('aria-valuetext', 'Merge boxes: Off');
+    await says(bar, '2 boxes');
+    await typed.fill('2');
+    await expect(bar.merge).toHaveAttribute('aria-valuetext', 'Merge boxes: within 2 lines');
+    await says(bar, '1 box');
+    await typed.fill('0');
+    await expect(bar.merge).toHaveAttribute('aria-valuetext', 'Merge boxes: touching');
+    await says(bar, '2 boxes');
+    await bar.merge.focus();
+    await page.keyboard.press('End');
+    await expect(typed).toHaveValue('3');
+
     await bar.apply.click();
     await expect.poll(async () => (await savedShapes(page, docId)).length).toBe(1);
     const [box] = await savedShapes(page, docId);
@@ -156,6 +172,44 @@ test('keyboard focus goes to the length slider when the preview opens and back t
 
     await expect(bar.slider).not.toBeVisible();
     await expect(page.getByRole('button', { name: 'Auto-occlude' })).toBeFocused();
+});
+
+test('the mouse wheel over the sliders and the number field moves them, up towards more', async ({ page }) => {
+    await openLabelsPage(page, 'Auto Occlude Wheel Doc');
+    const bar = await openPreview(page);
+    await says(bar, 'Minimum length 24 units');
+
+    const lengthBox = (await bar.slider.boundingBox())!;
+    await page.mouse.move(lengthBox.x + lengthBox.width / 2, lengthBox.y + lengthBox.height / 2);
+    await page.mouse.wheel(0, -100);
+    await says(bar, 'Minimum length 23 units');
+    await page.mouse.wheel(0, 100);
+    await says(bar, 'Minimum length 24 units');
+
+    const mergeBox = (await bar.merge.boundingBox())!;
+    await page.mouse.move(mergeBox.x + mergeBox.width / 2, mergeBox.y + mergeBox.height / 2);
+    await expect(bar.merge).toHaveAttribute('aria-valuetext', 'Merge boxes: Off');
+    await page.mouse.wheel(0, -100);
+    await expect(bar.merge).toHaveAttribute('aria-valuetext', 'Merge boxes: overlapping by 2 lines');
+    await page.mouse.wheel(0, 100);
+    await expect(bar.merge).toHaveAttribute('aria-valuetext', 'Merge boxes: Off');
+
+    const typed = page.getByRole('spinbutton', { name: 'Merge distance in line heights' });
+    const typedBox = (await typed.boundingBox())!;
+    await page.mouse.move(typedBox.x + typedBox.width / 2, typedBox.y + typedBox.height / 2);
+    await page.mouse.wheel(0, -100);
+    await expect(typed).toHaveValue('-2');
+    await page.mouse.wheel(0, -100);
+    await expect(typed).toHaveValue('-1.75');
+    // The field goes on past the slider's end, and comes back down to Off.
+    await typed.fill('3');
+    await page.mouse.wheel(0, -100);
+    await expect(typed).toHaveValue('3.25');
+    await expect(bar.merge).toHaveAttribute('aria-valuetext', 'Merge boxes: within 3.25 lines');
+    await typed.fill('-2');
+    await page.mouse.wheel(0, 100);
+    await expect(typed).toHaveValue('');
+    await expect(bar.merge).toHaveAttribute('aria-valuetext', 'Merge boxes: Off');
 });
 
 test('Esc closes an open dialog and leaves the preview as it is', async ({ page }) => {

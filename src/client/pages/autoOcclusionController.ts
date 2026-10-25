@@ -11,6 +11,9 @@ export const MIN_LETTERS_RANGE = { min: 2, max: 24 };
 // The merge slider has one more position, before the first, where nothing is merged.
 export const MERGE_LINES_RANGE = { min: -2, max: 3, step: 0.25 };
 
+// What may be typed (or scrolled) as a merge distance: the slider's lowest, and well past its highest.
+export const MERGE_LINES_LIMITS = { min: MERGE_LINES_RANGE.min, max: 20 };
+
 // A merge distance in lines, or null for no merging.
 export type MergeSetting = number | null;
 

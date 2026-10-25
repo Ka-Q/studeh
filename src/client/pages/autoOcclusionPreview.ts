@@ -1,5 +1,5 @@
 import { iconSpan } from '../dom';
-import { MERGE_LINES_RANGE, MIN_LETTERS_RANGE, type MergeSetting } from './autoOcclusionController';
+import { MERGE_LINES_LIMITS, MERGE_LINES_RANGE, MIN_LETTERS_RANGE, type MergeSetting } from './autoOcclusionController';
 
 // The merge slider has one more position than there are distances: the first, where nothing is merged.
 const MERGE_POSITIONS = Math.round((MERGE_LINES_RANGE.max - MERGE_LINES_RANGE.min) / MERGE_LINES_RANGE.step) + 1;
@@ -12,11 +12,6 @@ function mergeAt(position: number): MergeSetting {
     return position === 0 ? null : MERGE_LINES_RANGE.min + (position - 1) * MERGE_LINES_RANGE.step;
 }
 
-// What the merge slider shows: just the distance, signed (minus: overlapping by that much, plus: apart by up to that much).
-function mergeText(merge: MergeSetting): string {
-    return merge === null ? 'Off' : merge === 0 ? 'Touching' : merge < 0 ? String(merge) : `+${merge}`;
-}
-
 // The same in words, for a screen reader.
 function mergeSpoken(merge: MergeSetting): string {
     if (merge === null) {
@@ -27,12 +22,58 @@ function mergeSpoken(merge: MergeSetting): string {
 }
 
 // Keeps the slider's --share (how far along its range the thumb is) up to date, for the track's filled part.
-function trackShare(slider: HTMLInputElement): void {
+function trackShare(slider: HTMLInputElement): () => void {
     function update(): void {
         slider.style.setProperty('--share', String((Number(slider.value) - Number(slider.min)) / (Number(slider.max) - Number(slider.min))));
     }
     update();
     slider.addEventListener('input', update);
+    return update;
+}
+
+// The mouse wheel over a control moves a slider one step per notch (up: towards the right, more), as a slider is moved by its
+// keys; small trackpad scrolls add up to a step. It fires the slider's own input event, so everything that follows a drag follows this.
+const WHEEL_STEP_DELTA = 50;
+const WHEEL_DELTA_PER_LINE = 33;
+
+function moveByWheel(slider: HTMLInputElement, ...controls: HTMLElement[]): void {
+    let pending = 0;
+    for (const control of controls) {
+        control.addEventListener('wheel', (event) => {
+            event.preventDefault();
+            pending += event.deltaMode === WheelEvent.DOM_DELTA_LINE ? event.deltaY * WHEEL_DELTA_PER_LINE : event.deltaY;
+            if (Math.abs(pending) < WHEEL_STEP_DELTA) {
+                return;
+            }
+            const next = Math.min(Number(slider.max), Math.max(Number(slider.min), Number(slider.value) + (pending < 0 ? 1 : -1)));
+            pending = 0;
+            if (next !== Number(slider.value)) {
+                slider.value = String(next);
+                slider.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }, { passive: false });
+    }
+}
+
+// The wheel over the merge number field steps its own value, through the whole of what can be typed (Off, then the slider's lowest
+// distance, on past its highest), where the slider stops at its ends.
+function moveFieldByWheel(field: HTMLInputElement): void {
+    let pending = 0;
+    const lastPosition = Math.round((MERGE_LINES_LIMITS.max - MERGE_LINES_LIMITS.min) / MERGE_LINES_RANGE.step) + 1;
+    field.addEventListener('wheel', (event) => {
+        event.preventDefault();
+        pending += event.deltaMode === WheelEvent.DOM_DELTA_LINE ? event.deltaY * WHEEL_DELTA_PER_LINE : event.deltaY;
+        if (Math.abs(pending) < WHEEL_STEP_DELTA) {
+            return;
+        }
+        const position = field.value.trim() === '' ? 0 : Math.round((Number(field.value) - MERGE_LINES_RANGE.min) / MERGE_LINES_RANGE.step) + 1;
+        const next = Math.min(lastPosition, Math.max(0, position + (pending < 0 ? 1 : -1)));
+        pending = 0;
+        if (next !== position) {
+            field.value = next === 0 ? '' : String(MERGE_LINES_RANGE.min + (next - 1) * MERGE_LINES_RANGE.step);
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    }, { passive: false });
 }
 
 export interface AutoOcclusionPreviewBar {
@@ -91,14 +132,17 @@ export function buildAutoOcclusionPreviewBar(
     // What the position means, for a screen reader and on hover: the sliders show only what they do to the page.
     let currentCount = boxCount;
     function describe(): void {
-        const text = `Labels of at least ${minLettersAt(Number(slider.value))} letters: ${currentCount === 0 ? 'no boxes' : currentCount === 1 ? '1 box' : `${currentCount} boxes`}`;
-        slider.title = `${text}. Right: more of the page covered, down to the shortest labels (and more extras). Left: only the longest labels.`;
+        const length = minLettersAt(Number(slider.value));
+        const text = `Minimum length ${length} units: ${currentCount === 0 ? 'no boxes' : currentCount === 1 ? '1 box' : `${currentCount} boxes`}`;
+        // A unit is a label's width compared with the height of its own text, so it doesn't depend on the font size: about a letter.
+        slider.title = `${text}. A unit is about one letter of the label's own text size, whatever the font size. Right: more of the page covered, down to the shortest labels (and more extras). Left: only the longest labels.`;
         slider.setAttribute('aria-valuetext', text);
         applyButton.disabled = currentCount === 0;
         applyButton.title = replacedCount === 0 ? 'Add these boxes' : `Replaces ${replacedCount === 1 ? '1 occlusion' : `${replacedCount} occlusions`}`;
     }
     describe();
     trackShare(slider);
+    moveByWheel(slider, slider);
     slider.addEventListener('input', () => {
         describe();
         handlers.onMinLettersChange(minLettersAt(Number(slider.value)));
@@ -119,22 +163,48 @@ export function buildAutoOcclusionPreviewBar(
     mergeSlider.min = '0';
     mergeSlider.max = String(MERGE_POSITIONS);
     mergeSlider.step = '1';
-    mergeSlider.value = String(merge === null ? 0 : Math.round((merge - MERGE_LINES_RANGE.min) / MERGE_LINES_RANGE.step) + 1);
+    mergeSlider.value = String(positionOf(merge));
     mergeSlider.className = 'auto-occlusion-slider';
     mergeSlider.setAttribute('aria-label', 'Merge distance');
-    const mergeValue = document.createElement('span');
-    mergeValue.className = 'auto-occlusion-merge-value';
-    function describeMerge(): void {
-        const merge = mergeAt(Number(mergeSlider.value));
-        mergeValue.textContent = mergeText(merge);
-        mergeSlider.setAttribute('aria-valuetext', `Merge boxes: ${mergeSpoken(merge)}`);
-        mergeSlider.title = 'Merge boxes that are this close, edge to edge, in line heights: a minus number joins only boxes overlapping by that much, Touching those that touch, a plus number those up to that far apart. All the way left: no merging.';
+    // The distance as a number too, for an exact value and the keyboard: empty is Off, anything else a distance in lines.
+    const mergeInput = document.createElement('input');
+    mergeInput.type = 'number';
+    mergeInput.className = 'dialog-field auto-occlusion-merge-input';
+    mergeInput.step = String(MERGE_LINES_RANGE.step);
+    mergeInput.min = String(MERGE_LINES_LIMITS.min);
+    mergeInput.max = String(MERGE_LINES_LIMITS.max);
+    mergeInput.placeholder = 'Off';
+    mergeInput.setAttribute('aria-label', 'Merge distance in line heights');
+    mergeInput.value = merge === null ? '' : String(merge);
+    function positionOf(distance: MergeSetting): number {
+        return distance === null ? 0 : Math.min(MERGE_POSITIONS, Math.max(1, Math.round((distance - MERGE_LINES_RANGE.min) / MERGE_LINES_RANGE.step) + 1));
     }
-    describeMerge();
-    trackShare(mergeSlider);
+    function describeMerge(distance: MergeSetting): void {
+        mergeSlider.setAttribute('aria-valuetext', `Merge boxes: ${mergeSpoken(distance)}`);
+        const meaning = 'Merge boxes that are this close, edge to edge, in line heights: a minus number joins only boxes overlapping by that much, 0 those that touch, a plus number those up to that far apart. Empty, or all the way left: no merging.';
+        mergeSlider.title = meaning;
+        mergeInput.title = meaning;
+    }
+    describeMerge(merge);
+    const updateMergeShare = trackShare(mergeSlider);
+    moveByWheel(mergeSlider, mergeSlider);
+    moveFieldByWheel(mergeInput);
     mergeSlider.addEventListener('input', () => {
-        describeMerge();
-        handlers.onMergeChange(mergeAt(Number(mergeSlider.value)));
+        const distance = mergeAt(Number(mergeSlider.value));
+        mergeInput.value = distance === null ? '' : String(distance);
+        describeMerge(distance);
+        handlers.onMergeChange(distance);
+    });
+    mergeInput.addEventListener('input', () => {
+        if (mergeInput.validity.badInput) {
+            return;
+        }
+        const typed = mergeInput.value.trim() === '' ? NaN : Number(mergeInput.value);
+        const distance = Number.isFinite(typed) ? Math.min(MERGE_LINES_LIMITS.max, Math.max(MERGE_LINES_LIMITS.min, typed)) : null;
+        mergeSlider.value = String(positionOf(distance));
+        updateMergeShare();
+        describeMerge(distance);
+        handlers.onMergeChange(distance);
     });
     // Notches across the slider's track at Off and at "touching" (0), where boxes stop overlapping and start to be apart; they come
     // first, so the track and the thumb are drawn over them: a notch shows as a mark above and below the track.
@@ -154,7 +224,7 @@ export function buildAutoOcclusionPreviewBar(
     const buttons = document.createElement('div');
     buttons.className = 'flex-row auto-occlusion-buttons';
     buttons.append(cancelButton, applyButton);
-    bar.append(title, sliderGroup, mergeGroup, mergeValue, buttons);
+    bar.append(title, sliderGroup, mergeGroup, mergeInput, buttons);
     return {
         element: bar,
         lengthSlider: slider,

@@ -1193,10 +1193,10 @@ button.stage-controls-fixed:hover:not(:disabled),
     flex: 0 0 auto;
 }
 
-.auto-occlusion-merge-value {
-    min-width: 4.5em;
+.auto-occlusion-merge-input {
+    flex: 0 0 auto;
+    width: 5.5em;
     font-variant-numeric: tabular-nums;
-    white-space: nowrap;
 }
 
 .canvas-mount {
