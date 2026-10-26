@@ -8,5 +8,5 @@
         "noEmit": true,
         "allowImportingTsExtensions": true
     },
-    "include": ["tests/**/*.ts", "src/**/*.test.ts", "vite.config.ts", "playwright.config.ts"]
+    "include": ["scripts/**/*.ts", "tests/**/*.ts", "src/**/*.test.ts", "vite.config.ts", "playwright.config.ts"]
 }
