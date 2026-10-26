@@ -1,0 +1,6 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "paths": { "@studeh/image-analysis": ["../../../image-analysis/src/index.ts"] }
+    }
+}

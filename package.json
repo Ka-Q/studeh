@@ -8,7 +8,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsc -p src/server/tsconfig.json && tsc --noEmit -p src/client/tsconfig.json && vite build",
+    "build": "tsc -p src/server/tsconfig.json && node scripts/typecheck.ts src/client/tsconfig.json && vite build",
     "start": "npm run build && node dist/server/index.js",
     "dev": "concurrently -n client,server,run -c blue,green,yellow \"npm:dev:client\" \"npm:dev:server\" \"npm:dev:run\"",
     "predev": "npm run build",
@@ -17,7 +17,7 @@
     "dev:run": "SKIP_OPEN_BROWSER=1 node --watch dist/server/index.js",
     "test:unit": "tsx --test 'src/**/*.test.ts'",
     "test:e2e": "playwright test",
-    "typecheck:tests": "tsc --noEmit -p tsconfig.json",
+    "typecheck:tests": "node scripts/typecheck.ts tsconfig.json",
     "test": "npm run typecheck:tests && npm run test:unit && npm run test:e2e"
   },
   "repository": {
@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/Ka-Q/studeh#readme",
   "dependencies": {
-    "@studeh/image-analysis": "file:../image-analysis",
+    "@studeh/image-analysis": "git+https://github.com/Ka-Q/studeh-image-analysis.git",
     "express": "^5.2.1"
   },
   "devDependencies": {
